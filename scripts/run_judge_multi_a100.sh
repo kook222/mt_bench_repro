@@ -15,6 +15,13 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 export PYTHONPATH="$PROJECT_DIR/src"
+export HOME="/tmp"
+export LOGNAME="clink-seunghyun"
+export USER="clink-seunghyun"
+export PIP_CACHE_DIR="/tmp/pip_cache"
+export HF_HOME="/tmp/hf_home"
+export TORCHINDUCTOR_CACHE_DIR="/tmp/torchinductor_cache"
+export TRITON_CACHE_DIR="/tmp/triton_cache"
 
 HOME_DIR="/home/clink-seunghyun"
 MODEL_BASE_DIR="$HOME_DIR/models"

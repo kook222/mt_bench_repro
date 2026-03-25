@@ -36,10 +36,15 @@ VLLM_BASE_URL="http://localhost:$VLLM_PORT/v1"
 VLLM_LOG="/tmp/vllm.log"
 VENV_DIR="/tmp/venv"
 
-# k8s 컨테이너 안에서 pip/HF 캐시를 writable 경로로 강제 지정
+# k8s 컨테이너 안에서 writable 경로 강제 지정
+# (UID가 /etc/passwd에 없는 환경에서 getpass.getuser() 실패 방지)
 export HOME="/tmp"
+export LOGNAME="clink-seunghyun"
+export USER="clink-seunghyun"
 export PIP_CACHE_DIR="/tmp/pip_cache"
 export HF_HOME="/tmp/hf_home"
+export TORCHINDUCTOR_CACHE_DIR="/tmp/torchinductor_cache"
+export TRITON_CACHE_DIR="/tmp/triton_cache"
 export PYTHONPATH="$PROJECT_DIR/src"
 
 echo "=============================="
