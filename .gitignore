@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# 모델 가중치 (용량 크므로 절대 커밋 금지)
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+models/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# 환경변수 (API 키 등 절대 커밋 금지)
+.env
+.env.*
+secrets.yaml
+
+# 생성된 데이터 파일 (재현 가능하므로 git에서 제외)
+data/answers/
+data/judgments/
+data/results.csv
+data/mt_bench_questions.jsonl
+
+# 단, 샘플 파일과 다운로드 스크립트는 포함
+!data/mt_bench_questions_sample.jsonl
+!scripts/download_dataset.sh
+
+# 로그
+*.log
+vllm_server.log
+run.out
+
+# 테스트 임시 디렉토리
+/tmp/

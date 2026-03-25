@@ -1,0 +1,36 @@
+# requirements.txt
+# MT-Bench 재현 파이프라인 의존성
+#
+# 설치: pip install -r requirements.txt
+# A100 서버: pip install -r requirements.txt --break-system-packages
+#
+# openai: vLLM OpenAI-compatible endpoint 및 GPT-4 judge 호출
+# torch, transformers, vllm은 A100 서버에서 별도 설치 (CUDA 버전 의존)
+
+# ── 핵심 런타임 ──
+openai>=1.10.0
+
+# ── 데이터 처리 ──
+# 표준 라이브러리(json, csv, pathlib)만 사용하므로 추가 패키지 불필요
+
+# ── 개발/검증 ──
+# mock 서버 (scripts/mock_openai_server.py)
+flask>=3.0.0
+
+# ── 노트북 ──
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# ── 분석 (선택) ──
+pandas>=2.0.0
+matplotlib>=3.7.0
+tabulate>=0.9.0
+
+# ── 코드 품질 ──
+pyright>=1.1.0
+
+# ── A100 서버 전용 (CUDA 버전에 맞게 별도 설치) ──
+# torch>=2.1.0          # pip install torch --index-url https://download.pytorch.org/whl/cu121
+# transformers>=4.38.0
+# vllm>=0.3.0
+# accelerate>=0.27.0

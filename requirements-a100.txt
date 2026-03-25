@@ -1,0 +1,31 @@
+# requirements-a100.txt
+# A100 서버 전용 패키지 (CUDA 12.1 기준)
+#
+# 설치 방법:
+#   pip install -r requirements-a100.txt
+#
+# CUDA 버전이 다를 경우 torch 설치 URL을 변경:
+#   CUDA 11.8: https://download.pytorch.org/whl/cu118
+#   CUDA 12.1: https://download.pytorch.org/whl/cu121
+#   CUDA 12.4: https://download.pytorch.org/whl/cu124
+#
+# torch는 CUDA 버전에 맞게 별도 설치 필요:
+#   pip install torch>=2.1.0 --index-url https://download.pytorch.org/whl/cu121
+
+# ── 기본 패키지 (requirements.txt 전체 포함) ──
+-r requirements.txt
+
+# ── GPU 추론 ──
+transformers>=4.38.0
+accelerate>=0.27.0
+huggingface-hub>=0.20.0
+
+# ── vLLM (OpenAI-compatible serving) ──
+# vLLM은 CUDA 버전에 따라 별도 설치 필요:
+#   pip install vllm>=0.3.0
+# k8s/슬러rm 환경에서는 공식 이미지 사용 권장:
+#   vllm/vllm-openai:latest
+vllm>=0.3.0
+
+# ── 진행 표시 (80문항 처리 시 유용) ──
+tqdm>=4.66.0
