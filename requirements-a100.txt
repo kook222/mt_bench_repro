@@ -21,11 +21,10 @@ accelerate>=0.27.0
 huggingface-hub>=0.20.0
 
 # ── vLLM (OpenAI-compatible serving) ──
-# vLLM은 CUDA 버전에 따라 별도 설치 필요:
-#   pip install vllm>=0.3.0
-# k8s/슬러rm 환경에서는 공식 이미지 사용 권장:
-#   vllm/vllm-openai:latest
-vllm>=0.3.0
+# pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime 이미지의 PyTorch 2.2.2와 호환되는 버전 고정.
+# vLLM 0.6.0+ 는 V1 엔진 아키텍처 도입으로 PyTorch 2.4+ 필요 → 사용 불가.
+# vLLM 0.4.x 는 PyTorch 2.2.x 와 호환됨.
+vllm>=0.4.0,<0.5.0
 
 # ── 진행 표시 (80문항 처리 시 유용) ──
 tqdm>=4.66.0
