@@ -373,88 +373,183 @@ def print_win_rate_table(
     print(f"{'='*max(70, len(header))}\n")
 
 
+def print_pairwise_matrix(
+    all_judgments: List["JudgmentPairwise"],
+    model_ids: List[str],
+) -> None:
+    """
+    모델 간 head-to-head win rate 매트릭스 출력.
+
+    논문 추이 재현의 핵심 검증 수단:
+    - 강한 모델이 약한 모델을 일관되게 이기는지 확인
+    - inconsistent/error 제외, tie = 0.5점으로 계산
+    - 행: 해당 모델 기준, 열: 상대 모델 대비 win rate
+    """
+    if not all_judgments or len(model_ids) < 2:
+        return
+
+    # (model_a, model_b) → (wins_a, total) 누적
+    head2head: Dict[tuple, List[float]] = {}
+    for j in all_judgments:
+        if j.winner in ("inconsistent", "error"):
+            continue
+        key = (j.model_a, j.model_b)
+        if key not in head2head:
+            head2head[key] = [0.0, 0.0]
+        head2head[key][1] += 1.0
+        if j.winner == j.model_a:
+            head2head[key][0] += 1.0
+        elif j.winner == "tie":
+            head2head[key][0] += 0.5
+
+    col_w = max(len(m) for m in model_ids) + 2
+    cell_w = 8
+
+    print(f"\n{'='*70}")
+    print("  PAIRWISE HEAD-TO-HEAD MATRIX (행 모델의 열 모델 대비 win rate)")
+    print(f"{'='*70}")
+    header = f"{'vs →':<{col_w}}" + "".join(f"{m[:cell_w-1]:>{cell_w}}" for m in model_ids)
+    print(header)
+    print("-" * len(header))
+
+    for row_m in model_ids:
+        row = f"{row_m:<{col_w}}"
+        for col_m in model_ids:
+            if row_m == col_m:
+                row += f"{'---':>{cell_w}}"
+                continue
+            # (row_m, col_m) 또는 (col_m, row_m) 방향 찾기
+            if (row_m, col_m) in head2head:
+                wins, total = head2head[(row_m, col_m)]
+                wr = wins / total if total > 0 else float("nan")
+            elif (col_m, row_m) in head2head:
+                wins_opp, total = head2head[(col_m, row_m)]
+                wr = (total - wins_opp) / total if total > 0 else float("nan")
+            else:
+                wr = float("nan")
+            row += f"{wr*100:>{cell_w-1}.1f}%" if wr == wr else f"{'N/A':>{cell_w}}"
+        print(row)
+
+    print(f"{'='*70}\n")
+
+
 def print_trend_summary(
     single_scores: Dict[str, Dict[str, float]],
     win_rates: Dict[str, Dict[str, float]],
+    all_judgments: Optional[List] = None,
 ) -> None:
     """
-    논문 재현 관점에서 핵심 trend를 요약 출력.
+    논문 추이 재현 관점에서 핵심 trend를 요약 출력.
 
-    출력 내용:
-    1. 모델 서열 (overall score 기준)
-    2. 논문 참조값 대비 Spearman 순위 상관계수
-    3. 카테고리별 서열 역전 여부 (논문 Table 7과 비교)
-    4. math/reasoning/coding vs writing/roleplay 갭 비교
-       (논문에서 GPT-4가 이 카테고리들에서 특히 강함)
+    평가 기준 (임의 reference score 없음):
+    1. 모델 서열: overall score 기준 내림차순
+    2. Pairwise head-to-head: 강한 모델이 약한 모델을 일관적으로 이기는지
+    3. Category 강약 패턴: hard(math/coding/reasoning) vs easy(writing/roleplay) 갭
+    4. Category별 서열 일관성: overall 서열이 카테고리별로도 유지되는지
+
+    논문의 핵심 주장:
+    - 강한 모델은 hard category에서 특히 우위 (GPT-4: math/coding gap 큼)
+    - 약한 모델은 writing/roleplay에서 상대적으로 선전
+    - Pairwise와 single grading 서열이 일치
 
     Args:
         single_scores: compute_single_scores() 반환값
         win_rates: compute_win_rates() 반환값
+        all_judgments: pairwise 판정 전체 리스트 (head-to-head matrix용, 선택)
     """
     print(f"\n{'='*70}")
-    print("  TREND SUMMARY (논문 재현 관점)")
+    print("  TREND SUMMARY (논문 추이 재현 관점)")
     print(f"{'='*70}")
 
-    # ── 1. 모델 서열 ──
+    # ── 1. 모델 서열 (overall score) ──
     overall_scores = {
         m: v["overall"]
         for m, v in single_scores.items()
         if "overall" in v and v["overall"] == v["overall"]
     }
 
-    if overall_scores:
-        ranked = sorted(overall_scores.items(), key=lambda x: x[1], reverse=True)
-        print("\n[1] 모델 서열 (overall score, 내림차순):")
-        for rank, (model, score) in enumerate(ranked, start=1):
-            paper_score = PAPER_REFERENCE_SCORES.get(model, None)
-            paper_str = f"  (논문: {paper_score:.2f})" if paper_score else ""
-            print(f"    {rank}. {model:<25} {score:.2f}{paper_str}")
+    if not overall_scores:
+        print("  (데이터 없음)")
+        print(f"\n{'='*70}\n")
+        return
 
-        # ── 2. Spearman 상관 ──
-        rho = compute_rank_correlation(overall_scores)
-        print(f"\n[2] 논문 참조값과 Spearman 순위 상관계수: ", end="")
-        if rho is not None:
-            interpretation = (
-                "매우 높음 ✓" if rho > 0.9 else
-                "높음 ✓" if rho > 0.7 else
-                "보통 △" if rho > 0.5 else
-                "낮음 ✗"
+    ranked = sorted(overall_scores.items(), key=lambda x: x[1], reverse=True)
+    print("\n[1] 모델 서열 (overall score 기준)")
+    for rank, (model, score) in enumerate(ranked, start=1):
+        n = int(single_scores[model].get("n_samples", 0))
+        print(f"    {rank}. {model:<30} {score:.2f}  (n={n})")
+
+    # ── 2. Pairwise head-to-head matrix ──
+    if all_judgments:
+        model_list = [m for m, _ in ranked]
+        print_pairwise_matrix(all_judgments, model_list)
+    else:
+        # win_rates에서 overall win rate로 간이 서열 확인
+        if win_rates:
+            pairwise_ranked = sorted(
+                win_rates.items(),
+                key=lambda x: x[1].get("overall", float("-inf")),
+                reverse=True,
             )
-            print(f"{rho:.3f} ({interpretation})")
-        else:
-            print("계산 불가 (공통 모델명 확인 필요)")
+            print("\n[2] Pairwise 서열 (overall win rate 기준)")
+            for rank, (model, wr) in enumerate(pairwise_ranked, start=1):
+                ov = wr.get("overall", float("nan"))
+                n = int(wr.get("n_games", 0))
+                ov_str = f"{ov*100:.1f}%" if ov == ov else "N/A"
+                print(f"    {rank}. {model:<30} win={ov_str}  (games={n})")
 
-    # ── 3. 카테고리별 서열 역전 감지 ──
-    print("\n[3] 카테고리별 상위/하위 모델 서열 요약:")
+    # ── 3. Hard vs Easy category 갭 ──
+    hard_cats = ["math", "reasoning", "coding"]
+    easy_cats = ["writing", "roleplay", "humanities"]
+
+    print("\n[3] Hard vs Easy category 갭 (논문 핵심 패턴)")
+    print(f"    {'Model':<30} {'hard_avg':>9} {'easy_avg':>9} {'gap(easy-hard)':>15}  판정")
+    print(f"    {'-'*70}")
+    for model, _ in ranked:
+        ms = single_scores[model]
+        hard_avg = _safe_avg([ms.get(c, float("nan")) for c in hard_cats])
+        easy_avg = _safe_avg([ms.get(c, float("nan")) for c in easy_cats])
+        if hard_avg != hard_avg or easy_avg != easy_avg:
+            continue
+        diff = easy_avg - hard_avg
+        # 논문 패턴: 모든 모델에서 hard < easy, 강한 모델일수록 갭이 작음
+        if diff > 2.0:
+            flag = "hard 매우 약함"
+        elif diff > 1.0:
+            flag = "hard 약함"
+        elif diff > 0.0:
+            flag = "hard 소폭 약함"
+        else:
+            flag = "hard 강함 (상위 모델 패턴)"
+        print(f"    {model:<30} {hard_avg:>9.2f} {easy_avg:>9.2f} {diff:>+15.2f}  {flag}")
+
+    # ── 4. Category별 서열 일관성 ──
+    print("\n[4] Category별 1위 모델 (서열 일관성 확인)")
+    overall_top = ranked[0][0] if ranked else None
+    consistent_cats = 0
+    total_cats = 0
     for cat in MT_BENCH_CATEGORIES:
-        cat_scores = {
-            m: v.get(cat, float("nan"))
-            for m, v in single_scores.items()
+        cat_scores_raw = {
+            m: single_scores[m].get(cat, float("nan"))
+            for m in single_scores
         }
-        valid = {m: s for m, s in cat_scores.items() if s == s}
+        valid = {m: s for m, s in cat_scores_raw.items() if s == s}
         if not valid:
             continue
+        total_cats += 1
         best = max(valid, key=lambda m: valid[m])
         worst = min(valid, key=lambda m: valid[m])
         gap = valid[best] - valid[worst]
-        print(f"    {cat:<12}: best={best} ({valid[best]:.2f})  "
-              f"worst={worst} ({valid[worst]:.2f})  gap={gap:.2f}")
+        is_consistent = (best == overall_top)
+        if is_consistent:
+            consistent_cats += 1
+        mark = "✓" if is_consistent else "△"
+        print(f"    {mark} {cat:<12}: 1위={best:<30} gap={gap:.2f}")
 
-    # ── 4. 논문 핵심 패턴 검증 ──
-    # 논문 Table 7: Vicuna-13B는 math/reasoning에서 특히 약함
-    print("\n[4] 논문 핵심 패턴 검증:")
-    for model, model_scores in single_scores.items():
-        hard_cats = ["math", "reasoning", "coding"]
-        easy_cats = ["writing", "roleplay", "humanities"]
-
-        hard_avg = _safe_avg([model_scores.get(c, float("nan")) for c in hard_cats])
-        easy_avg = _safe_avg([model_scores.get(c, float("nan")) for c in easy_cats])
-
-        if hard_avg == hard_avg and easy_avg == easy_avg:
-            diff = easy_avg - hard_avg
-            flag = "↓ hard 약함 (논문과 일치 가능)" if diff > 1.0 else "≈ 균형"
-            print(f"    {model:<25} hard_avg={hard_avg:.2f}  "
-                  f"easy_avg={easy_avg:.2f}  diff={diff:+.2f}  {flag}")
+    if overall_top and total_cats > 0:
+        print(f"\n    overall 1위({overall_top})가 카테고리 1위인 비율: "
+              f"{consistent_cats}/{total_cats} ({consistent_cats/total_cats*100:.0f}%)")
+        print( "    → 80% 이상이면 서열 일관성 높음 (논문과 동일 패턴)")
 
     print(f"\n{'='*70}\n")
 
@@ -521,9 +616,17 @@ def run_aggregate(
     logger.info("Aggregating pairwise win rates...")
     win_rates = compute_win_rates(judgments_dir, model_ids)
 
-    print_score_table(single_scores, title="MT-Bench Single-Answer Scores (GPT-4 Judge)")
-    print_win_rate_table(win_rates, title="Pairwise Win Rates (논문 Figure 3 참조)")
-    print_trend_summary(single_scores, win_rates)
+    # head-to-head matrix를 위해 pairwise 판정 전체 로드
+    pairwise_dir = Path(judgments_dir) / "pairwise"
+    all_pairwise: List[JudgmentPairwise] = []
+    if pairwise_dir.exists():
+        for path in sorted(pairwise_dir.glob("*.jsonl")):
+            all_pairwise.extend(load_pairwise_judgments(str(path)))
+
+    judge_label = "Judge"
+    print_score_table(single_scores, title=f"MT-Bench Single-Answer Scores ({judge_label})")
+    print_win_rate_table(win_rates, title="Pairwise Win Rates (category별)")
+    print_trend_summary(single_scores, win_rates, all_judgments=all_pairwise or None)
 
     if output_csv:
         save_scores_csv(single_scores, output_csv)
