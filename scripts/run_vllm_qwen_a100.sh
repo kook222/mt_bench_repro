@@ -54,6 +54,11 @@ echo " Model: $MODEL_ID (생성 + Judge)"
 echo " Date: $(date)"
 echo "=============================="
 
+# ── 환경 진단 ─────────────────────────────────────────────────────────────
+echo "[Diag] python3: $(which python3 2>/dev/null || echo NOT_FOUND)"
+echo "[Diag] vllm  : $(python3 -c 'import vllm; print(vllm.__version__)' 2>&1)"
+echo "[Diag] vllm cmd: $(which vllm 2>/dev/null || echo NOT_FOUND)"
+
 # ── Step 1: 경량 의존성 설치 ──────────────────────────────────────────────
 # vllm/vllm-openai 이미지에는 vLLM, PyTorch, transformers가 이미 설치됨.
 # venv 없이 --target으로 경량 패키지만 별도 경로에 설치 → 시스템 Python 그대로 사용.
@@ -73,10 +78,10 @@ fi
 echo "[Step 2] 모델 확인 OK: $MODEL_DIR"
 
 # ── Step 3: vLLM 서버 백그라운드 실행 ────────────────────────────────────
+# vllm/vllm-openai 이미지: `vllm serve` CLI 사용 (image 내장 launcher)
 echo ""
 echo "[Step 3] vLLM 서버 시작 (port=$VLLM_PORT)..."
-python3 -m vllm.entrypoints.openai.api_server \
-    --model "$MODEL_DIR" \
+vllm serve "$MODEL_DIR" \
     --served-model-name "$MODEL_ID" \
     --api-key EMPTY \
     --port "$VLLM_PORT" \
