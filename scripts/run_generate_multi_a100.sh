@@ -33,6 +33,13 @@ ANSWERS_DIR="$PROJECT_DIR/data/answers/"
 VLLM_PORT=8000
 VLLM_LOG="$HOME_DIR/vllm_generate.log"
 
+# ── 경량 의존성 설치 (vllm/vllm-openai 이미지 전용) ──────────────────────
+echo "[Init] 경량 의존성 설치..."
+python3 -m venv /tmp/venv --system-site-packages
+source /tmp/venv/bin/activate
+pip install openai tabulate tqdm -q
+echo "[Init] 완료."
+
 # ── 생성할 모델 목록 ──────────────────────────────────────────────────────
 # 형식: "HuggingFace_ID:served-model-name"
 # served-model-name은 답변 파일명과 CLI --model-id에 그대로 쓰인다.

@@ -53,13 +53,15 @@ echo " Model: $MODEL_ID (생성 + Judge)"
 echo " Date: $(date)"
 echo "=============================="
 
-# ── Step 1: venv 생성 및 의존성 설치 ──────────────────────────────────────
+# ── Step 1: 경량 의존성 설치 ──────────────────────────────────────────────
+# vllm/vllm-openai 이미지에는 vLLM, PyTorch, transformers가 이미 설치됨.
+# --system-site-packages 로 시스템 패키지를 그대로 이어받고,
+# 우리 코드에 필요한 경량 패키지만 추가 설치한다.
 echo ""
-echo "[Step 1] 가상환경 생성 및 의존성 설치..."
-python3 -m venv "$VENV_DIR"
+echo "[Step 1] 경량 의존성 설치 (openai, tabulate, tqdm)..."
+python3 -m venv "$VENV_DIR" --system-site-packages
 source "$VENV_DIR/bin/activate"
-pip install --upgrade pip -q
-pip install -r "$PROJECT_DIR/requirements-a100.txt" -q
+pip install openai tabulate tqdm -q
 echo "[Step 1] 의존성 설치 완료."
 
 # ── Step 2: 모델 디렉토리 확인 ────────────────────────────────────────────

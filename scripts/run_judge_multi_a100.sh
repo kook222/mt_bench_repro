@@ -32,6 +32,13 @@ OUTPUT_CSV="$PROJECT_DIR/data/results_multi.csv"
 VLLM_PORT=8000
 VLLM_LOG="$HOME_DIR/vllm_judge.log"
 
+# ── 경량 의존성 설치 (vllm/vllm-openai 이미지 전용) ──────────────────────
+echo "[Init] 경량 의존성 설치..."
+python3 -m venv /tmp/venv --system-site-packages
+source /tmp/venv/bin/activate
+pip install openai tabulate tqdm -q
+echo "[Init] 완료."
+
 # ── 설정 ──────────────────────────────────────────────────────────────────
 # judge 모델 설정 (두 가지 중 하나 선택)
 JUDGE_USE_VLLM="${JUDGE_USE_VLLM:-true}"          # true: 로컬 vLLM judge
