@@ -8,11 +8,11 @@
 #
 # 실행 전제:
 #   - /home/clink-seunghyun/models/Qwen2.5-7B-Instruct 가 존재해야 한다.
-#   - /tmp/venv 에 requirements-a100.txt 가 Step 1에서 자동 설치된다.
+#   - 이미지: vllm/vllm-openai:v0.6.6 (vLLM + PyTorch + transformers 사전 설치됨)
 #
 # 사용법:
 #   python3 k8s_create_job.py \
-#     -i pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime \
+#     -i vllm/vllm-openai:v0.6.6 \
 #     -g 1 \
 #     -n "clink-seunghyun-1" \
 #     -c "cd /home/clink-seunghyun && bash MT_BENCH_REPRO/scripts/run_vllm_qwen_a100.sh > run.out 2>&1"
@@ -34,7 +34,7 @@ OUTPUT_CSV="$PROJECT_DIR/data/results.csv"
 VLLM_PORT=8000
 VLLM_BASE_URL="http://localhost:$VLLM_PORT/v1"
 VLLM_LOG="/tmp/vllm.log"
-VENV_DIR="/tmp/venv"
+EXTRA_PKGS="/tmp/site-extra"
 
 # k8s 컨테이너 안에서 writable 경로 강제 지정
 # (UID가 /etc/passwd에 없는 환경에서 getpass.getuser() 실패 방지)
@@ -45,7 +45,8 @@ export PIP_CACHE_DIR="/tmp/pip_cache"
 export HF_HOME="/tmp/hf_home"
 export TORCHINDUCTOR_CACHE_DIR="/tmp/torchinductor_cache"
 export TRITON_CACHE_DIR="/tmp/triton_cache"
-export PYTHONPATH="$PROJECT_DIR/src"
+# vllm 이미지의 시스템 패키지 + 우리 경량 패키지 + 프로젝트 코드
+export PYTHONPATH="$EXTRA_PKGS:$PROJECT_DIR/src"
 
 echo "=============================="
 echo " A100 MT-Bench 전체 파이프라인"
@@ -55,13 +56,10 @@ echo "=============================="
 
 # ── Step 1: 경량 의존성 설치 ──────────────────────────────────────────────
 # vllm/vllm-openai 이미지에는 vLLM, PyTorch, transformers가 이미 설치됨.
-# --system-site-packages 로 시스템 패키지를 그대로 이어받고,
-# 우리 코드에 필요한 경량 패키지만 추가 설치한다.
+# venv 없이 --target으로 경량 패키지만 별도 경로에 설치 → 시스템 Python 그대로 사용.
 echo ""
 echo "[Step 1] 경량 의존성 설치 (openai, tabulate, tqdm)..."
-python3 -m venv "$VENV_DIR" --system-site-packages
-source "$VENV_DIR/bin/activate"
-pip install openai tabulate tqdm -q
+pip install openai tabulate tqdm --target "$EXTRA_PKGS" -q
 echo "[Step 1] 의존성 설치 완료."
 
 # ── Step 2: 모델 디렉토리 확인 ────────────────────────────────────────────
@@ -77,7 +75,7 @@ echo "[Step 2] 모델 확인 OK: $MODEL_DIR"
 # ── Step 3: vLLM 서버 백그라운드 실행 ────────────────────────────────────
 echo ""
 echo "[Step 3] vLLM 서버 시작 (port=$VLLM_PORT)..."
-python -m vllm.entrypoints.openai.api_server \
+python3 -m vllm.entrypoints.openai.api_server \
     --model "$MODEL_DIR" \
     --served-model-name "$MODEL_ID" \
     --api-key EMPTY \
@@ -96,7 +94,6 @@ echo "[Step 4] 서버 준비 대기 (최대 300초)..."
 MAX_WAIT=300
 WAITED=0
 until curl -s "http://localhost:$VLLM_PORT/health" > /dev/null 2>&1; do
-    # vLLM 프로세스가 살아있는지 먼저 확인
     if ! kill -0 "$VLLM_PID" 2>/dev/null; then
         echo "[ERROR] vLLM 프로세스가 예기치 않게 종료되었습니다."
         echo "=== vLLM 로그 (마지막 50줄) ==="
@@ -119,7 +116,7 @@ echo "[Step 4] 서버 준비 완료 (${WAITED}s)"
 # ── Step 5: 답변 생성 ─────────────────────────────────────────────────────
 echo ""
 echo "[Step 5] 답변 생성 시작..."
-python -m mtbench_repro.cli generate \
+python3 -m mtbench_repro.cli generate \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
     --model-id "$MODEL_ID" \
@@ -133,7 +130,7 @@ echo "[Step 5] 답변 생성 완료: $ANSWERS_DIR${MODEL_ID}.jsonl"
 # ── Step 6: Single-answer grading ────────────────────────────────────────
 echo ""
 echo "[Step 6] Single-answer grading 시작..."
-python -m mtbench_repro.cli judge-single \
+python3 -m mtbench_repro.cli judge-single \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
     --output-dir "$JUDGMENTS_DIR" \
@@ -147,7 +144,7 @@ echo "[Step 6] Single-answer grading 완료."
 # ── Step 7: Reference-guided grading (math / reasoning / coding) ─────────
 echo ""
 echo "[Step 7] Reference-guided grading 시작 (math/reasoning/coding)..."
-python -m mtbench_repro.cli judge-reference \
+python3 -m mtbench_repro.cli judge-reference \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
     --output-dir "$JUDGMENTS_DIR" \
@@ -169,7 +166,7 @@ if [ "$AVAILABLE_MODELS" -ge 2 ]; then
     while IFS= read -r f; do
         MODEL_NAMES+=("$(basename "$f" .jsonl)")
     done < <(ls "$ANSWERS_DIR"*.jsonl)
-    python -m mtbench_repro.cli judge-pairwise \
+    python3 -m mtbench_repro.cli judge-pairwise \
         --questions "$QUESTIONS" \
         --answers-dir "$ANSWERS_DIR" \
         --output-dir "$JUDGMENTS_DIR" \
@@ -186,7 +183,7 @@ fi
 # ── Step 9: 집계 ──────────────────────────────────────────────────────────
 echo ""
 echo "[Step 9] 결과 집계 및 Trend 분석..."
-python -m mtbench_repro.cli aggregate \
+python3 -m mtbench_repro.cli aggregate \
     --judgments-dir "$JUDGMENTS_DIR" \
     --output-csv "$OUTPUT_CSV"
 echo "[Step 9] 집계 완료. CSV: $OUTPUT_CSV"

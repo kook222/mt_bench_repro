@@ -35,9 +35,8 @@ VLLM_LOG="$HOME_DIR/vllm_generate.log"
 
 # ── 경량 의존성 설치 (vllm/vllm-openai 이미지 전용) ──────────────────────
 echo "[Init] 경량 의존성 설치..."
-python3 -m venv /tmp/venv --system-site-packages
-source /tmp/venv/bin/activate
-pip install openai tabulate tqdm -q
+pip install openai tabulate tqdm --target /tmp/site-extra -q
+export PYTHONPATH="/tmp/site-extra:$PROJECT_DIR/src"
 echo "[Init] 완료."
 
 # ── 생성할 모델 목록 ──────────────────────────────────────────────────────
