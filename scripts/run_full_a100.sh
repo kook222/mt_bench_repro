@@ -16,15 +16,15 @@
 # k8s 제출 예시:
 #   python3 k8s_create_job.py \
 #     -i pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime \
-#     -g 1 -n "clink-seunghyun-full" \
-#     -c "cd /home/clink-seunghyun && \
+#     -g 1 -n "<pod-name>" \
+#     -c "cd $HOME && \
 #         export OPENAI_API_KEY=sk-xxx && \
 #         bash MT_BENCH_REPRO/scripts/run_full_a100.sh > full_run.out 2>&1"
 
 set -e
 
 # ── 경로 및 설정 ──
-HOME_DIR="/home/clink-seunghyun"
+HOME_DIR="${HOME}"
 PROJECT_DIR="$HOME_DIR/MT_BENCH_REPRO"
 MODEL_DIR="$HOME_DIR/models/Qwen2.5-7B-Instruct"
 MODEL_ID="Qwen2.5-7B-Instruct"

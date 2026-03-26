@@ -7,15 +7,15 @@
 # OpenAI API 키 없이 Qwen2.5-7B-Instruct 하나로 생성 + Judge 역할을 모두 수행.
 #
 # 실행 전제:
-#   - /home/clink-seunghyun/models/Qwen2.5-7B-Instruct 가 존재해야 한다.
+#   - $HOME/models/Qwen2.5-7B-Instruct 가 존재해야 한다.
 #   - 이미지: vllm/vllm-openai:v0.6.6 (vLLM + PyTorch + transformers 사전 설치됨)
 #
 # 사용법:
 #   python3 k8s_create_job.py \
 #     -i vllm/vllm-openai:v0.6.6 \
 #     -g 1 \
-#     -n "clink-seunghyun-1" \
-#     -c "cd /home/clink-seunghyun && bash MT_BENCH_REPRO/scripts/run_vllm_qwen_a100.sh > run.out 2>&1"
+#     -n "<pod-name>" \
+#     -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_vllm_qwen_a100.sh > run.out 2>&1"
 #
 # 주의:
 #   - k8s 환경에서 작업이 끝나면 반드시 프로세스가 종료되어야 한다.
@@ -23,7 +23,7 @@
 set -e
 
 # ── 경로 설정 ──────────────────────────────────────────────────────────────
-HOME_DIR="/home/clink-seunghyun"
+HOME_DIR="$HOME"
 PROJECT_DIR="$HOME_DIR/MT_BENCH_REPRO"
 MODEL_DIR="$HOME_DIR/models/Qwen2.5-7B-Instruct"
 MODEL_ID="Qwen2.5-7B-Instruct"
@@ -39,8 +39,8 @@ EXTRA_PKGS="/tmp/site-extra"
 # k8s 컨테이너 안에서 writable 경로 강제 지정
 # (UID가 /etc/passwd에 없는 환경에서 getpass.getuser() 실패 방지)
 export HOME="/tmp"
-export LOGNAME="clink-seunghyun"
-export USER="clink-seunghyun"
+export LOGNAME="$(whoami)"
+export USER="$(whoami)"
 export PIP_CACHE_DIR="/tmp/pip_cache"
 export HF_HOME="/tmp/hf_home"
 export TORCHINDUCTOR_CACHE_DIR="/tmp/torchinductor_cache"

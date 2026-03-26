@@ -1,97 +1,9 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 NeurIPS 2023 논문 "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena" 재현 프로젝트.
 목표: 모델 랭킹 순서 및 카테고리별 성능 추이 재현 (정확한 점수 일치 아님).
-
----
-
-## 현재 진행 상태 (2026-03-25 기준)
-
-- ✅ 로컬 mock 파이프라인 전체 통과
-- ✅ Phase 1 완료: Qwen2.5-7B-Instruct 단일 모델 A100 실행 (self-judge, 파이프라인 검증용)
-- ⏳ **Phase 2 진행 중**: 3개 모델 답변 생성 + Qwen2.5-14B judge → 다음 실행 대기 중
-
----
-
-## Phase 2 실행 순서 (내일 바로 시작)
-
-### 서버 접속
-```bash
-ssh -p 8022 clink-seunghyun@164.125.19.48
-```
-
-### 0. 최신 코드 pull
-```bash
-cd /home/clink-seunghyun/MT_BENCH_REPRO && git pull origin main
-```
-
-### 1. 모델 다운로드 확인 (없으면 다운로드)
-```bash
-ls /home/clink-seunghyun/models/
-```
-없는 모델은 아래 명령으로 다운로드:
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-hf download meta-llama/Llama-3.1-8B-Instruct --local-dir /home/clink-seunghyun/models/Llama-3.1-8B-Instruct
-hf download mistralai/Mistral-7B-Instruct-v0.3 --local-dir /home/clink-seunghyun/models/Mistral-7B-Instruct-v0.3
-hf download Qwen/Qwen2.5-14B-Instruct --local-dir /home/clink-seunghyun/models/Qwen2.5-14B-Instruct
-```
-
-### 2. 3개 모델 답변 생성 job 제출
-```bash
-cd /home/clink-seunghyun
-python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "clink-seunghyun-8" -c "cd /home/clink-seunghyun && bash MT_BENCH_REPRO/scripts/run_generate_multi_a100.sh > run_gen.out 2>&1"
-```
-```bash
-tail -f /home/clink-seunghyun/run_gen.out
-```
-
-### 3. 생성 완료 확인 → pod 삭제
-```bash
-ls -lh /home/clink-seunghyun/MT_BENCH_REPRO/data/answers/
-kubectl delete pod clink-seunghyun-8
-```
-answers/ 에 `.jsonl` 3개 있어야 다음 단계 진행.
-
-### 4. Qwen2.5-14B judge + 집계 job 제출
-```bash
-python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "clink-seunghyun-9" -c "cd /home/clink-seunghyun && bash MT_BENCH_REPRO/scripts/run_judge_multi_a100.sh > run_judge.out 2>&1"
-```
-```bash
-tail -f /home/clink-seunghyun/run_judge.out
-```
-
-### 5. 완료 후 결과 확인 → pod 삭제 → git push
-```bash
-tail -80 /home/clink-seunghyun/run_judge.out
-cat /home/clink-seunghyun/MT_BENCH_REPRO/data/results_multi.csv
-kubectl delete pod clink-seunghyun-9
-```
-```bash
-cd /home/clink-seunghyun/MT_BENCH_REPRO
-git add data/
-git commit -m "feat: add Phase 2 results (3-model comparison, Qwen14B judge)"
-git push origin main
-```
-
----
-
-## 서버 환경 핵심 정보
-
-| 항목 | 값 |
-|------|-----|
-| 서버 | 164.125.19.48:8022 |
-| 계정 | clink-seunghyun |
-| k8s 이미지 | vllm/vllm-openai:v0.6.6 |
-| pod 명 규칙 | clink-seunghyun-숫자 |
-| 프로젝트 경로 | /home/clink-seunghyun/MT_BENCH_REPRO |
-| 모델 경로 | /home/clink-seunghyun/models/ |
-| GitHub | https://github.com/kook222/mt_bench_repro |
-
-**k8s 규정 주의:**
-- sleep/while true 금지
-- pod 완료/에러 후 반드시 `kubectl delete pod <이름>`
-- 동시에 여러 pod 실행 자제 (공유 자원)
 
 ---
 
@@ -125,6 +37,8 @@ python -m mtbench_repro.cli judge-reference --questions data/mt_bench_questions_
 python -m mtbench_repro.cli aggregate --judgments-dir data/judgments/ --output-csv data/results.csv
 ```
 
+항상 `PYTHONPATH=src python -m mtbench_repro.cli` 형태로 실행. `python src/mtbench_repro/cli.py` 형태는 import 오류 발생.
+
 ---
 
 ## 아키텍처
@@ -144,8 +58,106 @@ python -m mtbench_repro.cli aggregate --judgments-dir data/judgments/ --output-c
 - `io_utils.py` — JSONL 스트리밍 I/O, resume 지원
 - `cli.py` — 5개 서브커맨드 통합 진입점
 
-**설계 원칙:**
-- 모든 데이터 JSONL 형식 (메모리 효율)
-- resume 지원: 이미 처리된 question_id 스킵
-- `--mock` 플래그로 API 없이 로컬 테스트 가능
-- 항상 `python -m mtbench_repro.xxx` 형태로 실행 (PYTHONPATH 필요)
+### 논문-코드 대응
+
+| 논문 근거 | 구현 위치 | 설명 |
+|---|---|---|
+| Figure 5 | `prompts._SYSTEM_PAIRWISE` | pairwise 기본 프롬프트 |
+| Figure 6 | `prompts._SYSTEM_SINGLE` | single grading 프롬프트 |
+| Figure 7 | `prompts._SYSTEM_PAIRWISE_MATH_COT` | CoT pairwise |
+| Figure 8 | `prompts._SYSTEM_PAIRWISE_REFERENCE` | reference-guided pairwise |
+| Figure 9 | `prompts.build_multiturn_pairwise_prompt` | multi-turn pairwise |
+| Figure 10 | `prompts.build_multiturn_single_prompt` | reference-guided multi-turn single |
+| Section 3.4 conservative swap | `judge_pairwise.judge_pairwise_question` | AB/BA 두 번 호출 후 일치할 때만 winner |
+| Table 8 MT-Bench Score | `aggregate.compute_single_scores` | 160턴 평균 |
+
+---
+
+## 핵심 설계 결정 (수정 시 반드시 읽을 것)
+
+1. **JSONL append 방식**: judge 도중 API 실패해도 완료된 결과를 보존하기 위해 `append_jsonl`로 한 건씩 저장한다. `write_jsonl` 전체 덮어쓰기를 쓰면 안 된다.
+
+2. **resume 기반 skip**: `get_processed_ids(output_path)`로 이미 처리된 `question_id`를 읽어 skip한다. `--no-resume` 플래그로 비활성화 가능.
+
+3. **conservative verdict**: pairwise에서 AB 순서와 BA 순서 판정이 다르면 `"inconsistent"`로 저장하고 집계에서 tie로 처리한다.
+
+4. **파싱 실패 = -1.0**: single score 파싱 실패 시 NaN 대신 `-1.0`을 저장한다. `avg_score` property에서 명시적으로 체크해 집계에서 제외한다.
+
+5. **temperature 분리**: 생성은 `0.7`, judge는 `0.0` (greedy). 혼용하면 안 된다.
+
+6. **카테고리 상수**: `MT_BENCH_CATEGORIES`와 `REFERENCE_GUIDED_CATEGORIES`는 `schemas.py`에 정의되어 있다. 하드코딩하지 말고 항상 import해서 쓴다.
+
+### Import 규칙
+
+```python
+# 항상 절대 경로
+from mtbench_repro.schemas import MTBenchQuestion
+from mtbench_repro.io_utils import load_questions, append_jsonl
+from mtbench_repro.client import ChatClient
+from mtbench_repro.prompts import build_single_prompt, parse_single_score
+
+# 금지 — 로컬 import (ModuleNotFoundError 발생)
+from schemas import MTBenchQuestion      # NG
+import schemas                           # NG
+```
+
+---
+
+## 흔한 오류
+
+| 오류 | 원인 | 해결 |
+|---|---|---|
+| `ModuleNotFoundError: No module named 'mtbench_repro'` | PYTHONPATH 미설정 | `export PYTHONPATH=src` |
+| `FileNotFoundError: mt_bench_questions.jsonl` | 질문 파일 없음 | `--questions data/mt_bench_questions_sample.jsonl` 으로 테스트 |
+| score가 전부 -1.0 | mock 파서 불일치 | `client._mock_response` 반환 형식 확인 |
+| winner가 전부 inconsistent | mock swap 판정 불일치 | 의도된 동작, aggregate에서 tie 처리됨 |
+| k8s pod이 바로 삭제됨 | sleep/while true 사용 | 금지 — 작업 끝나면 자연 종료되어야 함 |
+
+---
+
+## 서버 환경 (A100 Kubernetes)
+
+| 항목 | 값 |
+|------|-----|
+| k8s 이미지 | vllm/vllm-openai:v0.6.6 |
+| 프로젝트 경로 | `$HOME/MT_BENCH_REPRO` |
+| 모델 경로 | `$HOME/models/` |
+
+**k8s 규정 주의:**
+- sleep/while true 금지
+- pod 완료/에러 후 반드시 `kubectl delete pod <이름>`
+- 동시에 여러 pod 실행 자제 (공유 자원)
+
+### Phase 2 실행 순서
+
+```bash
+# 서버 접속 후 최신 코드 pull
+cd $HOME/MT_BENCH_REPRO && git pull origin main
+
+# 모델 다운로드 (없는 경우)
+export PATH="$HOME/.local/bin:$PATH"
+hf download meta-llama/Llama-3.1-8B-Instruct --local-dir $HOME/models/Llama-3.1-8B-Instruct
+hf download mistralai/Mistral-7B-Instruct-v0.3 --local-dir $HOME/models/Mistral-7B-Instruct-v0.3
+hf download Qwen/Qwen2.5-14B-Instruct --local-dir $HOME/models/Qwen2.5-14B-Instruct
+
+# 3개 모델 답변 생성 job 제출
+cd $HOME
+python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "<pod-name-gen>" \
+  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_generate_multi_a100.sh > run_gen.out 2>&1"
+tail -f $HOME/run_gen.out
+
+# 생성 완료 확인 (answers/에 .jsonl 3개) → pod 삭제
+ls -lh $HOME/MT_BENCH_REPRO/data/answers/
+kubectl delete pod <pod-name-gen>
+
+# Qwen2.5-14B judge + 집계 job 제출
+python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "<pod-name-judge>" \
+  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_judge_multi_a100.sh > run_judge.out 2>&1"
+tail -f $HOME/run_judge.out
+
+# 완료 후 결과 확인 → pod 삭제 → git push
+cat $HOME/MT_BENCH_REPRO/data/results_multi.csv
+kubectl delete pod <pod-name-judge>
+cd $HOME/MT_BENCH_REPRO
+git add data/ && git commit -m "feat: add Phase 2 results (3-model comparison, Qwen14B judge)" && git push origin main
+```
