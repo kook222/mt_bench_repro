@@ -6,22 +6,24 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 
 ---
 
+## 사용 모델
+
+| 구분 | 모델 | 파라미터 |
+|------|------|---------|
+| 평가 대상 | Qwen2.5-7B-Instruct | 7B |
+| 평가 대상 | Llama-3.1-8B-Instruct | 8B |
+| 평가 대상 | Mistral-7B-Instruct-v0.3 | 7B |
+| Judge | Qwen2.5-14B-Instruct | 14B |
+
+- **Phase 1**: Qwen2.5-7B만 사용, self-judge (자기 자신이 채점)
+- **Phase 2**: 3개 모델 비교, Qwen2.5-14B가 외부 judge로 채점
+- **인프라**: A100 32GB × 4, 로컬 vLLM 서빙
+
+---
+
 ## 실험 구성
 
-### 평가 대상 모델
-
-| 모델 | 파라미터 | 비고 |
-|------|---------|------|
-| Qwen2.5-7B-Instruct | 7B | Phase 1 (self-judge), Phase 2 |
-| Llama-3.1-8B-Instruct | 8B | Phase 2 |
-| Mistral-7B-Instruct-v0.3 | 7B | Phase 2 |
-
-### Judge 모델
-
-| 단계 | Judge | 방식 |
-|------|-------|------|
-| Phase 1 | Qwen2.5-7B-Instruct | Self-judge (로컬 vLLM) |
-| Phase 2 | Qwen2.5-14B-Instruct | 외부 judge (로컬 vLLM) |
+### 평가 방법 (논문 재현 범위)
 
 ### 평가 방법 (논문 재현 범위)
 
@@ -30,6 +32,7 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 | Single-answer grading (1~10점) | Figure 6, Table 8 | 전 카테고리 |
 | Pairwise comparison (AB/BA swap) | Figure 5, 9, Section 3.4 | 전 카테고리 |
 | Reference-guided grading | Figure 8, 10 | math / reasoning / coding |
+
 
 ---
 
