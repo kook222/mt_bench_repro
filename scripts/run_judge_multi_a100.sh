@@ -49,6 +49,9 @@ EVAL_MODELS=(
   "Qwen2.5-7B-Instruct"
   "Llama-3.1-8B-Instruct"
   "Mistral-7B-Instruct-v0.3"
+  "Zephyr-7B-beta"
+  "Yi-1.5-9B-Chat"
+  "Phi-3.5-mini-Instruct"
 )
 
 echo "=============================="

@@ -46,6 +46,9 @@ MODEL_LIST=(
   "Qwen/Qwen2.5-7B-Instruct:Qwen2.5-7B-Instruct"
   "meta-llama/Llama-3.1-8B-Instruct:Llama-3.1-8B-Instruct"
   "mistralai/Mistral-7B-Instruct-v0.3:Mistral-7B-Instruct-v0.3"
+  "HuggingFaceH4/zephyr-7b-beta:Zephyr-7B-beta"
+  "01-ai/Yi-1.5-9B-Chat:Yi-1.5-9B-Chat"
+  "microsoft/Phi-3.5-mini-instruct:Phi-3.5-mini-Instruct"
 )
 
 echo "=============================="
