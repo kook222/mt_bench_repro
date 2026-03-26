@@ -66,7 +66,7 @@ if [ "$JUDGE_USE_VLLM" = "true" ]; then
   fi
 
   # judge vLLM 서버 시작
-  python -m vllm.entrypoints.openai.api_server \
+  vllm serve \
     --model "$JUDGE_MODEL_DIR" \
     --served-model-name "$JUDGE_MODEL_ID" \
     --api-key EMPTY \

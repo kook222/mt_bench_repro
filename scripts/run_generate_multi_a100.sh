@@ -79,7 +79,7 @@ for ENTRY in "${MODEL_LIST[@]}"; do
   fi
 
   # vLLM 서버 시작
-  python -m vllm.entrypoints.openai.api_server \
+  vllm serve \
     --model "$MODEL_DIR" \
     --served-model-name "$MODEL_ID" \
     --api-key EMPTY \
