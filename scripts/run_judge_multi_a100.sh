@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
-HOME_DIR="${HOME}"
+HOME_DIR="$(dirname "$PROJECT_DIR")"
 export PYTHONPATH="$PROJECT_DIR/src"
 export HOME="/tmp"
 export LOGNAME="$(whoami)"
