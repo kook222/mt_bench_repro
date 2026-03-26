@@ -19,7 +19,7 @@
 | ----------- | --------------------------------------------------------- |
 | Python      | 3.10+                                                     |
 | 서버        | 부산대 AI 대학원 A100 (Kubernetes)                        |
-| 서버 접속   | `ssh -p 8022 clink-seunghyun@164.125.19.48`               |
+| 서버 접속   |               |
 | 실행 방식   | `PYTHONPATH=src python -m mtbench_repro.cli <subcommand>` |
 | 패키지 루트 | `src/mtbench_repro/`                                      |
 
@@ -166,17 +166,12 @@ python -m mtbench_repro.cli aggregate \
 
 ```bash
 # 1. 로컬에서 서버로 복사
-scp -P 8022 -r MT_BENCH_REPRO/ clink-seunghyun@164.125.19.48:~/
 
 # 2. k8s pod 제출 (서버에서)
-python3 k8s_create_job.py \
-  -i pytorch/pytorch:2.2.2-cuda12.1-cudnn8-runtime \
-  -g 1 \
-  -n "clink-seunghyun-1" \
-  -c "cd /home/clink-seunghyun && bash MT_BENCH_REPRO/scripts/run_vllm_qwen_a100.sh > run.out 2>&1 && echo DONE"
+
 
 # 3. 로그 확인
-kubectl logs -f clink-seunghyun-1
+
 ```
 
 ---
