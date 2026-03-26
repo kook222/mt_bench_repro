@@ -105,9 +105,8 @@ class ChatClient:
         A100에서 실행 중인 vLLM 서버에 연결하는 클라이언트 생성.
 
         vLLM 실행 명령 예시 (A100 서버):
-            python -m vllm.entrypoints.openai.api_server \\
-                --model /home/clink-seunghyun/models/vicuna-13b \\
-                --served-model-name vicuna-13b \\
+            vllm serve $HOME/models/Qwen2.5-7B-Instruct \\
+                --served-model-name Qwen2.5-7B-Instruct \\
                 --api-key EMPTY \\
                 --port 8000
 
