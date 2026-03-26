@@ -66,8 +66,7 @@ if [ "$JUDGE_USE_VLLM" = "true" ]; then
   fi
 
   # judge vLLM 서버 시작
-  vllm serve \
-    --model "$JUDGE_MODEL_DIR" \
+  vllm serve "$JUDGE_MODEL_DIR" \
     --served-model-name "$JUDGE_MODEL_ID" \
     --api-key EMPTY \
     --port "$VLLM_PORT" \
@@ -114,7 +113,7 @@ for MODEL_ID in "${EVAL_MODELS[@]}"; do
     continue
   fi
   echo "  채점: $MODEL_ID"
-  python -m mtbench_repro.cli judge-single \
+  python3 -m mtbench_repro.cli judge-single \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
     --output-dir "$JUDGMENTS_DIR" \
@@ -139,7 +138,7 @@ for ((i=0; i<${#EVAL_MODELS[@]}; i++)); do
       continue
     fi
     echo "  비교: $MODEL_A vs $MODEL_B"
-    python -m mtbench_repro.cli judge-pairwise \
+    python3 -m mtbench_repro.cli judge-pairwise \
       --questions "$QUESTIONS" \
       --answers-dir "$ANSWERS_DIR" \
       --output-dir "$JUDGMENTS_DIR" \
@@ -159,7 +158,7 @@ for MODEL_ID in "${EVAL_MODELS[@]}"; do
   ANSWER_FILE="$ANSWERS_DIR/${MODEL_ID}.jsonl"
   [ -f "$ANSWER_FILE" ] || continue
   echo "  reference 채점: $MODEL_ID"
-  python -m mtbench_repro.cli judge-reference \
+  python3 -m mtbench_repro.cli judge-reference \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
     --output-dir "$JUDGMENTS_DIR" \
@@ -174,7 +173,7 @@ done
 # ── Step 4: 집계 ──────────────────────────────────────────────────────────
 echo ""
 echo "[Step 4] 집계 및 추이 분석..."
-python -m mtbench_repro.cli aggregate \
+python3 -m mtbench_repro.cli aggregate \
   --judgments-dir "$JUDGMENTS_DIR" \
   --output-csv "$OUTPUT_CSV"
 

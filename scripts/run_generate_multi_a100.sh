@@ -79,8 +79,7 @@ for ENTRY in "${MODEL_LIST[@]}"; do
   fi
 
   # vLLM 서버 시작
-  vllm serve \
-    --model "$MODEL_DIR" \
+  vllm serve "$MODEL_DIR" \
     --served-model-name "$MODEL_ID" \
     --api-key EMPTY \
     --port "$VLLM_PORT" \
@@ -106,7 +105,7 @@ for ENTRY in "${MODEL_LIST[@]}"; do
   echo "[OK] 서버 준비 완료 (${WAITED}s)"
 
   # 답변 생성
-  python -m mtbench_repro.cli generate \
+  python3 -m mtbench_repro.cli generate \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
     --model-id "$MODEL_ID" \
