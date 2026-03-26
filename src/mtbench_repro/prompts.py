@@ -218,6 +218,82 @@ def build_multiturn_pairwise_prompt(
 
 
 # ===========================================================================
+# Reference-guided multi-turn pairwise (Figure 8 × Figure 9 결합)
+# ===========================================================================
+
+def build_multiturn_pairwise_reference_prompt(
+    turns: List[str],
+    answers_a: List[str],
+    answers_b: List[str],
+    references: List[str],
+) -> List[Dict[str, str]]:
+    """
+    Multi-turn reference-guided pairwise 프롬프트 (Figure 8 + Figure 9 결합).
+
+    Figure 8(reference-guided)과 Figure 9(multi-turn)를 결합:
+    - reference answer(1st/2nd turn 모두)를 judge에게 제공
+    - 두 모델의 전체 2-turn 대화를 하나의 프롬프트에 담음
+    - judge가 reference 기준으로 두 모델의 정확성을 전체 대화 맥락에서 비교
+
+    기존 단순화 방식(1st turn만, single-turn 포맷) 대비 차이:
+    - 2nd turn 답변까지 함께 제공해 judge가 대화 전체를 평가
+    - 2nd turn reference가 있으면 함께 제공 (없어도 동작)
+
+    Args:
+        turns: [1st_turn_question, 2nd_turn_question]
+        answers_a: [1st_answer_A, 2nd_answer_A]
+        answers_b: [1st_answer_B, 2nd_answer_B]
+        references: [1st_reference] 또는 [1st_reference, 2nd_reference]
+
+    Returns:
+        messages 리스트
+    """
+    assert len(turns) == 2 and len(answers_a) == 2 and len(answers_b) == 2
+    assert len(references) >= 1, "reference가 최소 1개 필요합니다."
+
+    # Reference block — Figure 10의 표현 방식 준용, 2nd turn reference는 선택적
+    ref_turn1 = (
+        f"### User:\n{turns[0]}\n"
+        f"### Reference answer:\n{references[0]}"
+    )
+    ref_turn2 = (
+        f"### User:\n{turns[1]}\n"
+        f"### Reference answer:\n{references[1]}"
+        if len(references) >= 2
+        else f"### User:\n{turns[1]}"
+    )
+    ref_block = (
+        f"<|The Start of Reference Answer|>\n"
+        f"{ref_turn1}\n"
+        f"{ref_turn2}\n"
+        f"<|The End of Reference Answer|>"
+    )
+
+    # 두 모델의 전체 대화 — Figure 9 방식
+    conv_a = (
+        f"<|The Start of Assistant A's Conversation with User|>\n"
+        f"### User:\n{turns[0]}\n"
+        f"### Assistant A:\n{answers_a[0]}\n"
+        f"### User:\n{turns[1]}\n"
+        f"### Assistant A:\n{answers_a[1]}\n"
+        f"<|The End of Assistant A's Conversation with User|>"
+    )
+    conv_b = (
+        f"<|The Start of Assistant B's Conversation with User|>\n"
+        f"### User:\n{turns[0]}\n"
+        f"### Assistant B:\n{answers_b[0]}\n"
+        f"### User:\n{turns[1]}\n"
+        f"### Assistant B:\n{answers_b[1]}\n"
+        f"<|The End of Assistant B's Conversation with User|>"
+    )
+
+    return [
+        {"role": "system", "content": _SYSTEM_PAIRWISE_REFERENCE},
+        {"role": "user", "content": f"{ref_block}\n\n{conv_a}\n\n{conv_b}"},
+    ]
+
+
+# ===========================================================================
 # Single-answer grading 프롬프트 빌더 (Figure 6, 10)
 # ===========================================================================
 
@@ -286,12 +362,21 @@ def build_multiturn_single_prompt(
     assert len(turns) == 2 and len(answers) == 2
 
     if references is not None:
+        # turn1 reference는 항상 존재, turn2 reference는 없을 수도 있음
+        ref_turn1 = (
+            f"### User:\n{turns[0]}\n"
+            f"### Reference answer:\n{references[0]}"
+        )
+        ref_turn2 = (
+            f"### User:\n{turns[1]}\n"
+            f"### Reference answer:\n{references[1]}"
+            if len(references) >= 2
+            else f"### User:\n{turns[1]}"
+        )
         ref_block = (
             f"<|The Start of Reference Answer|>\n"
-            f"### User:\n{turns[0]}\n"
-            f"### Reference answer:\n{references[0]}\n"
-            f"### User:\n{turns[1]}\n"
-            f"### Reference answer:\n{references[1]}\n"
+            f"{ref_turn1}\n"
+            f"{ref_turn2}\n"
             f"<|The End of Reference Answer|>\n\n"
         )
         system = _SYSTEM_SINGLE_REFERENCE

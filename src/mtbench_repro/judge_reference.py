@@ -36,8 +36,8 @@ from mtbench_repro.io_utils import (
     load_questions,
 )
 from mtbench_repro.prompts import (
+    build_multiturn_pairwise_reference_prompt,
     build_multiturn_single_prompt,
-    build_pairwise_prompt,
     parse_pairwise_verdict,
     parse_single_score,
     resolve_pairwise_winner,
@@ -148,18 +148,13 @@ def judge_pairwise_with_reference(
     """
     Reference answer가 있는 질문에 대해 reference-guided pairwise 판정.
 
-    Figure 8 프롬프트 사용:
-    - [reference] + [answer_a] + [answer_b]를 모두 포함.
-    - judge가 reference를 기준으로 두 답변의 정확성을 비교.
+    Figure 8(reference-guided) + Figure 9(multi-turn)를 결합한 프롬프트 사용:
+    - reference answer와 두 모델의 전체 2-turn 대화를 하나의 프롬프트에 담음.
+    - judge가 reference를 기준으로 전체 대화 맥락에서 정확성을 비교.
+    - 2nd turn reference가 있으면 함께 제공하고, 없어도 동작함.
 
-    단, pairwise도 position bias 완화를 위해 swap 수행:
-    - 논문 Section 3.4: reference-guided에서도 swap을 권장.
-    - conservative verdict: 두 순서 모두 일치할 때만 winner 선언.
-
-    1st turn의 reference만 제공 (단순화):
-    - 논문에서 reference-guided는 주로 1st turn 기준.
-    - 2nd turn까지 reference 제공하려면 build_pairwise_prompt를
-      turn별로 두 번 호출하는 것으로 확장 가능.
+    position bias 완화를 위해 AB/BA swap 수행:
+    - 논문 Section 3.4 conservative approach: 두 순서 모두 일치할 때만 winner 선언.
 
     Args:
         question: reference 필드가 있는 MTBenchQuestion
@@ -178,14 +173,14 @@ def judge_pairwise_with_reference(
     turns_q = question.turns
     turns_a = answer_a.get_turns()
     turns_b = answer_b.get_turns()
-    reference_text = question.reference[0]  # 1st turn reference 사용
+    references = question.reference  # 가용한 모든 reference 사용
 
-    # ── AB 순서 (Figure 8) ──
-    msgs_ab = build_pairwise_prompt(
-        question=turns_q[0],
-        answer_a=turns_a[0],
-        answer_b=turns_b[0],
-        reference=reference_text,
+    # ── AB 순서 (Figure 8 + Figure 9 결합) ──
+    msgs_ab = build_multiturn_pairwise_reference_prompt(
+        turns=turns_q,
+        answers_a=turns_a,
+        answers_b=turns_b,
+        references=references,
     )
     raw_ab = judge_client.chat(
         messages=msgs_ab,
@@ -196,11 +191,11 @@ def judge_pairwise_with_reference(
     verdict_ab = parse_pairwise_verdict(raw_ab)
 
     # ── BA 순서 (swap) ──
-    msgs_ba = build_pairwise_prompt(
-        question=turns_q[0],
-        answer_a=turns_b[0],  # B를 A 자리에
-        answer_b=turns_a[0],  # A를 B 자리에
-        reference=reference_text,
+    msgs_ba = build_multiturn_pairwise_reference_prompt(
+        turns=turns_q,
+        answers_a=turns_b,   # B를 A 자리에
+        answers_b=turns_a,   # A를 B 자리에
+        references=references,
     )
     raw_ba = judge_client.chat(
         messages=msgs_ba,
@@ -227,7 +222,7 @@ def judge_pairwise_with_reference(
         judgment_ba=raw_ba,
         winner_ab=verdict_ab,
         winner_ba=verdict_ba,
-        turn=1,            # reference-guided는 1st turn 기준
+        turn=2,            # multi-turn: 2nd turn 기준
         category=question.category,
         tstamp=time.time(),
     )
