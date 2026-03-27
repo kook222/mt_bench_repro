@@ -140,20 +140,20 @@ hf download upstage/SOLAR-10.7B-Instruct-v1.0 --local-dir $HOME/models/SOLAR-10.
 hf download mistralai/Mistral-7B-Instruct-v0.3 --local-dir $HOME/models/Mistral-7B-Instruct-v0.3
 hf download Qwen/Qwen2.5-14B-Instruct --local-dir $HOME/models/Qwen2.5-14B-Instruct
 
-# 3개 모델 답변 생성 job 제출
+# 6개 모델 답변 생성 job 제출 (출력은 /tmp 에 써야 함 — pod 내 $HOME 쓰기 권한 없음)
 cd $HOME
 python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "<pod-name-gen>" \
-  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_generate_multi_a100.sh > run_gen.out 2>&1"
-tail -f $HOME/run_gen.out
+  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_generate_multi_a100.sh > /tmp/run_gen.out 2>&1"
+kubectl logs -f <pod-name-gen>   # 실시간 로그 확인 권장
 
-# 생성 완료 확인 (answers/에 .jsonl 3개) → pod 삭제
+# 생성 완료 확인 (answers/에 .jsonl 6개) → pod 삭제
 ls -lh $HOME/MT_BENCH_REPRO/data/answers/
 kubectl delete pod <pod-name-gen>
 
 # Qwen2.5-14B judge + 집계 job 제출
 python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "<pod-name-judge>" \
-  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_judge_multi_a100.sh > run_judge.out 2>&1"
-tail -f $HOME/run_judge.out
+  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_judge_multi_a100.sh > /tmp/run_judge.out 2>&1"
+kubectl logs -f <pod-name-judge>
 
 # 완료 후 결과 확인 → pod 삭제 → git push
 cat $HOME/MT_BENCH_REPRO/data/results_multi.csv
