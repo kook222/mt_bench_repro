@@ -158,6 +158,14 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 > Self-judge 특성상 math/coding 점수가 과대평가됨. Phase 2 (외부 judge) 결과와 비교 예정.
 
+### Phase 2 — 6-model comparison (진행 중)
+
+| 단계 | 상태 | 비고 |
+|------|------|------|
+| 모델 다운로드 (6개 + judge) | ✅ 완료 | A100 서버 `/home/clink-seunghyun/models/` |
+| 답변 생성 (`run_generate_multi_a100.sh`) | ✅ 완료 | 6모델 × 80문항 = 480개 답변 |
+| Judge + 집계 (`run_judge_multi_a100.sh`) | ⏳ 예정 | Qwen2.5-14B 외부 judge, ~4-5시간 소요 |
+
 ---
 
 ## 논문-코드 대응
