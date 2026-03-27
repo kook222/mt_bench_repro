@@ -47,11 +47,11 @@ JUDGE_MODEL_DIR="$MODEL_BASE_DIR/$JUDGE_MODEL_ID"
 # 평가할 모델 목록 (data/answers/ 에 파일이 있어야 함)
 EVAL_MODELS=(
   "SOLAR-10.7B-Instruct"
-  "Mistral-7B-Instruct-v0.3"
-  "Yi-1.5-9B-Chat"
-  "Phi-3.5-mini-Instruct"
   "gemma-2-9b-it"
+  "Yi-1.5-9B-Chat"
   "Zephyr-7B-beta"
+  "Mistral-7B-Instruct-v0.3"
+  "Phi-3.5-mini-Instruct"
 )
 
 echo "=============================="

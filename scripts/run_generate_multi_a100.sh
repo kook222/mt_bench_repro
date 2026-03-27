@@ -44,11 +44,11 @@ echo "[Init] 완료."
 # served-model-name은 답변 파일명과 CLI --model-id에 그대로 쓰인다.
 MODEL_LIST=(
   "upstage/SOLAR-10.7B-Instruct-v1.0:SOLAR-10.7B-Instruct"
-  "mistralai/Mistral-7B-Instruct-v0.3:Mistral-7B-Instruct-v0.3"
-  "01-ai/Yi-1.5-9B-Chat:Yi-1.5-9B-Chat"
-  "microsoft/Phi-3.5-mini-instruct:Phi-3.5-mini-Instruct"
   "google/gemma-2-9b-it:gemma-2-9b-it"
+  "01-ai/Yi-1.5-9B-Chat:Yi-1.5-9B-Chat"
   "HuggingFaceH4/zephyr-7b-beta:Zephyr-7B-beta"
+  "mistralai/Mistral-7B-Instruct-v0.3:Mistral-7B-Instruct-v0.3"
+  "microsoft/Phi-3.5-mini-instruct:Phi-3.5-mini-Instruct"
 )
 
 echo "=============================="
