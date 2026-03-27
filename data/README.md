@@ -13,7 +13,7 @@ data/
 │
 ├── answers/                          # 각 모델의 답변
 │   ├── Qwen2.5-7B-Instruct.jsonl
-│   ├── Llama-3.1-8B-Instruct.jsonl
+│   ├── SOLAR-10.7B-Instruct.jsonl
 │   └── Mistral-7B-Instruct-v0.3.jsonl
 │
 ├── judgments/                        # judge 채점 결과
@@ -24,7 +24,7 @@ data/
 │   │   ├── Qwen2.5-7B-Instruct.jsonl
 │   │   └── ...
 │   └── pairwise/                     # 모델 간 비교 (AB/BA swap)
-│       ├── Qwen2.5-7B-Instruct_vs_Llama-3.1-8B-Instruct.jsonl
+│       ├── Qwen2.5-7B-Instruct_vs_SOLAR-10.7B-Instruct.jsonl
 │       └── ...
 │
 ├── results.csv                       # Phase 1 단일 모델 집계 결과
@@ -67,4 +67,4 @@ data/
 | 날짜 | Phase | 모델 | judge | 비고 |
 |------|-------|------|-------|------|
 | 2026-03-25 | Phase 1 | Qwen2.5-7B-Instruct | Qwen2.5-7B (self) | 파이프라인 검증용 |
-| - | Phase 2 | Qwen2.5-7B + Llama-3.1-8B + Mistral-7B | Qwen2.5-14B | 다중 모델 비교 예정 |
+| - | Phase 2 | Qwen2.5-7B + SOLAR-10.7B + Mistral-7B | Qwen2.5-14B | 다중 모델 비교 예정 |

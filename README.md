@@ -13,7 +13,7 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 | 구분 | 모델 | 파라미터 | 논문 내 위치 유사 |
 |------|------|---------|----------------|
 | 평가 대상 | Qwen2.5-7B-Instruct | 7B | 상위권 |
-| 평가 대상 | Llama-3.1-8B-Instruct | 8B | 상위권 |
+| 평가 대상 | SOLAR-10.7B-Instruct | 10.7B | 상위권 |
 | 평가 대상 | Mistral-7B-Instruct-v0.3 | 7B | 중위권 |
 | 평가 대상 | Zephyr-7B-beta | 7B | 중위권 |
 | 평가 대상 | Yi-1.5-9B-Chat | 9B | 중위권 |
@@ -102,7 +102,7 @@ python -m mtbench_repro.cli judge-pairwise \
   --answers-dir data/answers/ \
   --output-dir data/judgments/ \
   --model-a Qwen2.5-7B-Instruct \
-  --model-b Llama-3.1-8B-Instruct \
+  --model-b SOLAR-10.7B-Instruct \
   --judge-model Qwen2.5-14B-Instruct \
   --openai-base-url http://localhost:8000/v1 \
   --openai-api-key EMPTY
