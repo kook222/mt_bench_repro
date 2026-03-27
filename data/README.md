@@ -67,4 +67,4 @@ data/
 | 날짜 | Phase | 모델 | judge | 비고 |
 |------|-------|------|-------|------|
 | 2026-03-25 | Phase 1 | Qwen2.5-7B-Instruct | Qwen2.5-7B (self) | 파이프라인 검증용 |
-| - | Phase 2 | SOLAR-10.7B + Mistral-7B + Yi-1.5-9B + Phi-3.5-mini + gemma-2-9b + Zephyr-7B | Qwen2.5-14B | 다중 모델 비교 예정 |
+| 2026-03-27 | Phase 2 (답변 생성 완료) | SOLAR-10.7B + gemma-2-9b + Yi-1.5-9B + Zephyr-7B + Mistral-7B + Phi-3.5-mini | Qwen2.5-14B | judge ⏳ 예정 |
