@@ -24,8 +24,9 @@
 set -e
 
 # ── 경로 및 설정 ──
-HOME_DIR="${HOME}"
-PROJECT_DIR="$HOME_DIR/MT_BENCH_REPRO"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+HOME_DIR="$(dirname "$PROJECT_DIR")"
 MODEL_DIR="$HOME_DIR/models/Qwen2.5-7B-Instruct"
 MODEL_ID="Qwen2.5-7B-Instruct"
 JUDGE_MODEL="gpt-4"
@@ -36,6 +37,13 @@ CSV_OUT="$PROJECT_DIR/data/results.csv"
 VLLM_PORT=8000
 VLLM_LOG="$HOME_DIR/vllm_server.log"
 
+export HOME="/tmp"
+export LOGNAME="$(whoami)"
+export USER="$(whoami)"
+export PIP_CACHE_DIR="/tmp/pip_cache"
+export HF_HOME="/tmp/hf_home"
+export TORCHINDUCTOR_CACHE_DIR="/tmp/torchinductor_cache"
+export TRITON_CACHE_DIR="/tmp/triton_cache"
 export PYTHONPATH="$PROJECT_DIR/src"
 
 echo "=============================="
@@ -73,11 +81,13 @@ echo "=============================="
 echo " Step 1: 답변 생성 (vLLM)"
 echo "=============================="
 
-pip install vllm openai --break-system-packages -q || true
+echo "[Init] 경량 의존성 설치..."
+pip install openai tabulate tqdm --target /tmp/site-extra -q
+export PYTHONPATH="/tmp/site-extra:$PROJECT_DIR/src"
+echo "[Init] 완료."
 
 echo "vLLM 서버 시작 (port=$VLLM_PORT)..."
-python -m vllm.entrypoints.openai.api_server \
-    --model "$MODEL_DIR" \
+vllm serve "$MODEL_DIR" \
     --served-model-name "$MODEL_ID" \
     --api-key EMPTY \
     --port "$VLLM_PORT" \
