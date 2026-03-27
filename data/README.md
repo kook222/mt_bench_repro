@@ -15,7 +15,7 @@ data/
 │   ├── Qwen2.5-7B-Instruct.jsonl     # ✅ Phase 1 완료
 │   ├── SOLAR-10.7B-Instruct.jsonl    # Phase 2 예정
 │   ├── Mistral-7B-Instruct-v0.3.jsonl
-│   ├── Zephyr-7B-beta.jsonl
+│   ├── gemma-2-9b-it.jsonl
 │   ├── Yi-1.5-9B-Chat.jsonl
 │   └── Phi-3.5-mini-Instruct.jsonl
 │
@@ -69,4 +69,4 @@ data/
 | 날짜 | Phase | 모델 | judge | 비고 |
 |------|-------|------|-------|------|
 | 2026-03-25 | Phase 1 | Qwen2.5-7B-Instruct | Qwen2.5-7B (self) | 파이프라인 검증용 |
-| - | Phase 2 | Qwen2.5-7B + SOLAR-10.7B + Mistral-7B + Zephyr-7B + Yi-1.5-9B + Phi-3.5-mini | Qwen2.5-14B | 다중 모델 비교 예정 |
+| - | Phase 2 | Qwen2.5-7B + SOLAR-10.7B + Mistral-7B + gemma-2-9b + Yi-1.5-9B + Phi-3.5-mini | Qwen2.5-14B | 다중 모델 비교 예정 |

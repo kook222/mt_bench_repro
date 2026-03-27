@@ -49,7 +49,7 @@ EVAL_MODELS=(
   "Qwen2.5-7B-Instruct"
   "SOLAR-10.7B-Instruct"
   "Mistral-7B-Instruct-v0.3"
-  "Zephyr-7B-beta"
+  "gemma-2-9b-it"
   "Yi-1.5-9B-Chat"
   "Phi-3.5-mini-Instruct"
 )

@@ -15,7 +15,7 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 | 평가 대상 | Qwen2.5-7B-Instruct | 7B | 상위권 |
 | 평가 대상 | SOLAR-10.7B-Instruct | 10.7B | 상위권 |
 | 평가 대상 | Mistral-7B-Instruct-v0.3 | 7B | 중위권 |
-| 평가 대상 | Zephyr-7B-beta | 7B | 중위권 |
+| 평가 대상 | gemma-2-9b-it | 9B | 중위권 |
 | 평가 대상 | Yi-1.5-9B-Chat | 9B | 중위권 |
 | 평가 대상 | Phi-3.5-mini-Instruct | 3.8B | 하위권 |
 | Judge | Qwen2.5-14B-Instruct | 14B | 외부 judge |

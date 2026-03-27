@@ -46,7 +46,7 @@ MODEL_LIST=(
   "Qwen/Qwen2.5-7B-Instruct:Qwen2.5-7B-Instruct"
   "upstage/SOLAR-10.7B-Instruct-v1.0:SOLAR-10.7B-Instruct"
   "mistralai/Mistral-7B-Instruct-v0.3:Mistral-7B-Instruct-v0.3"
-  "HuggingFaceH4/zephyr-7b-beta:Zephyr-7B-beta"
+  "google/gemma-2-9b-it:gemma-2-9b-it"
   "01-ai/Yi-1.5-9B-Chat:Yi-1.5-9B-Chat"
   "microsoft/Phi-3.5-mini-instruct:Phi-3.5-mini-Instruct"
 )
