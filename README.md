@@ -22,7 +22,7 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 
 - **Phase 1**: Qwen2.5-7B만 사용, self-judge (완료)
 - **Phase 2**: 6개 모델 비교, Qwen2.5-14B 외부 judge
-- **인프라**: A100 32GB × 4, 로컬 vLLM 서빙 (순차 실행)
+- **인프라**: A100 40GB, 로컬 vLLM 서빙 (순차 실행)
 
 ---
 
