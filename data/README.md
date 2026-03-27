@@ -12,20 +12,18 @@ data/
 ├── mt_bench_questions_sample.jsonl   # 샘플 3문항 (로컬 mock 테스트용)
 │
 ├── answers/                          # 각 모델의 답변 (Phase 2 완료 시)
-│   ├── Qwen2.5-7B-Instruct.jsonl     # ✅ Phase 1 완료
 │   ├── SOLAR-10.7B-Instruct.jsonl    # Phase 2 예정
 │   ├── Mistral-7B-Instruct-v0.3.jsonl
-│   ├── gemma-2-9b-it.jsonl
 │   ├── Yi-1.5-9B-Chat.jsonl
-│   └── Phi-3.5-mini-Instruct.jsonl
+│   ├── Phi-3.5-mini-Instruct.jsonl
+│   ├── gemma-2-9b-it.jsonl
+│   └── Zephyr-7B-beta.jsonl
 │
 ├── judgments/                        # judge 채점 결과
 │   ├── single_grade/                 # 단순 점수 채점 (1~10점)
-│   │   ├── Qwen2.5-7B-Instruct.jsonl # ✅ Phase 1 완료
-│   │   └── ...
+│   │   └── ...                       # Phase 2 예정
 │   ├── single_grade_ref/             # 정답 기반 채점 (math/reasoning/coding)
-│   │   ├── Qwen2.5-7B-Instruct.jsonl # ✅ Phase 1 완료
-│   │   └── ...
+│   │   └── ...                       # Phase 2 예정
 │   └── pairwise/                     # 모델 간 비교 (AB/BA swap)
 │       └── ...                       # Phase 2 예정
 │
@@ -69,4 +67,4 @@ data/
 | 날짜 | Phase | 모델 | judge | 비고 |
 |------|-------|------|-------|------|
 | 2026-03-25 | Phase 1 | Qwen2.5-7B-Instruct | Qwen2.5-7B (self) | 파이프라인 검증용 |
-| - | Phase 2 | Qwen2.5-7B + SOLAR-10.7B + Mistral-7B + gemma-2-9b + Yi-1.5-9B + Phi-3.5-mini | Qwen2.5-14B | 다중 모델 비교 예정 |
+| - | Phase 2 | SOLAR-10.7B + Mistral-7B + Yi-1.5-9B + Phi-3.5-mini + gemma-2-9b + Zephyr-7B | Qwen2.5-14B | 다중 모델 비교 예정 |
