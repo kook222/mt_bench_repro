@@ -136,7 +136,7 @@ cd $HOME/MT_BENCH_REPRO && git pull origin main
 
 # 모델 다운로드 (없는 경우)
 export PATH="$HOME/.local/bin:$PATH"
-hf download meta-llama/Llama-3.1-8B-Instruct --local-dir $HOME/models/Llama-3.1-8B-Instruct
+hf download upstage/SOLAR-10.7B-Instruct-v1.0 --local-dir $HOME/models/SOLAR-10.7B-Instruct
 hf download mistralai/Mistral-7B-Instruct-v0.3 --local-dir $HOME/models/Mistral-7B-Instruct-v0.3
 hf download Qwen/Qwen2.5-14B-Instruct --local-dir $HOME/models/Qwen2.5-14B-Instruct
 

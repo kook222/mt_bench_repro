@@ -44,7 +44,7 @@ echo "[Init] 완료."
 # served-model-name은 답변 파일명과 CLI --model-id에 그대로 쓰인다.
 MODEL_LIST=(
   "Qwen/Qwen2.5-7B-Instruct:Qwen2.5-7B-Instruct"
-  "meta-llama/Llama-3.1-8B-Instruct:Llama-3.1-8B-Instruct"
+  "upstage/SOLAR-10.7B-Instruct-v1.0:SOLAR-10.7B-Instruct"
   "mistralai/Mistral-7B-Instruct-v0.3:Mistral-7B-Instruct-v0.3"
   "HuggingFaceH4/zephyr-7b-beta:Zephyr-7B-beta"
   "01-ai/Yi-1.5-9B-Chat:Yi-1.5-9B-Chat"
