@@ -128,7 +128,30 @@ import schemas                           # NG
 - pod 완료/에러 후 반드시 `kubectl delete pod <이름>`
 - 동시에 여러 pod 실행 자제 (공유 자원)
 
-### Phase 2 실행 순서
+### ⏭️ 다음 작업 (Phase 2 judge — 내일 실행)
+
+답변 생성 ✅ 완료. 바로 judge job 제출하면 됨.
+
+```bash
+# A100 서버 접속 후
+cd /home/clink-seunghyun && git pull origin main
+
+python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "clink-seunghyun-judge" \
+  -c "cd /home/clink-seunghyun && bash MT_BENCH_REPRO/scripts/run_judge_multi_a100.sh"
+kubectl logs -f clink-seunghyun-judge
+```
+
+완료 후:
+```bash
+cat /home/clink-seunghyun/MT_BENCH_REPRO/data/results_multi.csv
+kubectl delete pod clink-seunghyun-judge
+cd /home/clink-seunghyun/MT_BENCH_REPRO
+git add data/ && git commit -m "feat: add Phase 2 results (6-model, Qwen14B judge)" && git push origin main
+```
+
+---
+
+### Phase 2 실행 순서 (전체)
 
 ```bash
 # 서버 접속 후 최신 코드 pull
