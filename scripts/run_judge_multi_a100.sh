@@ -73,7 +73,7 @@ if [ "$JUDGE_USE_VLLM" = "true" ]; then
     --served-model-name "$JUDGE_MODEL_ID" \
     --api-key EMPTY \
     --port "$VLLM_PORT" \
-    --max-model-len 4096 \
+    --max-model-len 8192 \
     --dtype auto \
     --gpu-memory-utilization 0.90 \
     > "$VLLM_LOG" 2>&1 &
