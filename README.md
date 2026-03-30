@@ -25,9 +25,9 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 | 평가 대상 | Zephyr-7B-beta | 7B | 7위 (7.04) |
 | Judge | Qwen2.5-14B-Instruct | 14B | — |
 
-- **Phase 1**: Qwen2.5-7B만 사용, self-judge (완료)
-- **Phase 2**: 7개 모델 비교, Qwen2.5-14B 외부 judge (완료)
-- **Phase 3**: Qwen2.5-7B → Llama-3.1-8B로 교체, Qwen2.5 judge 3종(14B/32B/72B) 스케일링 실험 (예정)
+- **Phase 1**: Qwen2.5-7B만 사용, self-judge (✅ 완료)
+- **Phase 2**: 7개 모델 비교, Qwen2.5-14B 외부 judge (✅ 완료)
+- **Phase 3**: Qwen2.5-7B → Llama-3.1-8B로 교체, Qwen2.5 judge 4종(7B/14B/32B/72B) 스케일링 실험 (🔧 코드 완료, 실행 대기)
 - **인프라**: A100 SXM4 40GB, 로컬 vLLM 서빙 (순차 실행)
 
 ---
@@ -140,13 +140,23 @@ bash scripts/run_generate_multi_a100.sh
 
 # Phase 2: Qwen2.5-14B judge + 집계
 bash scripts/run_judge_multi_a100.sh
+
+# Phase 3: Llama-3.1-8B 답변 생성 (Phase 2 6개 파일 재사용, 1개만 신규 생성)
+bash scripts/run_generate_phase3_a100.sh
+
+# Phase 3: judge 4종 순차 실행 (7B → 14B → 32B → 72B, 약 12~20시간)
+bash scripts/run_judge_phase3_a100.sh
+
+# Phase 3: 스케일링 커브 + 문항 수 민감도 분석 (로컬 실행)
+export PYTHONPATH=src
+python3 scripts/analyze_phase3.py
 ```
 
 k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 ---
 
-## Phase 3 계획 — Judge Scaling Law 실험 (예정)
+## Phase 3 — Judge Scaling Law 실험 (🔧 코드 완료, 실행 대기)
 
 **목표:** Judge 모델 크기에 따른 pairwise inconsistency율 변화를 측정해 "Judge Scaling Law" 도출.
 
@@ -171,10 +181,10 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 | Judge | 파라미터 | VRAM | 양자화 | 상태 |
 |-------|---------|------|--------|------|
-| Qwen2.5-7B-Instruct | 7B | ~14GB | fp16 | ⏳ 예정 |
+| Qwen2.5-7B-Instruct | 7B | ~14GB | fp16 | ⏳ 실행 대기 |
 | Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | ✅ 완료 (46.1%) |
-| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ⏳ 예정 |
-| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ⏳ 예정 |
+| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ⏳ 실행 대기 |
+| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ⏳ 실행 대기 |
 
 > Phase 3에서 Qwen2.5-7B는 평가 대상에서 제외되므로 judge로 사용해도 self-judge 편향 없음.
 > 스케일링 커브: 7B → 14B → 32B → 72B
@@ -182,9 +192,32 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 ### 측정 지표
 
-- **Inconsistency율**: 각 judge 크기별 AB/BA 불일치 비율
-- **Single-answer 순위 상관**: 14B judge 기준 순위와의 Spearman ρ
-- **Hard/Easy 갭 변화**: judge 크기에 따라 카테고리별 점수 분포가 달라지는지
+- **Inconsistency율**: 각 judge 크기별 AB/BA 불일치 비율 → 스케일링 커브
+- **Cross-judge Spearman ρ**: judge 간 모델 순위 일관성
+- **문항 수 민감도**: 몇 문항으로 신뢰할 수 있는 순위가 수렴하는가
+
+### 문항 수 민감도 — 사전 분석 결과 (Phase 2 데이터 기반)
+
+`analyze_phase3.py`의 서브샘플링 분석을 Phase 2 데이터(7개 모델, 80문항)로 실행한 결과:
+
+| N문항 | 평균 Spearman ρ | 최소 | 최대 |
+|------|---------------|------|------|
+| 10 | 0.777 | 0.321 | 0.964 |
+| 20 | 0.839 | 0.464 | 1.000 |
+| 40 | 0.857 | 0.607 | 1.000 |
+| 60 | 0.952 | 0.643 | 1.000 |
+| 80 | 1.000 | — | — |
+
+> **60문항(ρ=0.95+)부터 안정적.** 10문항은 순위 불일치 위험 있음(min ρ=0.32).
+> MT-Bench 80문항은 신뢰성을 위한 적정 규모임을 실증.
+
+### Phase 3 스크립트 구조
+
+| 스크립트 | 역할 |
+|---------|------|
+| `scripts/run_generate_phase3_a100.sh` | Llama-3.1-8B 답변 생성 (1개, 나머지 Phase 2 재사용) |
+| `scripts/run_judge_phase3_a100.sh` | judge 4종 순차 실행, `data/judgments_phase3/judge_XB/` 경로 분리 |
+| `scripts/analyze_phase3.py` | 스케일링 커브 + 문항 수 민감도 통합 분석, CSV 출력 |
 
 ---
 
