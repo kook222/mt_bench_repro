@@ -171,11 +171,13 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 | Judge | 파라미터 | VRAM | 양자화 | 상태 |
 |-------|---------|------|--------|------|
+| Qwen2.5-7B-Instruct | 7B | ~14GB | fp16 | ⏳ 예정 |
 | Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | ✅ 완료 (46.1%) |
 | Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ⏳ 예정 |
 | Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ⏳ 예정 |
 
-> 스케일링 커브: 14B → 32B → 72B
+> Phase 3에서 Qwen2.5-7B는 평가 대상에서 제외되므로 judge로 사용해도 self-judge 편향 없음.
+> 스케일링 커브: 7B → 14B → 32B → 72B
 > 72B AWQ는 40GB 한계에 근접 → `--gpu-memory-utilization 0.85` 사용.
 
 ### 측정 지표

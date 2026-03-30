@@ -70,14 +70,16 @@ inconsistency율이 높을수록:
 
 | Judge | 파라미터 | VRAM | 양자화 | 예상 inconsistency | 상태 |
 |-------|---------|------|--------|-------------------|------|
+| Qwen2.5-7B-Instruct | 7B | ~14GB | fp16 | ~55% 예상 | ⏳ 예정 |
 | Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | **46.1% (측정됨)** | ✅ 완료 |
 | Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ~35% 예상 | ⏳ 예정 |
 | Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ~25% 예상 | ⏳ 예정 |
 
+> Phase 3에서 Qwen2.5-7B는 평가 대상에서 제외 → judge로 사용해도 self-judge 편향 없음.
 > HuggingFace: `Qwen/Qwen2.5-32B-Instruct-AWQ`, `Qwen/Qwen2.5-72B-Instruct-AWQ`
 > 72B AWQ는 40GB 한계에 근접 → `--gpu-memory-utilization 0.85` 사용.
 
-**스케일링 커브 포인트:** 14B → 32B → 72B
+**스케일링 커브 포인트:** 7B → 14B → 32B → 72B
 
 **기여점:** "Judge Scaling Law" — Qwen2.5 패밀리 내 크기 증가에 따른 inconsistency율 감소 곡선. 어느 크기부터 신뢰도가 수렴하는지 실증.
 
