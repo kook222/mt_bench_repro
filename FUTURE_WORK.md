@@ -51,25 +51,29 @@ inconsistency율이 높을수록:
 
 **연구 질문:** Judge 모델 크기가 커질수록 inconsistency율이 어떻게 감소하는가? 신뢰할 수 있는 판정을 위한 최소 judge 크기는 어디인가?
 
-**실험 설계:**
+**인프라:** NVIDIA A100 SXM4 40GB (로컬 vLLM)
 
-| Judge 모델 | 파라미터 | 예상 inconsistency | 비용 |
-|-----------|---------|-------------------|------|
-| Qwen2.5-7B | 7B | ~60% 이상 예상 | 무료 (서버에 있음) |
-| Qwen2.5-14B | 14B | **46.1% (측정됨)** | 무료 |
-| GPT-4o-mini | — | ~20% 예상 | API 소액 |
-| GPT-4o | — | ~10% 예상 | API |
+**모델 선정 기준:**
+- eval 셋(Qwen2.5-7B 포함)과 겹치지 않아야 self-judge 편향 방지
+- A100 40GB에 올라가야 함 (32B 이상은 AWQ 4-bit 양자화 필요)
+- 같은 패밀리(Qwen2.5) 우선 → 아키텍처 변수 제거, 순수 크기 효과만 측정
 
-**기여점:** "Judge Scaling Law" — judge 크기와 inconsistency율의 관계를 실증적으로 도출. 어느 크기부터 GPT-4급 신뢰도에 수렴하는지 보여주는 곡선.
+**확정 라인업:**
 
-**실행 방법:**
-```bash
-# Qwen2.5-7B judge (이미 서버에 있음)
-JUDGE_MODEL_ID=Qwen2.5-7B-Instruct bash scripts/run_judge_multi_a100.sh
+| Judge 모델 | 파라미터 | VRAM | 양자화 | 예상 inconsistency |
+|-----------|---------|------|--------|-------------------|
+| Llama-3.1-8B-Instruct | 8B | ~16GB | fp16 | ~55% 예상 |
+| **Qwen2.5-14B-Instruct** | **14B** | **~28GB** | **fp16** | **46.1% (측정됨)** |
+| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ~35% 예상 |
+| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ~25% 예상 |
 
-# GPT-4o-mini judge
-JUDGE_USE_VLLM=false OPENAI_API_KEY=... bash scripts/run_judge_multi_a100.sh
-```
+> Llama-3.1-8B: eval 셋에 없는 소형 judge 기준점.
+> Qwen2.5-32B/72B AWQ: HuggingFace `Qwen/Qwen2.5-32B-Instruct-AWQ`, `Qwen/Qwen2.5-72B-Instruct-AWQ`.
+> 72B AWQ는 40GB에서 아슬아슬 → `--gpu-memory-utilization 0.85` 권장.
+
+**스케일링 커브 포인트:** 8B → 14B → 32B → 72B
+
+**기여점:** "Judge Scaling Law" — judge 크기와 inconsistency율의 관계를 실증적으로 도출. 어느 크기부터 신뢰도가 수렴하는지 보여주는 곡선.
 
 ---
 
