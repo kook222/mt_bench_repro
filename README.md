@@ -14,20 +14,42 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 
 논문(NeurIPS 2023)의 6개 모델 비교 구조를 재현. 로컬 실행 가능한 오픈소스 모델로 capability 스펙트럼 구성.
 
-| 구분 | 모델 | 파라미터 | 실제 결과 순위 |
-|------|------|---------|--------------|
-| 평가 대상 | Qwen2.5-7B-Instruct | 7B | 1위 (8.12) |
-| 평가 대상 | Phi-3.5-mini-Instruct | 3.8B | 2위 (8.09) |
-| 평가 대상 | gemma-2-9b-it | 9B | 3위 (8.03) |
-| 평가 대상 | Yi-1.5-9B-Chat | 9B | 4위 (7.97) |
-| 평가 대상 | Mistral-7B-Instruct-v0.3 | 7B | 5위 (7.49) |
-| 평가 대상 | SOLAR-10.7B-Instruct | 10.7B | 6위 (7.07) |
-| 평가 대상 | Zephyr-7B-beta | 7B | 7위 (7.04) |
-| Judge | Qwen2.5-14B-Instruct | 14B | — |
+### Phase 1 — 파이프라인 검증 (1개 모델)
 
-- **Phase 1**: Qwen2.5-7B 1개, self-judge (✅ 완료)
-- **Phase 2**: 6개 모델 single/pairwise/reference judge, Qwen2.5-14B 외부 judge (✅ 완료) — Qwen2.5-7B는 single 채점만, pairwise 비교 대상에서 누락
-- **Phase 3**: Qwen2.5-7B 제외 + Llama-3.1-8B 추가 → 7개 모델, Qwen2.5 judge 4종(7B/14B/32B/72B) 스케일링 실험 (🔧 코드 완료, 실행 중)
+| 모델 | 파라미터 | Judge | 결과 |
+|------|---------|-------|------|
+| Qwen2.5-7B-Instruct | 7B | Qwen2.5-7B (self) | overall 8.12 |
+
+### Phase 2 — 6개 모델 비교 (✅ 완료)
+
+| 모델 | 파라미터 | single | pairwise | Phase 2 순위 |
+|------|---------|--------|----------|-------------|
+| Qwen2.5-7B-Instruct | 7B | ✅ | ❌ 누락 | 1위 (8.12) |
+| Phi-3.5-mini-Instruct | 3.8B | ✅ | ✅ | 2위 (8.09) |
+| gemma-2-9b-it | 9B | ✅ | ✅ | 3위 (8.03) |
+| Yi-1.5-9B-Chat | 9B | ✅ | ✅ | 4위 (7.97) |
+| Mistral-7B-Instruct-v0.3 | 7B | ✅ | ✅ | 5위 (7.49) |
+| SOLAR-10.7B-Instruct | 10.7B | ✅ | ✅ | 6위 (7.07) |
+| Zephyr-7B-beta | 7B | ✅ | ✅ | 7위 (7.04) |
+| **Judge** | Qwen2.5-14B-Instruct | 14B | — |
+
+> Qwen2.5-7B는 답변 생성은 했으나 judge 스크립트 EVAL_MODELS에서 누락돼 pairwise 비교 불가.
+
+### Phase 3 — 7개 모델 + Judge 스케일링 (🔧 실행 중)
+
+| 변경 | 모델 | 파라미터 |
+|------|------|---------|
+| ❌ 제외 | Qwen2.5-7B-Instruct | 7B (judge와 동일 패밀리 → self-judge 편향) |
+| ✅ 추가 | Llama-3.1-8B-Instruct | 8B |
+| 유지 | Phi-3.5-mini-Instruct | 3.8B |
+| 유지 | gemma-2-9b-it | 9B |
+| 유지 | Yi-1.5-9B-Chat | 9B |
+| 유지 | Mistral-7B-Instruct-v0.3 | 7B |
+| 유지 | SOLAR-10.7B-Instruct | 10.7B |
+| 유지 | Zephyr-7B-beta | 7B |
+
+Judge: Qwen2.5 단일 패밀리 4종 (7B / 14B / 32B / 72B) 순차 실행
+
 - **인프라**: A100 SXM4 40GB, 로컬 vLLM 서빙 (순차 실행)
 
 ---
