@@ -11,21 +11,19 @@ data/
 ├── mt_bench_questions.jsonl          # 전체 80문항 (git 제외, 별도 다운로드)
 ├── mt_bench_questions_sample.jsonl   # 샘플 3문항 (로컬 mock 테스트용)
 │
-├── answers/                          # 각 모델의 답변 (Phase 2 완료 시)
-│   ├── SOLAR-10.7B-Instruct.jsonl    # Phase 2 예정
+├── answers/                          # 각 모델의 답변 (Phase 2 완료)
+│   ├── Qwen2.5-7B-Instruct.jsonl     # Phase 1
+│   ├── SOLAR-10.7B-Instruct.jsonl    # Phase 2
 │   ├── Mistral-7B-Instruct-v0.3.jsonl
 │   ├── Yi-1.5-9B-Chat.jsonl
 │   ├── Phi-3.5-mini-Instruct.jsonl
 │   ├── gemma-2-9b-it.jsonl
 │   └── Zephyr-7B-beta.jsonl
 │
-├── judgments/                        # judge 채점 결과
-│   ├── single_grade/                 # 단순 점수 채점 (1~10점)
-│   │   └── ...                       # Phase 2 예정
-│   ├── single_grade_ref/             # 정답 기반 채점 (math/reasoning/coding)
-│   │   └── ...                       # Phase 2 예정
-│   └── pairwise/                     # 모델 간 비교 (AB/BA swap)
-│       └── ...                       # Phase 2 예정
+├── judgments/                        # judge 채점 결과 (Phase 2 완료)
+│   ├── single_grade/                 # 단순 점수 채점 (1~10점) — 7개 모델 × 80문항
+│   ├── single_grade_ref/             # 정답 기반 채점 (math/reasoning/coding) — 7개 모델 × 29문항
+│   └── pairwise/                     # 모델 간 비교 (AB/BA swap) — 15쌍 × 80문항
 │
 ├── results.csv                       # Phase 1 단일 모델 집계 결과
 └── results_multi.csv                 # Phase 2 다중 모델 집계 결과
@@ -67,4 +65,5 @@ data/
 | 날짜 | Phase | 모델 | judge | 비고 |
 |------|-------|------|-------|------|
 | 2026-03-25 | Phase 1 | Qwen2.5-7B-Instruct | Qwen2.5-7B (self) | 파이프라인 검증용 |
-| 2026-03-27 | Phase 2 (답변 생성 완료) | SOLAR-10.7B + gemma-2-9b + Yi-1.5-9B + Zephyr-7B + Mistral-7B + Phi-3.5-mini | Qwen2.5-14B | judge ⏳ 예정 |
+| 2026-03-27 | Phase 2 답변 생성 | SOLAR-10.7B + gemma-2-9b + Yi-1.5-9B + Zephyr-7B + Mistral-7B + Phi-3.5-mini | — | 6모델 × 80문항 |
+| 2026-03-29~30 | Phase 2 judge 완료 | 위 6개 모델 + Qwen2.5-7B | Qwen2.5-14B | single/pairwise/reference 전 완료 |
