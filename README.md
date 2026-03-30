@@ -26,8 +26,9 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 | Judge | Qwen2.5-14B-Instruct | 14B | — |
 
 - **Phase 1**: Qwen2.5-7B만 사용, self-judge (완료)
-- **Phase 2**: 6개 모델 비교, Qwen2.5-14B 외부 judge
-- **인프라**: A100 40GB, 로컬 vLLM 서빙 (순차 실행)
+- **Phase 2**: 7개 모델 비교, Qwen2.5-14B 외부 judge (완료)
+- **Phase 3**: Qwen2.5-7B → Llama-3.1-8B로 교체, Qwen2.5 judge 3종(14B/32B/72B) 스케일링 실험 (예정)
+- **인프라**: A100 SXM4 40GB, 로컬 vLLM 서빙 (순차 실행)
 
 ---
 
@@ -142,6 +143,46 @@ bash scripts/run_judge_multi_a100.sh
 ```
 
 k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
+
+---
+
+## Phase 3 계획 — Judge Scaling Law 실험 (예정)
+
+**목표:** Judge 모델 크기에 따른 pairwise inconsistency율 변화를 측정해 "Judge Scaling Law" 도출.
+
+**설계 원칙:**
+- 평가 모델에서 Qwen2.5-7B 제외 → Llama-3.1-8B-Instruct로 교체 (self-judge 편향 제거)
+- Judge를 Qwen2.5 단일 패밀리로 통일 → 아키텍처 변수 제거, 순수 크기 효과만 측정
+
+### 평가 대상 모델 (7개, Phase 2에서 변경)
+
+| 변경 | 모델 | 파라미터 | 비고 |
+|------|------|---------|------|
+| ❌ 제외 | Qwen2.5-7B-Instruct | 7B | judge와 동일 패밀리 → self-judge 편향 |
+| ✅ 추가 | **Llama-3.1-8B-Instruct** | 8B | 이종 아키텍처, 편향 없음 |
+| 유지 | Phi-3.5-mini-Instruct | 3.8B | — |
+| 유지 | gemma-2-9b-it | 9B | — |
+| 유지 | Yi-1.5-9B-Chat | 9B | — |
+| 유지 | Mistral-7B-Instruct-v0.3 | 7B | — |
+| 유지 | SOLAR-10.7B-Instruct | 10.7B | — |
+| 유지 | Zephyr-7B-beta | 7B | — |
+
+### Judge 스케일링 라인업 (Qwen2.5 단일 패밀리)
+
+| Judge | 파라미터 | VRAM | 양자화 | 상태 |
+|-------|---------|------|--------|------|
+| Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | ✅ 완료 (46.1%) |
+| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ⏳ 예정 |
+| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ⏳ 예정 |
+
+> 스케일링 커브: 14B → 32B → 72B
+> 72B AWQ는 40GB 한계에 근접 → `--gpu-memory-utilization 0.85` 사용.
+
+### 측정 지표
+
+- **Inconsistency율**: 각 judge 크기별 AB/BA 불일치 비율
+- **Single-answer 순위 상관**: 14B judge 기준 순위와의 Spearman ρ
+- **Hard/Easy 갭 변화**: judge 크기에 따라 카테고리별 점수 분포가 달라지는지
 
 ---
 

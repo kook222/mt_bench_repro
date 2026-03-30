@@ -47,33 +47,39 @@ inconsistency율이 높을수록:
 
 ## 향후 연구 아이디어
 
-### 1순위: Judge 모델 크기 스케일링 실험
+### 1순위: Judge 모델 크기 스케일링 실험 (Phase 3)
 
 **연구 질문:** Judge 모델 크기가 커질수록 inconsistency율이 어떻게 감소하는가? 신뢰할 수 있는 판정을 위한 최소 judge 크기는 어디인가?
 
 **인프라:** NVIDIA A100 SXM4 40GB (로컬 vLLM)
 
-**모델 선정 기준:**
-- eval 셋(Qwen2.5-7B 포함)과 겹치지 않아야 self-judge 편향 방지
-- A100 40GB에 올라가야 함 (32B 이상은 AWQ 4-bit 양자화 필요)
-- 같은 패밀리(Qwen2.5) 우선 → 아키텍처 변수 제거, 순수 크기 효과만 측정
+**설계 원칙:**
+- 평가 모델에서 Qwen2.5-7B 제외 → **Llama-3.1-8B-Instruct로 교체** (self-judge 편향 제거)
+- Judge를 **Qwen2.5 단일 패밀리**로 통일 → 아키텍처 변수 제거, 순수 크기 효과만 측정
+- 혼합 패밀리(Llama judge + Qwen judge)는 크기 효과와 아키텍처 효과가 혼재돼 해석 불가
 
-**확정 라인업:**
+**평가 대상 모델 (Phase 2에서 변경):**
 
-| Judge 모델 | 파라미터 | VRAM | 양자화 | 예상 inconsistency |
-|-----------|---------|------|--------|-------------------|
-| Llama-3.1-8B-Instruct | 8B | ~16GB | fp16 | ~55% 예상 |
-| **Qwen2.5-14B-Instruct** | **14B** | **~28GB** | **fp16** | **46.1% (측정됨)** |
-| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ~35% 예상 |
-| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ~25% 예상 |
+| | 모델 | 이유 |
+|--|------|------|
+| ❌ 제외 | Qwen2.5-7B-Instruct | Qwen2.5 judge와 동일 패밀리 → self-judge 편향 |
+| ✅ 교체 | Llama-3.1-8B-Instruct | 이종 아키텍처, 편향 없음 |
+| 유지 | 나머지 6개 모델 | Phase 2와 동일 |
 
-> Llama-3.1-8B: eval 셋에 없는 소형 judge 기준점.
-> Qwen2.5-32B/72B AWQ: HuggingFace `Qwen/Qwen2.5-32B-Instruct-AWQ`, `Qwen/Qwen2.5-72B-Instruct-AWQ`.
-> 72B AWQ는 40GB에서 아슬아슬 → `--gpu-memory-utilization 0.85` 권장.
+**Judge 스케일링 라인업 (Qwen2.5 단일 패밀리):**
 
-**스케일링 커브 포인트:** 8B → 14B → 32B → 72B
+| Judge | 파라미터 | VRAM | 양자화 | 예상 inconsistency | 상태 |
+|-------|---------|------|--------|-------------------|------|
+| Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | **46.1% (측정됨)** | ✅ 완료 |
+| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ~35% 예상 | ⏳ 예정 |
+| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ~25% 예상 | ⏳ 예정 |
 
-**기여점:** "Judge Scaling Law" — judge 크기와 inconsistency율의 관계를 실증적으로 도출. 어느 크기부터 신뢰도가 수렴하는지 보여주는 곡선.
+> HuggingFace: `Qwen/Qwen2.5-32B-Instruct-AWQ`, `Qwen/Qwen2.5-72B-Instruct-AWQ`
+> 72B AWQ는 40GB 한계에 근접 → `--gpu-memory-utilization 0.85` 사용.
+
+**스케일링 커브 포인트:** 14B → 32B → 72B
+
+**기여점:** "Judge Scaling Law" — Qwen2.5 패밀리 내 크기 증가에 따른 inconsistency율 감소 곡선. 어느 크기부터 신뢰도가 수렴하는지 실증.
 
 ---
 
