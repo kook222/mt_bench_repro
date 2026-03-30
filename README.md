@@ -4,6 +4,10 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 
 목표는 exact score 일치가 아니라 **모델 서열과 카테고리별 성능 추이** 재현이다.
 
+> **문서 바로가기**
+> - [MT-Bench 카테고리 구조](CATEGORIES.md) — 8개 카테고리 설명, Hard/Easy 분류, 변별력 분석
+> - [향후 연구 방향](FUTURE_WORK.md) — Inconsistency 분석, Judge 크기 실험, 한국어 번역 등
+
 ---
 
 ## 사용 모델
