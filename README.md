@@ -10,15 +10,16 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 
 논문(NeurIPS 2023)의 6개 모델 비교 구조를 재현. 로컬 실행 가능한 오픈소스 모델로 capability 스펙트럼 구성.
 
-| 구분 | 모델 | 파라미터 | 논문 내 위치 유사 |
-|------|------|---------|----------------|
-| 평가 대상 | SOLAR-10.7B-Instruct | 10.7B | 상위권 |
-| 평가 대상 | gemma-2-9b-it | 9B | 중위권 |
-| 평가 대상 | Yi-1.5-9B-Chat | 9B | 중위권 |
-| 평가 대상 | Zephyr-7B-beta | 7B | 중위권 |
-| 평가 대상 | Mistral-7B-Instruct-v0.3 | 7B | 중위권 |
-| 평가 대상 | Phi-3.5-mini-Instruct | 3.8B | 하위권 |
-| Judge | Qwen2.5-14B-Instruct | 14B | 외부 judge |
+| 구분 | 모델 | 파라미터 | 실제 결과 순위 |
+|------|------|---------|--------------|
+| 평가 대상 | Qwen2.5-7B-Instruct | 7B | 1위 (8.12) |
+| 평가 대상 | Phi-3.5-mini-Instruct | 3.8B | 2위 (8.09) |
+| 평가 대상 | gemma-2-9b-it | 9B | 3위 (8.03) |
+| 평가 대상 | Yi-1.5-9B-Chat | 9B | 4위 (7.97) |
+| 평가 대상 | Mistral-7B-Instruct-v0.3 | 7B | 5위 (7.49) |
+| 평가 대상 | SOLAR-10.7B-Instruct | 10.7B | 6위 (7.07) |
+| 평가 대상 | Zephyr-7B-beta | 7B | 7위 (7.04) |
+| Judge | Qwen2.5-14B-Instruct | 14B | — |
 
 - **Phase 1**: Qwen2.5-7B만 사용, self-judge (완료)
 - **Phase 2**: 6개 모델 비교, Qwen2.5-14B 외부 judge
@@ -129,7 +130,7 @@ python -m mtbench_repro.cli aggregate \
 ### A100 서버에서 전체 파이프라인 실행
 
 ```bash
-# Phase 2: 3개 모델 답변 생성
+# Phase 2: 6개 모델 답변 생성
 bash scripts/run_generate_multi_a100.sh
 
 # Phase 2: Qwen2.5-14B judge + 집계
@@ -156,7 +157,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | humanities | 8.60 |
 | **overall** | **8.12** |
 
-> Self-judge 특성상 math/coding 점수가 과대평가됨. Phase 2 (외부 judge) 결과와 비교 예정.
+> Self-judge 특성상 math/coding 점수가 과대평가됨. Phase 2 외부 judge 결과(overall 8.12)와 동일하지만, 카테고리 분포가 다름 — self-judge는 자신이 잘하는 영역을 후하게 채점하는 경향이 있음.
 
 ### Phase 2 — 6-model comparison (✅ 완료)
 
@@ -200,7 +201,8 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | 6 | Zephyr-7B-beta | 15.2% | 244 |
 
 > Single-answer 순위와 Pairwise 순위 완벽히 일치 → 논문의 "두 채점 방식이 수렴한다" 주장 재현 ✅
-> Inconsistent율 46.1% (1200개 중 553개) — Qwen2.5-14B judge의 position bias 한계.
+>
+> **한계:** Inconsistent율 46.1% (1200개 중 553개) — GPT-4 judge 대비 Qwen2.5-14B의 position bias가 높아 AB/BA 판정이 자주 불일치함. 또한 Qwen2.5-7B-Instruct가 pairwise 비교 대상에서 누락돼 win rate 산출 불가.
 
 #### 논문 결과와 비교
 
@@ -210,6 +212,29 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | Hard/Easy 갭 패턴 | ✅ 상위 모델 갭 작음 | ✅ 동일하게 재현 |
 | Single↔Pairwise 수렴 | ✅ | ✅ 동일하게 재현 |
 | Inconsistent율 | ~20% 추정 | 46.1% (judge 모델 한계) |
+
+---
+
+## 결론
+
+### 재현 성공 여부
+
+| 논문의 주장 | 재현 결과 |
+|------------|----------|
+| Hard category(math/reasoning/coding)에서 모델 간 격차가 더 크다 | ✅ 상위 모델 gap ≈ 0, 하위 모델 gap +1.5 이상 |
+| Single-answer grading과 Pairwise 순위가 수렴한다 | ✅ 두 방법 순위 완벽히 일치 |
+| LLM-as-a-Judge로 모델 서열을 신뢰성 있게 식별할 수 있다 | ✅ 7개 모델 일관된 서열 확인 |
+| 모델 크기가 클수록 반드시 성능이 높지 않다 | ✅ SOLAR 10.7B < Phi-3.5-mini 3.8B |
+
+### 논문과 차이가 난 이유
+
+1. **Judge 모델 차이**: 논문은 GPT-4, 이번은 Qwen2.5-14B. 더 작은 judge는 position bias가 높아 pairwise inconsistent율이 46%까지 상승 (논문 대비 약 2배 추정).
+2. **모델 세대 차이**: 2023년 모델(GPT-4~LLaMA-13B) 대비 2026년 모델들은 전반적으로 성능이 높아 점수 범위가 1.08p에 불과 (논문: 6.38p). 변별력이 낮아졌음.
+3. **Qwen2.5-7B pairwise 누락**: 스크립트 EVAL_MODELS에서 빠져서 1위 모델의 win rate를 산출하지 못함.
+
+### 핵심 takeaway
+
+> 논문의 핵심 방법론(LLM-as-a-Judge, position bias 완화를 위한 AB/BA swap, reference-guided grading)은 2026년 오픈소스 모델 환경에서도 동일하게 작동한다. 단, judge 모델 품질이 결과 신뢰도에 직결되므로 가능하면 GPT-4급 judge 사용을 권장한다.
 
 ---
 
