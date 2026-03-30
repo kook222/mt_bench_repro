@@ -128,6 +128,67 @@ import schemas                           # NG
 - pod 완료/에러 후 반드시 `kubectl delete pod <이름>`
 - 동시에 여러 pod 실행 자제 (공유 자원)
 
+### Phase 3 코드 구조 및 대응
+
+Phase 3는 기존 코드를 수정하지 않고 **스크립트 3개만 추가**해 구현했다.
+기존 CLI(`judge-single`, `judge-pairwise`, `judge-reference`, `aggregate`)를 그대로 재사용.
+
+| 파일 | 역할 | 핵심 설계 |
+|------|------|---------|
+| `scripts/run_generate_phase3_a100.sh` | Llama-3.1-8B-Instruct 답변 생성 (1개) | 나머지 6개 모델은 Phase 2 파일 재사용, 새 모델만 vLLM 올려서 generate |
+| `scripts/run_judge_phase3_a100.sh` | judge 4종 순차 실행 | judge마다 vLLM 시작→전 모델 judge→종료 반복; 32B/72B는 `--quantization awq`; 출력 경로를 `data/judgments_phase3/judge_7B/` 등으로 분리 |
+| `scripts/analyze_phase3.py` | 스케일링 커브 + 문항 수 민감도 통합 분석 | 기존 `aggregate.py` 함수 재사용; 새로 추가한 것은 `compute_inconsistency_rate()`, `spearman_rho()`, `run_qsize_analysis()` 3개 함수 |
+
+**Phase 3 신규 함수 대응:**
+
+| 함수 | 위치 | 설명 |
+|------|------|------|
+| `compute_inconsistency_rate(judgments_dir)` | `analyze_phase3.py` | pairwise/*.jsonl에서 winner=="inconsistent" 비율 계산 |
+| `spearman_rho(scores_a, scores_b)` | `analyze_phase3.py` | 두 모델 점수 dict의 Spearman ρ (scipy 불필요, 직접 구현) |
+| `compute_overall_scores(judgments_dir)` | `analyze_phase3.py` | single_grade/*.jsonl에서 모델별 overall score 계산 |
+| `load_per_question_scores(judgments_dir, min_questions=60)` | `analyze_phase3.py` | 문항별 점수 로드; 60문항 미만(mock/sample) 자동 제외 |
+| `run_scaling_analysis(phase3_dir, output_csv)` | `analyze_phase3.py` | judge 4종 비교: inconsistency율 테이블 + cross-judge Spearman ρ 행렬 |
+| `run_qsize_analysis(phase2_dir, output_csv, sizes, n_trials)` | `analyze_phase3.py` | Phase 2 데이터 서브샘플링 → N문항 Spearman ρ 곡선 (추가 실험 불필요) |
+
+**데이터 경로 구조:**
+```
+data/
+├── answers/                         # Phase 2 + Llama-3.1-8B (Phase 3 신규)
+├── judgments_phase3/
+│   ├── judge_7B/  single_grade/ pairwise/ single_grade_ref/
+│   ├── judge_14B/ ...
+│   ├── judge_32B/ ...
+│   └── judge_72B/ ...
+├── results_phase3_judge_7B.csv      # judge별 집계
+├── results_phase3_judge_14B.csv
+├── results_phase3_judge_32B.csv
+├── results_phase3_judge_72B.csv
+├── results_phase3_scaling.csv       # 스케일링 커브 (inconsistency율 × judge 크기)
+└── results_phase3_qsize.csv         # 문항 수 민감도 (Spearman ρ × N문항)
+```
+
+**Phase 3 실행 순서:**
+```bash
+cd $HOME
+# Step 1: Llama 답변 생성
+python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "<pod-gen-p3>" \
+  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_generate_phase3_a100.sh > /tmp/run_gen_p3.out 2>&1"
+kubectl logs -f <pod-gen-p3>
+kubectl delete pod <pod-gen-p3>
+
+# Step 2: judge 4종 순차 실행 (약 12~20시간)
+python3 k8s_create_job.py -i vllm/vllm-openai:v0.6.6 -g 1 -n "<pod-judge-p3>" \
+  -c "cd $HOME && bash MT_BENCH_REPRO/scripts/run_judge_phase3_a100.sh > /tmp/run_judge_p3.out 2>&1"
+kubectl logs -f <pod-judge-p3>
+kubectl delete pod <pod-judge-p3>
+
+# Step 3: 분석 (로컬 또는 서버)
+export PYTHONPATH=src
+python3 scripts/analyze_phase3.py
+```
+
+---
+
 ### ✅ Phase 2 완료 (2026-03-30)
 
 답변 생성 + judge (single / pairwise / reference) + 집계 전 완료.
