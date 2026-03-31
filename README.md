@@ -32,7 +32,7 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 | Zephyr-7B-beta | 7B | ✅ | ✅ | 6위 (7.04) |
 | **Judge** | Qwen2.5-14B-Instruct | 14B | — | — |
 
-> Qwen2.5-7B는 Phase 1(self-judge)에서만 평가. Phase 2 judge 스크립트 EVAL_MODELS에 포함되지 않아 single/pairwise 모두 미실시.
+> Qwen2.5-7B는 Phase 1(self-judge)에서만 평가. Phase 2는 Qwen2.5-14B를 judge로 사용하므로 동일 패밀리 self-judge 편향을 방지하기 위해 의도적으로 평가 대상에서 제외.
 
 ### Phase 3 — 7개 모델 + Judge 스케일링 (🔧 실행 중)
 
@@ -177,7 +177,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 ---
 
-## Phase 3 — Judge Scaling Law 실험 (🔧 코드 완료, 실행 대기)
+## Phase 3 — Judge Scaling Law 실험 (🔧 실행 중: judge_7B/14B/32B 완료, 72B 재실행 중)
 
 **목표:** Judge 모델 크기에 따른 pairwise inconsistency율 변화를 측정해 "Judge Scaling Law" 도출.
 
@@ -202,14 +202,14 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 | Judge | 파라미터 | VRAM | 양자화 | 상태 |
 |-------|---------|------|--------|------|
-| Qwen2.5-7B-Instruct | 7B | ~14GB | fp16 | ⏳ 실행 대기 |
-| Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | ✅ 완료 (46.1%) |
-| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ⏳ 실행 대기 |
-| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ⏳ 실행 대기 |
+| Qwen2.5-7B-Instruct | 7B | ~14GB | fp16 | ✅ 완료 |
+| Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | ✅ 완료 |
+| Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ✅ 완료 |
+| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | 🔄 재실행 중 (OOM 해결 후) |
 
 > Phase 3에서 Qwen2.5-7B는 평가 대상에서 제외되므로 judge로 사용해도 self-judge 편향 없음.
 > 스케일링 커브: 7B → 14B → 32B → 72B
-> 72B AWQ는 40GB 한계에 근접 → `--gpu-memory-utilization 0.85` 사용.
+> 72B AWQ는 40GB 한계에 근접 → `--gpu-memory-utilization 0.95 --enforce-eager --max-num-seqs 1 --max-model-len 6144` 적용.
 
 ### 측정 지표
 
@@ -258,7 +258,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | humanities | 8.60 |
 | **overall** | **8.12** |
 
-> Self-judge 특성상 math/coding 점수가 과대평가됨. Phase 2 외부 judge 결과(overall 8.12)와 동일하지만, 카테고리 분포가 다름 — self-judge는 자신이 잘하는 영역을 후하게 채점하는 경향이 있음.
+> Self-judge 특성상 math/coding 점수가 과대평가됨. Qwen2.5-7B는 Phase 2(외부 judge)에서 평가하지 않아 직접 비교 불가. self-judge는 자신이 잘하는 영역을 후하게 채점하는 경향이 있어 카테고리별 점수는 참고용으로만 활용.
 
 ### Phase 2 — 6-model comparison (✅ 완료)
 
@@ -324,7 +324,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 |------------|----------|
 | Hard category(math/reasoning/coding)에서 모델 간 격차가 더 크다 | ✅ 상위 모델 gap ≈ 0, 하위 모델 gap +1.5 이상 |
 | Single-answer grading과 Pairwise 순위가 수렴한다 | ⚠️ 부분 재현 — Spearman ρ=0.943, 3~6위 동일하나 1~2위(Phi↔gemma) 역전 |
-| LLM-as-a-Judge로 모델 서열을 신뢰성 있게 식별할 수 있다 | ✅ 7개 모델 일관된 서열 확인 |
+| LLM-as-a-Judge로 모델 서열을 신뢰성 있게 식별할 수 있다 | ✅ 6개 모델 일관된 서열 확인 |
 | 모델 크기가 클수록 반드시 성능이 높지 않다 | ✅ SOLAR 10.7B < Phi-3.5-mini 3.8B |
 
 ### 논문과 차이가 난 이유
