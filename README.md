@@ -324,18 +324,17 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 |------------|----------|
 | Hard category(math/reasoning/coding)에서 모델 간 격차가 더 크다 | ✅ 상위 모델 gap ≈ 0, 하위 모델 gap +1.5 이상 |
 | Single-answer grading과 Pairwise 순위가 수렴한다 | ⚠️ 부분 재현 — Spearman ρ=0.943, 3~6위 동일하나 1~2위(Phi↔gemma) 역전 |
-| LLM-as-a-Judge로 모델 서열을 신뢰성 있게 식별할 수 있다 | ✅ 6개 모델 일관된 서열 확인 |
+| LLM-as-a-Judge로 모델 서열을 신뢰성 있게 식별할 수 있다 | ⚠️ 조건부 재현 — 6개 모델 서열은 확인했으나, inconsistency 46.1%로 judge 신뢰도는 GPT-4 대비 낮음 |
 | 모델 크기가 클수록 반드시 성능이 높지 않다 | ✅ SOLAR 10.7B < Phi-3.5-mini 3.8B |
 
 ### 논문과 차이가 난 이유
 
-1. **Judge 모델 차이**: 논문은 GPT-4, 이번은 Qwen2.5-14B. 더 작은 judge는 position bias가 높아 pairwise inconsistent율이 46%까지 상승 (논문 대비 약 2배 추정).
+1. **Judge 모델 차이**: 논문은 GPT-4, 이번은 Qwen2.5-14B. 더 작은 judge는 position bias가 높아 pairwise inconsistency율이 46%까지 상승 (논문 대비 약 2배 추정).
 2. **모델 세대 차이**: 2023년 모델(GPT-4~LLaMA-13B) 대비 2026년 모델들은 전반적으로 성능이 높아 점수 범위가 1.08p에 불과 (논문: 6.38p). 변별력이 낮아졌음.
-3. **Qwen2.5-7B Phase 2 미포함**: Qwen2.5-7B-Instruct는 Phase 1에서 단독 채점 대상으로만 사용. Phase 2는 Qwen2.5-14B를 judge로 쓰는 실험이므로 동일 패밀리 self-judge 편향을 피하기 위해 의도적으로 제외했다.
 
 ### 핵심 takeaway
 
-> 논문의 핵심 방법론(LLM-as-a-Judge, position bias 완화를 위한 AB/BA swap, reference-guided grading)은 2026년 오픈소스 모델 환경에서도 동일하게 작동한다. 단, judge 모델 품질이 결과 신뢰도에 직결되므로 가능하면 GPT-4급 judge 사용을 권장한다.
+> 논문의 핵심 방법론(LLM-as-a-Judge, AB/BA swap, reference-guided grading)은 2026년 오픈소스 환경에서도 **모델 서열 파악** 수준에서는 재현 가능하다. 그러나 judge 모델 품질이 결과 신뢰도에 직결된다 — Qwen2.5-14B judge의 inconsistency 46.1%는 GPT-4 judge 대비 신뢰도가 낮으며, 상위 2개 모델 순위가 채점 방식에 따라 역전됐다. 신뢰할 수 있는 판정을 위해서는 judge 크기가 중요하며, 이것이 Phase 3(Judge Scaling Law)의 핵심 연구 질문이다.
 
 ---
 
