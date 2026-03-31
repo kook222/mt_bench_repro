@@ -140,10 +140,12 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
       --served-model-name "$JUDGE_MODEL_ID" \
       --api-key EMPTY \
       --port "$VLLM_PORT" \
-      --max-model-len 8192 \
+      --max-model-len 4096 \
       --dtype auto \
       --quantization awq \
-      --gpu-memory-utilization "$GPU_UTIL" \
+      --gpu-memory-utilization 0.95 \
+      --enforce-eager \
+      --max-num-seqs 1 \
       > "$VLLM_LOG" 2>&1 &
   else
     vllm serve "$JUDGE_MODEL_DIR" \
