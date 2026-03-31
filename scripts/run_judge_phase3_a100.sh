@@ -67,7 +67,7 @@ EVAL_MODELS=(
 # ── judge 라인업 ────────────────────────────────────────────────────────────
 # 형식: "judge_label:model_dir_name:quantization_flag:gpu_util"
 #   quantization_flag: "none" 또는 "awq"
-#   gpu_util: 72B AWQ는 0.85로 낮춤 (40GB 한계 근접)
+#   gpu_util: AWQ 모델은 0.95 + enforce-eager + max-num-seqs 1 (40GB 한계 대응)
 JUDGE_LIST=(
   "judge_7B:Qwen2.5-7B-Instruct:none:0.90"
   "judge_14B:Qwen2.5-14B-Instruct:none:0.90"
@@ -143,7 +143,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
       --max-model-len 6144 \
       --dtype auto \
       --quantization awq \
-      --gpu-memory-utilization 0.95 \
+      --gpu-memory-utilization "$GPU_UTIL" \
       --enforce-eager \
       --max-num-seqs 1 \
       > "$VLLM_LOG" 2>&1 &
