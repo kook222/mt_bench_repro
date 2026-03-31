@@ -177,7 +177,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 ---
 
-## Phase 3 — Judge Scaling Law 실험 (🔧 실행 중: judge_7B/14B/32B 완료, 72B 재실행 중)
+## Phase 3 — Judge Scaling Law 실험 (✅ 7B/14B/32B 완료, 72B 하드웨어 한계로 제외)
 
 **목표:** Judge 모델 크기에 따른 pairwise inconsistency율 변화를 측정해 "Judge Scaling Law" 도출.
 
@@ -205,7 +205,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | Qwen2.5-7B-Instruct | 7B | ~14GB | fp16 | ✅ 완료 |
 | Qwen2.5-14B-Instruct | 14B | ~28GB | fp16 | ✅ 완료 |
 | Qwen2.5-32B-Instruct | 32B | ~20GB | AWQ 4-bit | ✅ 완료 |
-| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | 🔄 재실행 중 (OOM 해결 후) |
+| Qwen2.5-72B-Instruct | 72B | ~38GB | AWQ 4-bit | ❌ 제외 (A100 40GB VRAM 부족) |
 
 > Phase 3에서 Qwen2.5-7B는 평가 대상에서 제외되므로 judge로 사용해도 self-judge 편향 없음.
 > 스케일링 커브: 7B → 14B → 32B → 72B
@@ -219,7 +219,9 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | 1차 | `gpu-memory-utilization 0.85, max-model-len 8192` | ❌ OOM |
 | 2차 | `gpu-memory-utilization 0.95, enforce-eager, max-num-seqs 1, max-model-len 6144` | ❌ OOM (38.95GB 할당, 160MiB 부족) |
 | 3차 | 위 설정 + `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True, max-model-len 4096` | ❌ OOM |
-| 4차 | 위 설정 + `max-model-len 2048` | 🔄 테스트 중 |
+| 4차 | 위 설정 + `max-model-len 2048` | ❌ OOM |
+
+> **결론**: Qwen2.5-72B AWQ 4-bit 웨이트 자체가 ~38.95GB로 A100 40GB를 거의 전부 차지. profiling 단계 activation 메모리를 위한 공간이 없어 max-model-len을 최소화해도 OOM 불가피. **72B는 A100 40GB 단일 GPU에서 judge로 사용 불가** → 스케일링 실험은 7B / 14B / 32B 3개 포인트로 진행.
 
 **max-model-len 축소의 영향:**
 - Pairwise 프롬프트는 system + 질문 2턴 + 두 모델 답변 4턴 = 평균 1500~2500 토큰, 최대 ~6000 토큰
