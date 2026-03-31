@@ -34,6 +34,7 @@
   - [Per-Category Heatmap](#per-category-heatmap)
   - [Hard vs. Easy Gap](#hard-vs-easy-gap)
   - [Pairwise Win Rates](#pairwise-win-rates)
+  - [Discriminability-Based Gap Analysis](#phase-2--discriminability-based-gap-analysis)
 - [Phase 3 — Judge Scaling Law](#phase-3--judge-scaling-law)
   - [Inconsistency Rate Curve](#inconsistency-rate-curve)
   - [Scores by Judge Size](#scores-by-judge-size)
@@ -269,6 +270,61 @@ Model rankings are **robustly preserved** across all judge sizes (all ρ > 0.75)
 | 80 | 1.000 | — | — |
 
 Ranking stabilizes at **≥ 60 questions** (ρ ≥ 0.95). At 10 questions, rankings can be highly unreliable (min ρ = 0.32). MT-Bench's 80-question design is empirically well-calibrated.
+
+---
+
+## Phase 2 — Discriminability-Based Gap Analysis
+
+> **Research question:** If we define "hard" by *inter-model score variance* instead of fixed category labels, what pattern emerges?
+
+### Methodology
+
+For each of the 80 MT-Bench questions, we compute the **standard deviation of scores across all 6 models**.
+A high std means models disagree sharply — the question genuinely separates good from bad models.
+We then compare this data-driven ranking with the paper's label-based hard/easy split (math / reasoning / coding = hard).
+
+<p align="center">
+  <img src="figures/fig8_discriminability.png" width="92%" alt="Discriminability Analysis">
+</p>
+
+### Key Findings
+
+**Top-20 most discriminative questions by category:**
+
+| Rank | QID | Category | Std | Mean | Paper Label |
+|------|-----|----------|-----|------|-------------|
+| 1 | 128 | coding | 2.961 | 5.67 | hard ✅ |
+| 2 | 126 | coding | 2.957 | 4.92 | hard ✅ |
+| 3 | **136** | **extraction** | **2.746** | 7.58 | **easy ⚠️** |
+| 4 | 104 | reasoning | 2.558 | 6.58 | hard ✅ |
+| 5–6 | 125, 127 | coding | 2.4–2.5 | 5.8–6.4 | hard ✅ |
+| 8 | **140** | **extraction** | **2.295** | 6.67 | **easy ⚠️** |
+| 10 | **95** | **roleplay** | **2.178** | 5.08 | **easy ⚠️** |
+
+**Mean discriminability per category (data-driven ranking):**
+
+| Rank | Category | Mean Std | Paper Label |
+|------|----------|----------|-------------|
+| 1 | coding | **1.864** | hard |
+| 2 | **extraction** | **1.291** | **easy** ⚠️ |
+| 3 | math | 1.277 | hard |
+| 4 | reasoning | 1.092 | hard |
+| 5 | **roleplay** | **0.776** | **easy** |
+| 6 | stem | 0.562 | easy |
+| 7 | writing | 0.482 | easy |
+| 8 | humanities | 0.472 | easy |
+
+### Interpretation
+
+1. **Paper's hard categories are largely validated:** 16/20 (80%) of the top discriminative questions come from math/reasoning/coding (vs. 37.5% expected if uniform). The label-based split is empirically grounded.
+
+2. **Extraction is a hidden hard category:** Extraction ranks **2nd** in mean discriminability (mean std = 1.29), above math (1.28) and reasoning (1.09). Three extraction questions crack the top-20. The paper treats extraction as easy, but it produces larger inter-model score spreads than math.
+
+3. **Low mean score ≠ high discriminability:** Panel (D) shows the top discriminative questions cluster at mean score 5–7 (hard difficulty), but the relationship is not monotone — some high-mean questions (e.g., q136 extraction, mean 7.58) are also highly discriminative.
+
+4. **Writing / Humanities are genuinely easy:** Lowest discriminability (mean std 0.47–0.48). All models cluster tightly on these tasks — not useful for model comparison.
+
+> **Takeaway:** A data-driven benchmark design would move 2–3 extraction questions into the "hard" pool and de-prioritize writing/humanities. MT-Bench's 80-question design is largely well-calibrated, but extraction is systematically under-labeled as easy.
 
 ---
 
