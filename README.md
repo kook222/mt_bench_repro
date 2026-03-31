@@ -301,7 +301,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | 5 | SOLAR-10.7B-Instruct | 25.2% | 214 |
 | 6 | Zephyr-7B-beta | 15.2% | 244 |
 
-> Single-answer 순위와 Pairwise 순위 완벽히 일치 → 논문의 "두 채점 방식이 수렴한다" 주장 재현 ✅
+> **Single ↔ Pairwise 수렴 분석:** Spearman ρ = 0.943으로 대체로 수렴하나 **상위 2개 모델(Phi↔gemma) 순위 역전**이 발생함. Single에서 Phi(1위, 8.09점) > gemma(2위, 8.03점)이었으나, Pairwise에서 gemma(1위, 79.4%) > Phi(2위, 76.3%)로 뒤집혔다. 3~6위는 동일. → 논문의 "두 채점 방식이 수렴한다" 주장은 **부분 재현 (ρ=0.943, 상위권 역전 존재)**
 >
 > **한계:** Inconsistent율 46.1% (1200개 중 553개) — GPT-4 judge 대비 Qwen2.5-14B의 position bias가 높아 AB/BA 판정이 자주 불일치함. 또한 Qwen2.5-7B-Instruct가 pairwise 비교 대상에서 누락돼 win rate 산출 불가.
 
@@ -311,7 +311,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 |------|--------------------------|--------------------------------|
 | 점수 범위 | 2.61 ~ 8.99 (6.38p) | 7.04 ~ 8.12 (1.08p) |
 | Hard/Easy 갭 패턴 | ✅ 상위 모델 갭 작음 | ✅ 동일하게 재현 |
-| Single↔Pairwise 수렴 | ✅ | ✅ 동일하게 재현 |
+| Single↔Pairwise 수렴 | ✅ | ⚠️ 부분 재현 (ρ=0.943, 상위 2개 역전) |
 | Inconsistent율 | ~20% 추정 | 46.1% (judge 모델 한계) |
 
 ---
@@ -323,7 +323,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | 논문의 주장 | 재현 결과 |
 |------------|----------|
 | Hard category(math/reasoning/coding)에서 모델 간 격차가 더 크다 | ✅ 상위 모델 gap ≈ 0, 하위 모델 gap +1.5 이상 |
-| Single-answer grading과 Pairwise 순위가 수렴한다 | ✅ 두 방법 순위 완벽히 일치 |
+| Single-answer grading과 Pairwise 순위가 수렴한다 | ⚠️ 부분 재현 — Spearman ρ=0.943, 3~6위 동일하나 1~2위(Phi↔gemma) 역전 |
 | LLM-as-a-Judge로 모델 서열을 신뢰성 있게 식별할 수 있다 | ✅ 7개 모델 일관된 서열 확인 |
 | 모델 크기가 클수록 반드시 성능이 높지 않다 | ✅ SOLAR 10.7B < Phi-3.5-mini 3.8B |
 
