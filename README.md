@@ -209,7 +209,22 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 > Phase 3에서 Qwen2.5-7B는 평가 대상에서 제외되므로 judge로 사용해도 self-judge 편향 없음.
 > 스케일링 커브: 7B → 14B → 32B → 72B
-> 72B AWQ는 40GB 한계에 근접 → `--gpu-memory-utilization 0.95 --enforce-eager --max-num-seqs 1 --max-model-len 6144` 적용.
+
+#### Qwen2.5-72B AWQ — A100 40GB OOM 이슈 및 해결 과정
+
+72B AWQ 4-bit 웨이트 자체가 ~38.95 GB를 차지해 A100 40GB에 올리기 빠듯함. vLLM 시작 시 profiling(warmup) 단계에서 activation 메모리를 추가로 요구하며 OOM 발생.
+
+| 시도 | 설정 | 결과 |
+|------|------|------|
+| 1차 | `gpu-memory-utilization 0.85, max-model-len 8192` | ❌ OOM |
+| 2차 | `gpu-memory-utilization 0.95, enforce-eager, max-num-seqs 1, max-model-len 6144` | ❌ OOM (38.95GB 할당, 160MiB 부족) |
+| 3차 | 위 설정 + `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True, max-model-len 4096` | 🔄 테스트 중 |
+
+**max-model-len 축소의 영향:**
+- Pairwise 프롬프트는 system + 질문 2턴 + 두 모델 답변 4턴 = 평균 1500~2500 토큰, 최대 ~6000 토큰
+- 4096 설정 시: 평균 케이스는 정상 처리, coding/math 장문 답변 일부 실패 가능
+- 실패한 문항은 집계에서 제외되므로 80문항 미만으로 줄어들 수 있음
+- 완료 후 실제 집계 문항 수를 확인해 7B/14B/32B(80문항)와 비교 필요
 
 ### 측정 지표
 
