@@ -136,11 +136,12 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
 
   # vLLM 서버 시작 (양자화 여부에 따라 분기)
   if [ "$QUANT" = "awq" ]; then
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
     vllm serve "$JUDGE_MODEL_DIR" \
       --served-model-name "$JUDGE_MODEL_ID" \
       --api-key EMPTY \
       --port "$VLLM_PORT" \
-      --max-model-len 6144 \
+      --max-model-len 2048 \
       --dtype auto \
       --quantization awq \
       --gpu-memory-utilization "$GPU_UTIL" \
