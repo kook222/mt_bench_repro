@@ -141,7 +141,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
       --served-model-name "$JUDGE_MODEL_ID" \
       --api-key EMPTY \
       --port "$VLLM_PORT" \
-      --max-model-len 4096 \
+      --max-model-len 2048 \
       --dtype auto \
       --quantization awq \
       --gpu-memory-utilization "$GPU_UTIL" \

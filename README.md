@@ -218,7 +218,8 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 |------|------|------|
 | 1차 | `gpu-memory-utilization 0.85, max-model-len 8192` | ❌ OOM |
 | 2차 | `gpu-memory-utilization 0.95, enforce-eager, max-num-seqs 1, max-model-len 6144` | ❌ OOM (38.95GB 할당, 160MiB 부족) |
-| 3차 | 위 설정 + `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True, max-model-len 4096` | 🔄 테스트 중 |
+| 3차 | 위 설정 + `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True, max-model-len 4096` | ❌ OOM |
+| 4차 | 위 설정 + `max-model-len 2048` | 🔄 테스트 중 |
 
 **max-model-len 축소의 영향:**
 - Pairwise 프롬프트는 system + 질문 2턴 + 두 모델 답변 4턴 = 평균 1500~2500 토큰, 최대 ~6000 토큰
