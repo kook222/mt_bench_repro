@@ -8,6 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Paper](https://img.shields.io/badge/Paper-NeurIPS%202023-red)](https://arxiv.org/abs/2306.05685)
 [![Infra: A100](https://img.shields.io/badge/Infra-A100%2040GB-lightgrey?logo=nvidia)](https://www.nvidia.com/)
+[![Cite](https://img.shields.io/badge/cite-CITATION.cff-blue)](CITATION.cff)
 
 </div>
 
@@ -426,7 +427,7 @@ mt_bench_repro/
 ### Installation
 
 ```bash
-git clone https://github.com/<your-handle>/mt_bench_repro.git
+git clone https://github.com/kook222/mt_bench_repro.git
 cd mt_bench_repro
 pip install -r requirements.txt
 export PYTHONPATH=src
@@ -528,9 +529,9 @@ If you use this reproduction, please also cite the original paper:
 ```bibtex
 @misc{mtbench_repro,
   title  = {{MT-Bench} Reproduction},
-  author = {kook2},
+  author = {Park, Seunghyun},
   year   = {2026},
-  url    = {https://github.com/<your-handle>/mt_bench_repro}
+  url    = {https://github.com/kook222/mt_bench_repro}
 }
 ```
 
