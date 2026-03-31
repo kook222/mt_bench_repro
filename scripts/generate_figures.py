@@ -677,10 +677,62 @@ def fig_summary_banner():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Figure 0: Phase 1 — Qwen2.5-7B Self-Judge
+# ─────────────────────────────────────────────────────────────────────────────
+def fig_phase1():
+    cats   = CAT_LABELS
+    scores = PHASE1_DATA["scores"]
+    overall = PHASE1_DATA["overall"]
+
+    fig, ax = plt.subplots(figsize=(9, 4.5))
+    fig.patch.set_facecolor("white")
+
+    # Color: highlight hard categories differently
+    HARD_CATS_LABEL = {"Reasoning", "Math", "Coding"}
+    bar_colors = ["#EF5350" if c in HARD_CATS_LABEL else "#42A5F5" for c in cats]
+
+    bars = ax.bar(range(len(cats)), scores, color=bar_colors, edgecolor="white",
+                  alpha=0.9, width=0.6)
+    ax.axhline(overall, color="#1565C0", linestyle="--", linewidth=1.8,
+               label=f"Overall avg: {overall:.2f}", zorder=5)
+    ax.axhline(10, color="none")  # y-limit anchor
+
+    for bar, val in zip(bars, scores):
+        ax.text(bar.get_x() + bar.get_width()/2, val + 0.08,
+                f"{val:.2f}", ha="center", va="bottom",
+                fontsize=10.5, fontweight="bold", color="#333")
+
+    ax.set_xticks(range(len(cats)))
+    ax.set_xticklabels(cats, fontsize=11)
+    ax.set_ylim(5.0, 10.2)
+    ax.set_ylabel("Score (1–10)", fontsize=11)
+    ax.set_title("Phase 1: Qwen2.5-7B-Instruct — Self-Judge Category Scores",
+                 fontsize=13, fontweight="bold")
+
+    hard_patch = mpatches.Patch(color="#EF5350", alpha=0.9, label="Hard (reasoning/math/coding)")
+    easy_patch = mpatches.Patch(color="#42A5F5", alpha=0.9, label="Easy (others)")
+    ax.legend(handles=[hard_patch, easy_patch,
+                        plt.Line2D([0], [0], color="#1565C0", linestyle="--",
+                                   linewidth=1.8, label=f"Overall: {overall:.2f}")],
+              fontsize=10, framealpha=0.85, loc="lower right")
+
+    ax.grid(True, axis="y", linestyle="--", alpha=0.4)
+    ax.set_axisbelow(True)
+    ax.spines["bottom"].set_visible(True)
+
+    plt.tight_layout()
+    out = FIGURES_DIR / "fig0_phase1_scores.png"
+    fig.savefig(out)
+    plt.close(fig)
+    print(f"  Saved: {out.name}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # main
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     print(f"Generating figures → {FIGURES_DIR}/")
+    fig_phase1()
     fig_category_heatmap()
     fig_overall_rankings()
     fig_hard_easy_gap()

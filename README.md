@@ -27,34 +27,35 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [Key Results](#key-results)
-  - [Phase 2 — 6-Model Comparison](#phase-2--6-model-comparison)
-  - [Phase 3 — Judge Scaling Law](#phase-3--judge-scaling-law)
 - [Experimental Setup](#experimental-setup)
-- [Repository Structure](#repository-structure)
-- [Quick Start](#quick-start)
-- [Detailed Results](#detailed-results)
+- [Phase 1 — Self-Judge Baseline](#phase-1--self-judge-baseline)
+- [Phase 2 — 6-Model Comparison](#phase-2--6-model-comparison)
+  - [Single-Answer Scores](#single-answer-scores)
   - [Per-Category Heatmap](#per-category-heatmap)
   - [Hard vs. Easy Gap](#hard-vs-easy-gap)
   - [Pairwise Win Rates](#pairwise-win-rates)
-  - [Judge Scaling Law](#judge-scaling-law)
+- [Phase 3 — Judge Scaling Law](#phase-3--judge-scaling-law)
+  - [Inconsistency Rate Curve](#inconsistency-rate-curve)
+  - [Scores by Judge Size](#scores-by-judge-size)
   - [Cross-Judge Spearman ρ](#cross-judge-spearman-ρ)
   - [Question Count Sensitivity](#question-count-sensitivity)
 - [Comparison with the Original Paper](#comparison-with-the-original-paper)
 - [Conclusions](#conclusions)
+- [Repository Structure](#repository-structure)
+- [Quick Start](#quick-start)
 - [Citation](#citation)
 
 ---
 
 ## Overview
 
-This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS 2023)](https://arxiv.org/abs/2306.05685) as a self-contained Python package (`mtbench_repro`). The experiment is structured in three phases:
+This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS 2023)](https://arxiv.org/abs/2306.05685) as a self-contained Python package (`mtbench_repro`). The experiment is structured in three progressive phases:
 
 | Phase | Description | Models | Judge | Status |
 |-------|-------------|--------|-------|--------|
 | **1** | Pipeline validation, self-judge baseline | Qwen2.5-7B | Qwen2.5-7B (self) | ✅ Done |
 | **2** | 6-model comparison, external judge | 6 open-source models | Qwen2.5-14B | ✅ Done |
-| **3** | Judge scaling law (7B → 32B) | 7 models (Phase 2 + Llama-3.1-8B) | Qwen2.5 7B/14B/32B | ✅ Done |
+| **3** | Judge scaling law (7B → 32B) | 7 models (Phase 2 + Llama-3.1-8B) | Qwen2.5 7B / 14B / 32B | ✅ Done |
 
 **Three grading methods** are implemented (matching the paper's evaluation protocol):
 
@@ -63,45 +64,6 @@ This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS
 | Single-answer grading (1–10) | Figure 6, Table 8 | All categories |
 | Pairwise comparison (AB/BA swap) | Figure 5, 9, §3.4 | All categories |
 | Reference-guided grading | Figure 8, 10 | math / reasoning / coding |
-
----
-
-## Key Results
-
-### Phase 2 — 6-Model Comparison
-
-<p align="center">
-  <img src="figures/fig2_overall_rankings.png" width="88%" alt="Phase 2 Overall Rankings">
-</p>
-
-**Single-answer scores (Qwen2.5-14B judge):**
-
-| Rank | Model | Params | Overall | Writing | Roleplay | Extraction | Reasoning | Math | Coding | STEM | Humanities |
-|------|-------|--------|---------|---------|----------|------------|-----------|------|--------|------|------------|
-| 1 | Phi-3.5-mini-Instruct | 3.8B | **8.09** | 8.25 | 7.70 | 7.65 | 7.75 | 8.30 | 8.15 | 8.25 | 8.65 |
-| 2 | gemma-2-9b-it | 9B | 8.03 | 8.15 | 8.00 | 7.50 | 7.70 | 8.05 | 7.95 | 8.40 | 8.50 |
-| 3 | Yi-1.5-9B-Chat | 9B | 7.97 | 8.10 | 8.05 | 8.05 | 7.45 | 8.00 | 7.20 | 8.50 | 8.40 |
-| 4 | Mistral-7B-Instruct-v0.3 | 7B | 7.49 | 8.25 | 7.80 | 7.70 | 6.70 | 6.75 | 6.05 | 8.35 | 8.30 |
-| 5 | SOLAR-10.7B-Instruct | 10.7B | 7.07 | 7.85 | 6.55 | 7.26 | 6.85 | 7.25 | 4.95 | 7.65 | 8.20 |
-| 6 | Zephyr-7B-beta | 7B | 7.04 | 7.60 | 7.20 | 7.40 | 6.15 | 6.35 | 5.65 | 8.10 | 7.90 |
-
-> **Note on Qwen2.5-7B:** Evaluated only in Phase 1 (self-judge, overall 8.12). Excluded from Phase 2 to prevent same-family self-judge bias.
-
----
-
-### Phase 3 — Judge Scaling Law
-
-<p align="center">
-  <img src="figures/fig4_judge_scaling.png" width="85%" alt="Judge Scaling Law">
-</p>
-
-| Judge | Params | Inconsistency Rate | Clear Decision Rate | Score Range |
-|-------|--------|--------------------|--------------------|----|
-| Qwen2.5-7B | 7B | **78.75%** | 21.25% | 0.84 pt |
-| Qwen2.5-14B | 14B | 46.85% | 53.15% | 1.13 pt |
-| Qwen2.5-32B | 32B | **32.86%** | 67.14% | 1.47 pt |
-
-**Key finding:** As judge size increases from 7B to 32B, pairwise inconsistency drops by **45.9 pp** — a strong judge scaling effect. Larger judges are also more *discriminative* (wider score spread).
 
 ---
 
@@ -120,16 +82,16 @@ This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS
 | 2, 3 | **Zephyr-7B-beta** | 7B | HuggingFace H4 |
 | 3 only | **Llama-3.1-8B-Instruct** | 8B | Meta (replaces Qwen2.5-7B) |
 
-### Judge Models (Phase 3 Scaling)
+### Judge Models
 
-| Judge | Params | VRAM | Quantization | Status |
-|-------|--------|------|-------------|--------|
-| Qwen2.5-7B-Instruct | 7B | ~14 GB | fp16 | ✅ |
-| Qwen2.5-14B-Instruct | 14B | ~28 GB | fp16 | ✅ |
-| Qwen2.5-32B-Instruct | 32B | ~20 GB | AWQ 4-bit | ✅ |
+| Judge | Params | VRAM | Quantization | Used in |
+|-------|--------|------|-------------|---------|
+| Qwen2.5-7B-Instruct | 7B | ~14 GB | fp16 | Phase 1 (self), Phase 3 |
+| Qwen2.5-14B-Instruct | 14B | ~28 GB | fp16 | Phase 2, Phase 3 |
+| Qwen2.5-32B-Instruct | 32B | ~20 GB | AWQ 4-bit | Phase 3 |
 | Qwen2.5-72B-Instruct | 72B | ~39 GB | AWQ 4-bit | ❌ OOM on A100 40 GB |
 
-> Using a single Qwen2.5 family for all judge sizes eliminates architecture variance, isolating the pure size effect.
+> Using a single Qwen2.5 family for all Phase 3 judge sizes eliminates architecture variance, isolating the pure size effect on judgment quality.
 
 ### Infrastructure
 
@@ -137,6 +99,233 @@ This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS
 - **Serving:** vLLM v0.6.6 (OpenAI-compatible API)
 - **Benchmark:** MT-Bench 80 questions × 2 turns = 160 scored turns per model
 - **Generation temp:** 0.7 · **Judge temp:** 0.0 (greedy)
+
+---
+
+## Phase 1 — Self-Judge Baseline
+
+> **Model:** Qwen2.5-7B-Instruct · **Judge:** Qwen2.5-7B-Instruct (self)
+
+<p align="center">
+  <img src="figures/fig0_phase1_scores.png" width="80%" alt="Phase 1 Self-Judge Scores">
+</p>
+
+| Category | Score |
+|----------|-------|
+| Writing | 7.60 |
+| Roleplay | 7.95 |
+| Extraction | 7.45 |
+| Reasoning | 7.20 |
+| Math | **8.80** |
+| Coding | **8.80** |
+| STEM | 8.55 |
+| Humanities | 8.60 |
+| **Overall** | **8.12** |
+
+**Observation:** Self-judge inflates Math and Coding scores (8.80), which are the categories Qwen2.5-7B is strongest in. This self-judge bias motivates using an external judge in Phase 2.
+
+---
+
+## Phase 2 — 6-Model Comparison
+
+> **Judge:** Qwen2.5-14B-Instruct · **Infra:** A100 40 GB vLLM
+
+### Single-Answer Scores
+
+<p align="center">
+  <img src="figures/fig2_overall_rankings.png" width="88%" alt="Phase 2 Overall Rankings">
+</p>
+
+| Rank | Model | Params | Overall | Writing | Roleplay | Extraction | Reasoning | Math | Coding | STEM | Humanities |
+|------|-------|--------|---------|---------|----------|------------|-----------|------|--------|------|------------|
+| 1 | Phi-3.5-mini-Instruct | 3.8B | **8.09** | 8.25 | 7.70 | 7.65 | 7.75 | 8.30 | 8.15 | 8.25 | 8.65 |
+| 2 | gemma-2-9b-it | 9B | 8.03 | 8.15 | 8.00 | 7.50 | 7.70 | 8.05 | 7.95 | 8.40 | 8.50 |
+| 3 | Yi-1.5-9B-Chat | 9B | 7.97 | 8.10 | 8.05 | 8.05 | 7.45 | 8.00 | 7.20 | 8.50 | 8.40 |
+| 4 | Mistral-7B-Instruct-v0.3 | 7B | 7.49 | 8.25 | 7.80 | 7.70 | 6.70 | 6.75 | 6.05 | 8.35 | 8.30 |
+| 5 | SOLAR-10.7B-Instruct | 10.7B | 7.07 | 7.85 | 6.55 | 7.26 | 6.85 | 7.25 | 4.95 | 7.65 | 8.20 |
+| 6 | Zephyr-7B-beta | 7B | 7.04 | 7.60 | 7.20 | 7.40 | 6.15 | 6.35 | 5.65 | 8.10 | 7.90 |
+
+> Qwen2.5-7B is excluded from Phase 2 to prevent same-family self-judge bias (Phase 1 self-judge overall: 8.12).
+
+---
+
+### Per-Category Heatmap
+
+<p align="center">
+  <img src="figures/fig1_category_heatmap.png" width="90%" alt="Per-Category Heatmap">
+</p>
+
+Coding and Reasoning are the most discriminative categories. Phi-3.5-mini leads in Math/Coding; SOLAR-10.7B and Zephyr-7B fall far behind in Coding (4.95, 5.65).
+
+---
+
+### Hard vs. Easy Gap
+
+<p align="center">
+  <img src="figures/fig3_hard_easy_gap.png" width="88%" alt="Hard vs Easy Gap">
+</p>
+
+| Model | Hard avg<br>(math / reasoning / coding) | Easy avg<br>(writing / roleplay / humanities) | Gap (Easy − Hard) |
+|-------|--------|--------|-------|
+| Phi-3.5-mini | 8.07 | 8.20 | +0.13 |
+| gemma-2-9b | 7.90 | 8.22 | +0.32 |
+| Yi-1.5-9B | 7.55 | 8.18 | +0.63 |
+| Mistral-7B | 6.50 | 8.12 | **+1.62** |
+| SOLAR-10.7B | 6.35 | 7.53 | +1.18 |
+| Zephyr-7B | 6.05 | 7.57 | **+1.52** |
+
+**Replicates the paper's core pattern:** stronger models have smaller hard/easy gaps. Mistral-7B and Zephyr-7B are disproportionately weak on hard tasks despite competitive writing scores.
+
+---
+
+### Pairwise Win Rates
+
+| Rank | Model | Win Rate | Games Played |
+|------|-------|----------|--------------|
+| 1 | gemma-2-9b-it | **79.4%** | 209 |
+| 2 | Phi-3.5-mini-Instruct | 76.3% | 219 |
+| 3 | Yi-1.5-9B-Chat | 66.1% | 202 |
+| 4 | Mistral-7B-Instruct-v0.3 | 43.4% | 206 |
+| 5 | SOLAR-10.7B-Instruct | 25.2% | 214 |
+| 6 | Zephyr-7B-beta | 15.2% | 244 |
+
+Single ↔ Pairwise Spearman ρ = **0.943** — strong convergence overall, with one notable exception: the top-2 ranks flip between methods (Single: Phi > gemma; Pairwise: gemma > Phi). Ranks 3–6 are identical.
+
+> Pairwise inconsistency rate: **46.1%** (553 / 1200) — significantly higher than estimated GPT-4 levels (~20%), reflecting position bias in a 14B judge.
+
+---
+
+## Phase 3 — Judge Scaling Law
+
+> **Evaluated models:** Phase 2 lineup (6) + Llama-3.1-8B-Instruct (replaces Qwen2.5-7B)
+> **Judges:** Qwen2.5-7B / 14B / 32B (single family, size-only variable)
+
+### Inconsistency Rate Curve
+
+<p align="center">
+  <img src="figures/fig4_judge_scaling.png" width="88%" alt="Judge Scaling Law">
+</p>
+
+| Judge | Params | Inconsistency Rate | Clear Decision Rate | Score Range |
+|-------|--------|-------------------|--------------------|----|
+| Qwen2.5-7B | 7B | **78.75%** | 21.25% | 0.84 pt |
+| Qwen2.5-14B | 14B | 46.85% | 53.15% | 1.13 pt |
+| Qwen2.5-32B | 32B | **32.86%** | 67.14% | 1.47 pt |
+
+As judge size increases 7B → 32B, pairwise inconsistency drops by **45.9 pp** (monotone decrease). Larger judges are also more *discriminative* — the score spread widens from 0.84 pt to 1.47 pt.
+
+> **Qwen2.5-72B:** AWQ 4-bit weights alone require ~38.95 GB, leaving no room for vLLM activation memory on A100 40 GB. All four attempts failed with OOM. Excluded from the scaling curve.
+
+---
+
+### Scores by Judge Size
+
+<p align="center">
+  <img src="figures/fig5_phase3_scores.png" width="90%" alt="Phase 3 Scores by Judge Size">
+</p>
+
+| Rank | Model | Judge 7B | Judge 14B | Judge 32B | Mean |
+|------|-------|----------|-----------|-----------|------|
+| 1 | Phi-3.5-mini-Instruct | 8.04 | 8.09 | 8.06 | **8.06** |
+| 2 | gemma-2-9b-it | 7.87 | 8.03 | 8.09 | 7.99 |
+| 3 | Llama-3.1-8B-Instruct | 7.89 | 8.17 | 7.71 | 7.92 |
+| 4 | Yi-1.5-9B-Chat | 7.98 | 7.97 | 7.79 | 7.91 |
+| 5 | Mistral-7B-Instruct-v0.3 | 7.45 | 7.49 | 7.09 | 7.34 |
+| 6 | SOLAR-10.7B-Instruct | 7.34 | 7.07 | 7.02 | 7.14 |
+| 7 | Zephyr-7B-beta | 7.20 | 7.04 | 6.62 | 6.95 |
+
+Parse failure rate: **0 / 560 (0%)** across all three judges.
+
+---
+
+### Cross-Judge Spearman ρ
+
+<p align="center">
+  <img src="figures/fig6_spearman_heatmap.png" width="40%" alt="Cross-Judge Spearman ρ">
+</p>
+
+| | Judge 7B | Judge 14B | Judge 32B |
+|--|---------|-----------|-----------|
+| **Judge 7B** | — | 0.821 | 0.786 |
+| **Judge 14B** | 0.821 | — | 0.750 |
+| **Judge 32B** | 0.786 | 0.750 | — |
+
+Model rankings are **robustly preserved** across all judge sizes (all ρ > 0.75). The top positions (Phi/gemma) and the bottom position (Zephyr) are consistent regardless of which judge is used.
+
+---
+
+### Question Count Sensitivity
+
+<p align="center">
+  <img src="figures/fig7_qsize_sensitivity.png" width="62%" alt="Question Count Sensitivity">
+</p>
+
+| N Questions | Mean Spearman ρ | Min | Max |
+|-------------|----------------|-----|-----|
+| 10 | 0.777 | 0.321 | 0.964 |
+| 20 | 0.839 | 0.464 | 1.000 |
+| 40 | 0.857 | 0.607 | 1.000 |
+| **60** | **0.952** | 0.643 | 1.000 |
+| 80 | 1.000 | — | — |
+
+Ranking stabilizes at **≥ 60 questions** (ρ ≥ 0.95). At 10 questions, rankings can be highly unreliable (min ρ = 0.32). MT-Bench's 80-question design is empirically well-calibrated.
+
+---
+
+## Comparison with the Original Paper
+
+| Metric | Original (GPT-4 judge, 2023) | This Reproduction (Qwen judge, 2026) |
+|--------|-------------------------------|--------------------------------------|
+| Score range | 2.61 – 8.99 **(6.38 pt)** | 7.04 – 8.09 (1.05 pt) |
+| Hard/Easy gap pattern | ✅ Higher-ranked models have smaller gap | ✅ Same pattern reproduced |
+| Single ↔ Pairwise convergence | ✅ | ⚠️ Partial — ρ = 0.943, top-2 rank inverted |
+| Pairwise inconsistency rate | ~20% (estimated) | 46.1% (14B judge) → 32.9% (32B judge) |
+| Parse failure rate | — | **0%** across all phases |
+
+**Why scores are compressed:** 2025-generation open-source models are substantially stronger than the 2023-era models (GPT-4, LLaMA-13B, Vicuna-13B) used in the original paper. All evaluated models cluster at the high end (7.0–8.1), reducing the effective score spread from 6.38 pt to ~1.05 pt.
+
+---
+
+## Conclusions
+
+| Claim from the Paper | Reproduction Result |
+|----------------------|---------------------|
+| Hard categories show larger inter-model gaps | ✅ Gap +0.13 pt (Phi) to +1.62 pt (Mistral) |
+| Single-answer and pairwise rankings converge | ⚠️ Partial — ρ = 0.943; top-2 flip observed |
+| LLM-as-a-Judge can reliably rank models | ⚠️ Conditional — stable rankings but 46% inconsistency with 14B judge |
+| Larger models ≠ better performance | ✅ SOLAR-10.7B (5th) < Phi-3.5-mini-3.8B (1st) |
+
+### Phase 3 Additional Findings
+
+| Finding | Result |
+|---------|--------|
+| Larger judge → lower inconsistency | ✅ 7B (78.75%) → 14B (46.85%) → 32B (32.86%), monotone ↓ |
+| Model rankings stable across judge sizes | ✅ Cross-judge ρ > 0.75 in all pairs |
+| Larger judge → higher discriminability | ✅ Score range 0.84 pt (7B) → 1.47 pt (32B) |
+| Qwen2.5-72B AWQ on A100 40 GB | ❌ OOM — weights alone require ~39 GB |
+
+### Judge Selection Recommendation
+
+| Use Case | Minimum Judge |
+|----------|--------------|
+| Quick model ordering only | 14B (inconsistency < 50%) |
+| Fine-grained ranking / publication | 32B (clear decision ~67%) |
+| Avoid entirely | 7B (position bias dominates, 78.75% inconsistency) |
+
+---
+
+## Paper–Code Correspondence
+
+| Paper | Implementation | Description |
+|-------|---------------|-------------|
+| Figure 5 | `prompts._SYSTEM_PAIRWISE` | Basic pairwise prompt |
+| Figure 6 | `prompts._SYSTEM_SINGLE` | Single grading prompt |
+| Figure 7 | `prompts._SYSTEM_PAIRWISE_MATH_COT` | CoT pairwise |
+| Figure 8 | `prompts._SYSTEM_PAIRWISE_REFERENCE` | Reference-guided pairwise |
+| Figure 9 | `prompts.build_multiturn_pairwise_prompt` | Multi-turn pairwise |
+| Figure 10 | `prompts.build_multiturn_single_prompt` | Reference-guided multi-turn single |
+| Section 3.4 | `judge_pairwise.judge_pairwise_question` | Conservative swap (winner only if AB = BA) |
+| Table 8 | `aggregate.compute_single_scores` | MT-Bench Score (mean over 160 turns) |
 
 ---
 
@@ -250,181 +439,17 @@ python3 scripts/generate_figures.py
 
 ```bash
 # Phase 2
-bash scripts/run_generate_multi_a100.sh   # answer generation
+bash scripts/run_generate_multi_a100.sh   # answer generation (6 models)
 bash scripts/run_judge_multi_a100.sh      # judging + aggregation
 
 # Phase 3
-bash scripts/run_generate_phase3_a100.sh  # Llama-3.1-8B answers only (6 others reused)
-bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B sequentially (~12–20 h)
+bash scripts/run_generate_phase3_a100.sh  # Llama-3.1-8B only (6 others reused)
+bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B (~12–20 h)
 
 # Analysis
 export PYTHONPATH=src
 python3 scripts/analyze_phase3.py
 ```
-
----
-
-## Detailed Results
-
-### Per-Category Heatmap
-
-<p align="center">
-  <img src="figures/fig1_category_heatmap.png" width="90%" alt="Per-Category Heatmap">
-</p>
-
-Coding and Reasoning are the most discriminative categories. Phi-3.5-mini dominates in Math/Coding; SOLAR-10.7B and Zephyr-7B fall far behind in Coding (4.95, 5.65).
-
----
-
-### Hard vs. Easy Gap
-
-<p align="center">
-  <img src="figures/fig3_hard_easy_gap.png" width="85%" alt="Hard vs Easy Gap">
-</p>
-
-| Model | Hard avg<br>(math/reasoning/coding) | Easy avg<br>(writing/roleplay/humanities) | Gap (Easy − Hard) |
-|-------|--------|--------|-------|
-| Phi-3.5-mini | 8.07 | 8.20 | +0.13 |
-| gemma-2-9b | 7.90 | 8.22 | +0.32 |
-| Yi-1.5-9B | 7.55 | 8.18 | +0.63 |
-| Mistral-7B | 6.50 | 8.12 | **+1.62** |
-| SOLAR-10.7B | 6.35 | 7.53 | +1.18 |
-| Zephyr-7B | 6.05 | 7.57 | **+1.52** |
-
-**Replicates the paper's core pattern:** stronger models have smaller hard/easy gaps. Mistral-7B and Zephyr-7B are disproportionately weak on hard tasks despite reasonable writing scores.
-
----
-
-### Pairwise Win Rates
-
-| Rank | Model | Win Rate | Played |
-|------|-------|----------|--------|
-| 1 | gemma-2-9b-it | **79.4%** | 209 |
-| 2 | Phi-3.5-mini-Instruct | 76.3% | 219 |
-| 3 | Yi-1.5-9B-Chat | 66.1% | 202 |
-| 4 | Mistral-7B-Instruct-v0.3 | 43.4% | 206 |
-| 5 | SOLAR-10.7B-Instruct | 25.2% | 214 |
-| 6 | Zephyr-7B-beta | 15.2% | 244 |
-
-Single ↔ Pairwise Spearman ρ = **0.943** — strong convergence, with one notable exception: the top-2 rank flips between methods (Single: Phi > gemma; Pairwise: gemma > Phi).
-
-> Inconsistency rate: 46.1% (553/1200) — significantly higher than estimated GPT-4 levels (~20%), reflecting the limitations of a 14B judge on pairwise tasks.
-
----
-
-### Judge Scaling Law
-
-<p align="center">
-  <img src="figures/fig4_judge_scaling.png" width="85%" alt="Judge Scaling Law">
-</p>
-
-<p align="center">
-  <img src="figures/fig5_phase3_scores.png" width="88%" alt="Phase 3 Scores by Judge Size">
-</p>
-
-**Phase 3 overall scores by judge:**
-
-| Rank | Model | Judge 7B | Judge 14B | Judge 32B | Mean |
-|------|-------|----------|-----------|-----------|------|
-| 1 | Phi-3.5-mini-Instruct | 8.04 | 8.09 | 8.06 | **8.06** |
-| 2 | gemma-2-9b-it | 7.87 | 8.03 | 8.09 | 7.99 |
-| 3 | Llama-3.1-8B-Instruct | 7.89 | 8.17 | 7.71 | 7.92 |
-| 4 | Yi-1.5-9B-Chat | 7.98 | 7.97 | 7.79 | 7.91 |
-| 5 | Mistral-7B-Instruct-v0.3 | 7.45 | 7.49 | 7.09 | 7.34 |
-| 6 | SOLAR-10.7B-Instruct | 7.34 | 7.07 | 7.02 | 7.14 |
-| 7 | Zephyr-7B-beta | 7.20 | 7.04 | 6.62 | 6.95 |
-
----
-
-### Cross-Judge Spearman ρ
-
-<p align="center">
-  <img src="figures/fig6_spearman_heatmap.png" width="42%" alt="Cross-Judge Spearman ρ">
-</p>
-
-| | Judge 7B | Judge 14B | Judge 32B |
-|--|---------|-----------|-----------|
-| **Judge 7B** | — | 0.821 | 0.786 |
-| **Judge 14B** | 0.821 | — | 0.750 |
-| **Judge 32B** | 0.786 | 0.750 | — |
-
-Model rankings are **robustly preserved** across judge sizes (all ρ > 0.75). The top (Phi/gemma) and bottom (Zephyr) positions are consistent regardless of judge choice.
-
----
-
-### Question Count Sensitivity
-
-<p align="center">
-  <img src="figures/fig7_qsize_sensitivity.png" width="62%" alt="Question Count Sensitivity">
-</p>
-
-| N Questions | Mean Spearman ρ | Min | Max |
-|-------------|----------------|-----|-----|
-| 10 | 0.777 | 0.321 | 0.964 |
-| 20 | 0.839 | 0.464 | 1.000 |
-| 40 | 0.857 | 0.607 | 1.000 |
-| **60** | **0.952** | 0.643 | 1.000 |
-| 80 | 1.000 | — | — |
-
-Ranking stabilizes at **≥60 questions** (ρ ≥ 0.95). With only 10 questions, rankings can be highly unreliable (min ρ = 0.32). MT-Bench's 80-question design is empirically well-calibrated.
-
----
-
-## Comparison with the Original Paper
-
-| Metric | Original (GPT-4 judge, 2023) | This Reproduction (Qwen14B judge, 2026) |
-|--------|-------------------------------|----------------------------------------|
-| Score range | 2.61 – 8.99 (6.38 pt) | 7.04 – 8.09 (1.05 pt) |
-| Hard/Easy gap pattern | ✅ Higher-ranked models have smaller gap | ✅ Same pattern reproduced |
-| Single ↔ Pairwise convergence | ✅ | ⚠️ Partial — ρ = 0.943, top-2 rank inverted |
-| Pairwise inconsistency rate | ~20% (estimated) | 46.1% (judge model limitation) |
-| Parse failure rate | — | 0 / 560 (0%) in all phases |
-
-### Why Scores Are Compressed
-
-2025-generation models (Phi-3.5-mini, gemma-2-9b, etc.) are substantially stronger than the 2023-era models in the original paper (GPT-4, LLaMA-13B, Vicuna-13B). As a result, all models cluster at the high end (7.0–8.1), reducing the effective score spread from 6.38 pt to ~1.05 pt.
-
----
-
-## Conclusions
-
-| Claim from the Paper | Reproduction Result |
-|----------------------|---------------------|
-| Hard categories (math/reasoning/coding) show larger inter-model gaps | ✅ Confirmed — gap +0.13 (Phi) to +1.62 (Mistral) |
-| Single-answer and pairwise rankings converge | ⚠️ Partial — ρ = 0.943; top-2 flip observed |
-| LLM-as-a-Judge can reliably rank models | ⚠️ Conditional — rankings stable but inconsistency 46% with 14B judge |
-| Larger models ≠ better performance | ✅ SOLAR-10.7B (5th) < Phi-3.5-mini-3.8B (1st) |
-
-### Phase 3 Additional Findings
-
-| Finding | Result |
-|---------|--------|
-| Larger judge → lower inconsistency rate | ✅ 7B(78.75%) → 14B(46.85%) → 32B(32.86%), monotone decrease |
-| Model rankings stable across judge sizes | ✅ Cross-judge ρ > 0.75 in all pairs |
-| Larger judge → higher discriminability | ✅ Score range: 0.84 pt (7B) → 1.47 pt (32B) |
-| Qwen2.5-72B AWQ on A100 40 GB | ❌ OOM — model weights alone require ~39 GB |
-
-### Recommendation
-
-For LLM-as-a-Judge deployments:
-- **14B minimum** for reliable pairwise judgments (inconsistency drops below 50%)
-- **32B** for fine-grained discrimination (inconsistency ~33%, clear decision ~67%)
-- **7B judge** is dominated by position bias (78.75% inconsistency) — not recommended
-
----
-
-## Paper–Code Correspondence
-
-| Paper | Implementation | Description |
-|-------|---------------|-------------|
-| Figure 5 | `prompts._SYSTEM_PAIRWISE` | Basic pairwise prompt |
-| Figure 6 | `prompts._SYSTEM_SINGLE` | Single grading prompt |
-| Figure 7 | `prompts._SYSTEM_PAIRWISE_MATH_COT` | CoT pairwise |
-| Figure 8 | `prompts._SYSTEM_PAIRWISE_REFERENCE` | Reference-guided pairwise |
-| Figure 9 | `prompts.build_multiturn_pairwise_prompt` | Multi-turn pairwise |
-| Figure 10 | `prompts.build_multiturn_single_prompt` | Reference-guided multi-turn single |
-| Section 3.4 | `judge_pairwise.judge_pairwise_question` | Conservative swap (winner only if AB = BA) |
-| Table 8 | `aggregate.compute_single_scores` | MT-Bench Score (mean over 160 turns) |
 
 ---
 
