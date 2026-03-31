@@ -71,8 +71,8 @@ EVAL_MODELS=(
 JUDGE_LIST=(
   "judge_7B:Qwen2.5-7B-Instruct:none:0.90"
   "judge_14B:Qwen2.5-14B-Instruct:none:0.90"
-  "judge_32B:Qwen2.5-32B-Instruct:awq:0.90"
-  "judge_72B:Qwen2.5-72B-Instruct:awq:0.85"
+  "judge_32B:Qwen2.5-32B-Instruct:awq:0.95"
+  "judge_72B:Qwen2.5-72B-Instruct:awq:0.95"
 )
 
 echo "=============================="
