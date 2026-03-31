@@ -303,7 +303,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 > **Single ↔ Pairwise 수렴 분석:** Spearman ρ = 0.943으로 대체로 수렴하나 **상위 2개 모델(Phi↔gemma) 순위 역전**이 발생함. Single에서 Phi(1위, 8.09점) > gemma(2위, 8.03점)이었으나, Pairwise에서 gemma(1위, 79.4%) > Phi(2위, 76.3%)로 뒤집혔다. 3~6위는 동일. → 논문의 "두 채점 방식이 수렴한다" 주장은 **부분 재현 (ρ=0.943, 상위권 역전 존재)**
 >
-> **한계:** Inconsistent율 46.1% (1200개 중 553개) — GPT-4 judge 대비 Qwen2.5-14B의 position bias가 높아 AB/BA 판정이 자주 불일치함. 또한 Qwen2.5-7B-Instruct가 pairwise 비교 대상에서 누락돼 win rate 산출 불가.
+> **한계:** Inconsistent율 46.1% (1200개 중 553개) — GPT-4 judge 대비 Qwen2.5-14B의 position bias가 높아 AB/BA 판정이 자주 불일치함. Qwen2.5-7B-Instruct는 Phase 1(단일 모델 채점)에서만 사용했고, Phase 2 pairwise 비교 대상에는 의도적으로 포함하지 않았다.
 
 #### 논문 결과와 비교
 
@@ -331,7 +331,7 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 
 1. **Judge 모델 차이**: 논문은 GPT-4, 이번은 Qwen2.5-14B. 더 작은 judge는 position bias가 높아 pairwise inconsistent율이 46%까지 상승 (논문 대비 약 2배 추정).
 2. **모델 세대 차이**: 2023년 모델(GPT-4~LLaMA-13B) 대비 2026년 모델들은 전반적으로 성능이 높아 점수 범위가 1.08p에 불과 (논문: 6.38p). 변별력이 낮아졌음.
-3. **Qwen2.5-7B pairwise 누락**: 스크립트 EVAL_MODELS에서 빠져서 1위 모델의 win rate를 산출하지 못함.
+3. **Qwen2.5-7B Phase 2 미포함**: Qwen2.5-7B-Instruct는 Phase 1에서 단독 채점 대상으로만 사용. Phase 2는 Qwen2.5-14B를 judge로 쓰는 실험이므로 동일 패밀리 self-judge 편향을 피하기 위해 의도적으로 제외했다.
 
 ### 핵심 takeaway
 
