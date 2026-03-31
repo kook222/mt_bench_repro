@@ -34,7 +34,7 @@ NeurIPS 2023 논문 **"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"**
 
 > Qwen2.5-7B는 Phase 1(self-judge)에서만 평가. Phase 2는 Qwen2.5-14B를 judge로 사용하므로 동일 패밀리 self-judge 편향을 방지하기 위해 의도적으로 평가 대상에서 제외.
 
-### Phase 3 — 7개 모델 + Judge 스케일링 (🔧 실행 중)
+### Phase 3 — 7개 모델 + Judge 스케일링 (✅ 완료, 3개 포인트)
 
 | 변경 | 모델 | 파라미터 |
 |------|------|---------|
@@ -255,8 +255,64 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 | 스크립트 | 역할 |
 |---------|------|
 | `scripts/run_generate_phase3_a100.sh` | Llama-3.1-8B 답변 생성 (1개, 나머지 Phase 2 재사용) |
-| `scripts/run_judge_phase3_a100.sh` | judge 4종 순차 실행, `data/judgments_phase3/judge_XB/` 경로 분리 |
+| `scripts/run_judge_phase3_a100.sh` | judge 3종 순차 실행, `data/judgments_phase3/judge_XB/` 경로 분리 |
 | `scripts/analyze_phase3.py` | 스케일링 커브 + 문항 수 민감도 통합 분석, CSV 출력 |
+
+### Phase 3 결과 (✅ 완료)
+
+#### Inconsistency율 스케일링 커브 (핵심 결과)
+
+| Judge | 파라미터 | Inconsistency율 | Clear Decision율 |
+|-------|---------|----------------|----------------|
+| Qwen2.5-7B | 7B | **78.75%** | 21.25% |
+| Qwen2.5-14B | 14B | 46.85% | 53.15% |
+| Qwen2.5-32B | 32B | **32.86%** | 67.14% |
+
+> Judge 크기가 7B→32B로 커지면서 inconsistency율이 **45.89pp 감소**. 32B judge는 판정의 2/3가 일관됨.
+> 7B judge는 inconsistency 78.75% — 사실상 위치 편향(position bias)에 지배되는 수준.
+
+#### Single-Answer Overall 점수 (judge별)
+
+| 순위 | 모델 | 7B judge | 14B judge | 32B judge | 평균 |
+|------|------|----------|-----------|-----------|------|
+| 1 | Phi-3.5-mini-Instruct | 8.04 | 8.09 | 8.06 | **8.06** |
+| 2 | gemma-2-9b-it | 7.87 | 8.03 | 8.09 | 7.99 |
+| 3 | Llama-3.1-8B-Instruct | 7.89 | 8.17 | 7.71 | 7.92 |
+| 4 | Yi-1.5-9B-Chat | 7.98 | 7.97 | 7.79 | 7.91 |
+| 5 | Mistral-7B-Instruct-v0.3 | 7.45 | 7.49 | 7.09 | 7.34 |
+| 6 | SOLAR-10.7B-Instruct | 7.34 | 7.07 | 7.02 | 7.14 |
+| 7 | Zephyr-7B-beta | 7.20 | 7.04 | 6.62 | 6.95 |
+
+> **점수 범위**: 7B=0.84p, 14B=1.13p, 32B=**1.47p** → judge가 클수록 변별력 증가 (예측 부합).
+> **파싱 실패**: 3개 judge 모두 0/560 (0%) — 완벽한 데이터 품질.
+
+#### Cross-Judge Spearman ρ (순위 일관성)
+
+| 비교 | Spearman ρ | 해석 |
+|------|-----------|------|
+| 7B vs 14B | 0.821 | 강한 상관 |
+| 7B vs 32B | 0.786 | 강한 상관 |
+| 14B vs 32B | 0.750 | 강한 상관 |
+
+> judge 크기가 달라도 모델 **순위는 대체로 보존됨** (ρ > 0.75). 단, 상위권 미세 순위는 달라짐.
+
+#### Pairwise Win Rate 분포 (judge별 1위 모델)
+
+| Judge | 1위 | win rate | 7위 | win rate |
+|-------|-----|----------|-----|----------|
+| 7B | Phi-3.5-mini | 11.67% | Zephyr | ~5% |
+| 14B | Phi-3.5-mini | 37.71% | Zephyr | ~15% |
+| 32B | Phi-3.5-mini | 49.37% | Zephyr | ~10% |
+
+> 7B judge는 win rate 차이가 거의 없어 사실상 순위 식별 불가. 32B에서 비로소 명확한 서열 분리.
+
+#### 핵심 발견 요약
+
+1. **Judge Scaling Law 확인**: 7B→32B에서 inconsistency 78.75%→32.86% (46pp 감소). 단조감소 곡선.
+2. **7B judge 신뢰 불가**: inconsistency 78.75%는 랜덤(50%)을 넘어 position bias가 오히려 강하게 고착된 수준.
+3. **32B judge 실용 임계점**: inconsistency 32.86%, clear decision 67% → 신뢰할 수 있는 판정 가능.
+4. **순위 안정성**: 어떤 judge를 써도 Phi/gemma 상위, Zephyr 하위는 일관됨 (ρ > 0.75).
+5. **변별력 증가**: 점수 범위 7B(0.84p) → 32B(1.47p) — 큰 judge가 더 엄격하고 discriminative.
 
 ---
 
@@ -350,9 +406,18 @@ k8s job으로 제출하는 방법은 `CLAUDE.md` 참고.
 1. **Judge 모델 차이**: 논문은 GPT-4, 이번은 Qwen2.5-14B. 더 작은 judge는 position bias가 높아 pairwise inconsistency율이 46%까지 상승 (논문 대비 약 2배 추정).
 2. **모델 세대 차이**: 2023년 모델(GPT-4~LLaMA-13B) 대비 2026년 모델들은 전반적으로 성능이 높아 점수 범위가 1.08p에 불과 (논문: 6.38p). 변별력이 낮아졌음.
 
+### Phase 3 추가 발견
+
+| Phase 3 발견 | 결과 |
+|------------|------|
+| Judge 크기 증가 → inconsistency 감소 | ✅ 7B(78.75%) → 14B(46.85%) → 32B(32.86%), 단조감소 |
+| Judge 크기와 무관한 모델 서열 안정성 | ✅ cross-judge ρ > 0.75, 상위/하위 모델 일관됨 |
+| Judge 크기 증가 → 점수 변별력 증가 | ✅ 점수 범위 7B(0.84p) → 32B(1.47p) |
+| 72B judge A100 40GB 실행 가능 여부 | ❌ AWQ 4-bit 웨이트 ~38.95GB, VRAM 초과 불가 |
+
 ### 핵심 takeaway
 
-> 논문의 핵심 방법론(LLM-as-a-Judge, AB/BA swap, reference-guided grading)은 2026년 오픈소스 환경에서도 **모델 서열 파악** 수준에서는 재현 가능하다. 그러나 judge 모델 품질이 결과 신뢰도에 직결된다 — Qwen2.5-14B judge의 inconsistency 46.1%는 GPT-4 judge 대비 신뢰도가 낮으며, 상위 2개 모델 순위가 채점 방식에 따라 역전됐다. 신뢰할 수 있는 판정을 위해서는 judge 크기가 중요하며, 이것이 Phase 3(Judge Scaling Law)의 핵심 연구 질문이다.
+> 논문의 핵심 방법론(LLM-as-a-Judge, AB/BA swap, reference-guided grading)은 2026년 오픈소스 환경에서도 **모델 서열 파악** 수준에서는 재현 가능하다. 단, judge 크기가 신뢰도에 직결된다 — 7B judge는 inconsistency 78.75%로 사실상 신뢰 불가, 32B judge에서 비로소 판정의 2/3가 일관됨. 모델 순위 자체는 judge 크기와 무관하게 안정적(ρ > 0.75)이므로, 서열 파악 목적이라면 14B 이상, 세밀한 판정이 필요하면 32B 이상을 권장한다.
 
 ---
 
