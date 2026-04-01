@@ -1,119 +1,119 @@
 <div align="center">
 
-# MT-Bench Reproduction
+# MT-Bench 재현
 
-**Reproducing _"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"_ (NeurIPS 2023)**
+**NeurIPS 2023 논문 _"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"_ 재현**
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Paper](https://img.shields.io/badge/Paper-NeurIPS%202023-red)](https://arxiv.org/abs/2306.05685)
-[![Infra: A100](https://img.shields.io/badge/Infra-A100%2040GB-lightgrey?logo=nvidia)](https://www.nvidia.com/)
-[![Cite](https://img.shields.io/badge/cite-CITATION.cff-blue)](CITATION.cff)
+[![Paper](https://img.shields.io/badge/논문-NeurIPS%202023-red)](https://arxiv.org/abs/2306.05685)
+[![Infra: A100](https://img.shields.io/badge/인프라-A100%2040GB-lightgrey?logo=nvidia)](https://www.nvidia.com/)
+[![Cite](https://img.shields.io/badge/인용-CITATION.cff-blue)](CITATION.cff)
 
 </div>
 
 ---
 
-> **Goal:** Reproduce the *model ranking order* and *per-category performance trends* from the NeurIPS 2023 MT-Bench paper using open-source models (2024–2025 generation) and a local vLLM judge.
-> Exact score matching is explicitly **not** the objective.
+> **목표:** NeurIPS 2023 MT-Bench 논문의 *모델 서열*과 *카테고리별 성능 추이*를 오픈소스 모델(2024–2025 세대)과 로컬 vLLM judge로 재현.
+> 정확한 점수 일치는 목표가 아님.
 
 <br>
 
 <p align="center">
-  <img src="figures/mt_bench_summary.png" width="96%" alt="MT-Bench Reproduction Summary">
+  <img src="figures/mt_bench_summary.png" width="96%" alt="MT-Bench 재현 요약">
 </p>
 
 ---
 
-## Table of Contents
+## 목차
 
-- [Overview](#overview)
-- [Experimental Setup](#experimental-setup)
-- [Phase 1 — Self-Judge Baseline](#phase-1--self-judge-baseline)
-- [Phase 2 — 6-Model Comparison](#phase-2--6-model-comparison)
-  - [Single-Answer Scores](#single-answer-scores)
-  - [Per-Category Heatmap](#per-category-heatmap)
-  - [Hard vs. Easy Gap](#hard-vs-easy-gap)
-  - [Pairwise Win Rates](#pairwise-win-rates)
-  - [Discriminability-Based Gap Analysis](#phase-2--discriminability-based-gap-analysis)
-- [Phase 3 — Judge Scaling Law](#phase-3--judge-scaling-law)
-  - [Inconsistency Rate Curve](#inconsistency-rate-curve)
-  - [Scores by Judge Size](#scores-by-judge-size)
+- [개요](#개요)
+- [실험 설정](#실험-설정)
+- [Phase 1 — Self-Judge 기준선](#phase-1--self-judge-기준선)
+- [Phase 2 — 6개 모델 비교](#phase-2--6개-모델-비교)
+  - [Single-Answer 점수](#single-answer-점수)
+  - [카테고리별 히트맵](#카테고리별-히트맵)
+  - [Hard vs. Easy 갭](#hard-vs-easy-갭)
+  - [Pairwise 승률](#pairwise-승률)
+  - [변별도 기반 갭 분석](#phase-2--변별도-기반-갭-분석)
+- [Phase 3 — Judge 스케일링 법칙](#phase-3--judge-스케일링-법칙)
+  - [Inconsistency율 곡선](#inconsistency율-곡선)
+  - [Judge 크기별 점수](#judge-크기별-점수)
   - [Cross-Judge Spearman ρ](#cross-judge-spearman-ρ)
-  - [Question Count Sensitivity](#question-count-sensitivity)
-- [Comparison with the Original Paper](#comparison-with-the-original-paper)
-- [Conclusions](#conclusions)
-- [Repository Structure](#repository-structure)
-- [Quick Start](#quick-start)
-- [Citation](#citation)
+  - [문항 수 민감도](#문항-수-민감도)
+- [원본 논문과 비교](#원본-논문과-비교)
+- [결론](#결론)
+- [저장소 구조](#저장소-구조)
+- [빠른 시작](#빠른-시작)
+- [인용](#인용)
 
 ---
 
-## Overview
+## 개요
 
-This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS 2023)](https://arxiv.org/abs/2306.05685) as a self-contained Python package (`mtbench_repro`). The experiment is structured in three progressive phases:
+이 저장소는 [Zheng et al. (NeurIPS 2023)](https://arxiv.org/abs/2306.05685)의 평가 파이프라인을 독립적인 Python 패키지(`mtbench_repro`)로 재구현한다. 실험은 3단계로 구성된다:
 
-| Phase | Description | Models | Judge | Status |
-|-------|-------------|--------|-------|--------|
-| **1** | Pipeline validation, self-judge baseline | Qwen2.5-7B | Qwen2.5-7B (self) | ✅ Done |
-| **2** | 6-model comparison, external judge | 6 open-source models | Qwen2.5-14B | ✅ Done |
-| **3** | Judge scaling law (7B → 32B) | 7 models (Phase 2 + Llama-3.1-8B) | Qwen2.5 7B / 14B / 32B | ✅ Done |
+| Phase | 설명 | 평가 모델 | Judge | 상태 |
+|-------|------|----------|-------|------|
+| **1** | 파이프라인 검증, self-judge 기준선 | Qwen2.5-7B | Qwen2.5-7B (self) | ✅ 완료 |
+| **2** | 6개 모델 비교, 외부 judge | 6개 오픈소스 모델 | Qwen2.5-14B | ✅ 완료 |
+| **3** | Judge 스케일링 법칙 (7B → 32B) | 7개 모델 (Phase 2 + Llama-3.1-8B) | Qwen2.5 7B / 14B / 32B | ✅ 완료 |
 
-**Three grading methods** are implemented (matching the paper's evaluation protocol):
+논문의 평가 프로토콜에 맞춰 **3가지 채점 방식**을 구현했다:
 
-| Method | Paper Reference | Scope |
-|--------|----------------|-------|
-| Single-answer grading (1–10) | Figure 6, Table 8 | All categories |
-| Pairwise comparison (AB/BA swap) | Figure 5, 9, §3.4 | All categories |
+| 방식 | 논문 근거 | 적용 범위 |
+|------|----------|----------|
+| Single-answer grading (1–10점) | Figure 6, Table 8 | 전 카테고리 |
+| Pairwise 비교 (AB/BA swap) | Figure 5, 9, §3.4 | 전 카테고리 |
 | Reference-guided grading | Figure 8, 10 | math / reasoning / coding |
 
 ---
 
-## Experimental Setup
+## 실험 설정
 
-### Models Evaluated
+### 평가 대상 모델
 
-| Phase | Model | Params | Notes |
-|-------|-------|--------|-------|
-| 1 | Qwen2.5-7B-Instruct | 7B | Self-judge baseline only |
+| Phase | 모델 | 파라미터 | 비고 |
+|-------|------|---------|------|
+| 1 | Qwen2.5-7B-Instruct | 7B | Self-judge 기준선 전용 |
 | 2, 3 | **Phi-3.5-mini-Instruct** | 3.8B | Microsoft |
 | 2, 3 | **gemma-2-9b-it** | 9B | Google |
 | 2, 3 | **Yi-1.5-9B-Chat** | 9B | 01.AI |
 | 2, 3 | **Mistral-7B-Instruct-v0.3** | 7B | Mistral AI |
 | 2, 3 | **SOLAR-10.7B-Instruct** | 10.7B | Upstage |
 | 2, 3 | **Zephyr-7B-beta** | 7B | HuggingFace H4 |
-| 3 only | **Llama-3.1-8B-Instruct** | 8B | Meta (replaces Qwen2.5-7B) |
+| 3 전용 | **Llama-3.1-8B-Instruct** | 8B | Meta (Qwen2.5-7B 대체) |
 
-### Judge Models
+### Judge 모델
 
-| Judge | Params | VRAM | Quantization | Used in |
-|-------|--------|------|-------------|---------|
+| Judge | 파라미터 | VRAM | 양자화 | 사용 Phase |
+|-------|---------|------|--------|-----------|
 | Qwen2.5-7B-Instruct | 7B | ~14 GB | fp16 | Phase 1 (self), Phase 3 |
 | Qwen2.5-14B-Instruct | 14B | ~28 GB | fp16 | Phase 2, Phase 3 |
 | Qwen2.5-32B-Instruct | 32B | ~20 GB | AWQ 4-bit | Phase 3 |
-| Qwen2.5-72B-Instruct | 72B | ~39 GB | AWQ 4-bit | ❌ OOM on A100 40 GB |
+| Qwen2.5-72B-Instruct | 72B | ~39 GB | AWQ 4-bit | ❌ A100 40GB OOM |
 
-> Using a single Qwen2.5 family for all Phase 3 judge sizes eliminates architecture variance, isolating the pure size effect on judgment quality.
+> Phase 3 judge를 Qwen2.5 단일 패밀리로 통일 → 아키텍처 변수를 제거하고 순수 크기 효과만 측정.
 
-### Infrastructure
+### 인프라
 
 - **GPU:** NVIDIA A100 SXM4 40 GB
-- **Serving:** vLLM v0.6.6 (OpenAI-compatible API)
-- **Benchmark:** MT-Bench 80 questions × 2 turns = 160 scored turns per model
-- **Generation temp:** 0.7 · **Judge temp:** 0.0 (greedy)
+- **서빙:** vLLM v0.6.6 (OpenAI 호환 API)
+- **벤치마크:** MT-Bench 80문항 × 2턴 = 모델당 160턴 채점
+- **생성 temperature:** 0.7 · **Judge temperature:** 0.0 (greedy)
 
 ---
 
-## Phase 1 — Self-Judge Baseline
+## Phase 1 — Self-Judge 기준선
 
-> **Model:** Qwen2.5-7B-Instruct · **Judge:** Qwen2.5-7B-Instruct (self)
+> **모델:** Qwen2.5-7B-Instruct · **Judge:** Qwen2.5-7B-Instruct (자기 자신)
 
 <p align="center">
-  <img src="figures/fig0_phase1_scores.png" width="80%" alt="Phase 1 Self-Judge Scores">
+  <img src="figures/fig0_phase1_scores.png" width="80%" alt="Phase 1 Self-Judge 점수">
 </p>
 
-| Category | Score |
-|----------|-------|
+| 카테고리 | 점수 |
+|---------|------|
 | Writing | 7.60 |
 | Roleplay | 7.95 |
 | Extraction | 7.45 |
@@ -122,24 +122,24 @@ This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS
 | Coding | **8.80** |
 | STEM | 8.55 |
 | Humanities | 8.60 |
-| **Overall** | **8.12** |
+| **전체** | **8.12** |
 
-**Observation:** Self-judge inflates Math and Coding scores (8.80), which are the categories Qwen2.5-7B is strongest in. This self-judge bias motivates using an external judge in Phase 2.
+**관찰:** Self-judge는 Qwen2.5-7B가 가장 강한 Math와 Coding 점수를 과대평가(8.80)한다. 이 self-judge 편향이 Phase 2에서 외부 judge를 사용하는 동기가 된다.
 
 ---
 
-## Phase 2 — 6-Model Comparison
+## Phase 2 — 6개 모델 비교
 
-> **Judge:** Qwen2.5-14B-Instruct · **Infra:** A100 40 GB vLLM
+> **Judge:** Qwen2.5-14B-Instruct · **인프라:** A100 40GB vLLM
 
-### Single-Answer Scores
+### Single-Answer 점수
 
 <p align="center">
-  <img src="figures/fig2_overall_rankings.png" width="88%" alt="Phase 2 Overall Rankings">
+  <img src="figures/fig2_overall_rankings.png" width="88%" alt="Phase 2 전체 순위">
 </p>
 
-| Rank | Model | Params | Overall | Writing | Roleplay | Extraction | Reasoning | Math | Coding | STEM | Humanities |
-|------|-------|--------|---------|---------|----------|------------|-----------|------|--------|------|------------|
+| 순위 | 모델 | 파라미터 | 전체 | Writing | Roleplay | Extraction | Reasoning | Math | Coding | STEM | Humanities |
+|------|------|---------|------|---------|----------|-----------|----------|------|--------|------|-----------|
 | 1 | Phi-3.5-mini-Instruct | 3.8B | **8.09** | 8.25 | 7.70 | 7.65 | 7.75 | 8.30 | 8.15 | 8.25 | 8.65 |
 | 2 | gemma-2-9b-it | 9B | 8.03 | 8.15 | 8.00 | 7.50 | 7.70 | 8.05 | 7.95 | 8.40 | 8.50 |
 | 3 | Yi-1.5-9B-Chat | 9B | 7.97 | 8.10 | 8.05 | 8.05 | 7.45 | 8.00 | 7.20 | 8.50 | 8.40 |
@@ -147,28 +147,28 @@ This repository reimplements the evaluation pipeline from [Zheng et al. (NeurIPS
 | 5 | SOLAR-10.7B-Instruct | 10.7B | 7.07 | 7.85 | 6.55 | 7.26 | 6.85 | 7.25 | 4.95 | 7.65 | 8.20 |
 | 6 | Zephyr-7B-beta | 7B | 7.04 | 7.60 | 7.20 | 7.40 | 6.15 | 6.35 | 5.65 | 8.10 | 7.90 |
 
-> Qwen2.5-7B is excluded from Phase 2 to prevent same-family self-judge bias (Phase 1 self-judge overall: 8.12).
+> Qwen2.5-7B는 self-judge 편향 방지를 위해 Phase 2에서 제외 (Phase 1 self-judge 전체 점수: 8.12).
 
 ---
 
-### Per-Category Heatmap
+### 카테고리별 히트맵
 
 <p align="center">
-  <img src="figures/fig1_category_heatmap.png" width="90%" alt="Per-Category Heatmap">
+  <img src="figures/fig1_category_heatmap.png" width="90%" alt="카테고리별 히트맵">
 </p>
 
-Coding and Reasoning are the most discriminative categories. Phi-3.5-mini leads in Math/Coding; SOLAR-10.7B and Zephyr-7B fall far behind in Coding (4.95, 5.65).
+Coding과 Reasoning이 가장 변별력 높은 카테고리다. Phi-3.5-mini가 Math/Coding에서 선두; SOLAR-10.7B와 Zephyr-7B는 Coding에서 크게 뒤처진다 (4.95, 5.65).
 
 ---
 
-### Hard vs. Easy Gap
+### Hard vs. Easy 갭
 
 <p align="center">
-  <img src="figures/fig3_hard_easy_gap.png" width="88%" alt="Hard vs Easy Gap">
+  <img src="figures/fig3_hard_easy_gap.png" width="88%" alt="Hard vs Easy 갭">
 </p>
 
-| Model | Hard avg<br>(math / reasoning / coding) | Easy avg<br>(writing / roleplay / humanities) | Gap (Easy − Hard) |
-|-------|--------|--------|-------|
+| 모델 | Hard 평균<br>(math / reasoning / coding) | Easy 평균<br>(writing / roleplay / humanities) | 갭 (Easy − Hard) |
+|------|--------|--------|-------|
 | Phi-3.5-mini | 8.07 | 8.20 | +0.13 |
 | gemma-2-9b | 7.90 | 8.22 | +0.32 |
 | Yi-1.5-9B | 7.55 | 8.18 | +0.63 |
@@ -176,14 +176,14 @@ Coding and Reasoning are the most discriminative categories. Phi-3.5-mini leads 
 | SOLAR-10.7B | 6.35 | 7.53 | +1.18 |
 | Zephyr-7B | 6.05 | 7.57 | **+1.52** |
 
-**Replicates the paper's core pattern:** stronger models have smaller hard/easy gaps. Mistral-7B and Zephyr-7B are disproportionately weak on hard tasks despite competitive writing scores.
+**논문 핵심 패턴 재현:** 강한 모델일수록 Hard/Easy 갭이 작다. Mistral-7B와 Zephyr-7B는 Writing 점수는 준수하나 Hard 카테고리에서 크게 뒤처진다.
 
 ---
 
-### Pairwise Win Rates
+### Pairwise 승률
 
-| Rank | Model | Win Rate | Games Played |
-|------|-------|----------|--------------|
+| 순위 | 모델 | 승률 | 게임 수 |
+|------|------|------|--------|
 | 1 | gemma-2-9b-it | **79.4%** | 209 |
 | 2 | Phi-3.5-mini-Instruct | 76.3% | 219 |
 | 3 | Yi-1.5-9B-Chat | 66.1% | 202 |
@@ -191,43 +191,96 @@ Coding and Reasoning are the most discriminative categories. Phi-3.5-mini leads 
 | 5 | SOLAR-10.7B-Instruct | 25.2% | 214 |
 | 6 | Zephyr-7B-beta | 15.2% | 244 |
 
-Single ↔ Pairwise Spearman ρ = **0.943** — strong convergence overall, with one notable exception: the top-2 ranks flip between methods (Single: Phi > gemma; Pairwise: gemma > Phi). Ranks 3–6 are identical.
+Single ↔ Pairwise Spearman ρ = **0.943** — 전반적으로 수렴하나 주목할 예외: 상위 2위 순위 역전 (Single: Phi > gemma; Pairwise: gemma > Phi). 3–6위는 동일.
 
-> Pairwise inconsistency rate: **46.1%** (553 / 1200) — significantly higher than estimated GPT-4 levels (~20%), reflecting position bias in a 14B judge.
-
----
-
-## Phase 3 — Judge Scaling Law
-
-> **Evaluated models:** Phase 2 lineup (6) + Llama-3.1-8B-Instruct (replaces Qwen2.5-7B)
-> **Judges:** Qwen2.5-7B / 14B / 32B (single family, size-only variable)
-
-### Inconsistency Rate Curve
-
-<p align="center">
-  <img src="figures/fig4_judge_scaling.png" width="88%" alt="Judge Scaling Law">
-</p>
-
-| Judge | Params | Inconsistency Rate | Clear Decision Rate | Score Range |
-|-------|--------|-------------------|--------------------|----|
-| Qwen2.5-7B | 7B | **78.75%** | 21.25% | 0.84 pt |
-| Qwen2.5-14B | 14B | 46.85% | 53.15% | 1.13 pt |
-| Qwen2.5-32B | 32B | **32.86%** | 67.14% | 1.47 pt |
-
-As judge size increases 7B → 32B, pairwise inconsistency drops by **45.9 pp** (monotone decrease). Larger judges are also more *discriminative* — the score spread widens from 0.84 pt to 1.47 pt.
-
-> **Qwen2.5-72B:** AWQ 4-bit weights alone require ~38.95 GB, leaving no room for vLLM activation memory on A100 40 GB. All four attempts failed with OOM. Excluded from the scaling curve.
+> Pairwise inconsistency율: **46.1%** (553 / 1200) — GPT-4 추정치(~20%)보다 현저히 높음. 14B judge의 position bias 한계.
 
 ---
 
-### Scores by Judge Size
+## Phase 2 — 변별도 기반 갭 분석
+
+> **연구 질문:** "Hard"를 고정 카테고리 레이블(math/reasoning/coding) 대신 *모델 간 점수 분산*으로 정의하면 무엇이 보이는가?
+
+### 방법론
+
+80개 MT-Bench 문항 각각에 대해 **6개 모델 점수의 표준편차(std)**를 계산한다.
+Std가 높은 문항 = 모델 간 점수 격차가 큰 실질적 변별 문항.
+이 데이터 기반 순위를 논문의 레이블 기반 hard/easy 분류(math/reasoning/coding = hard)와 비교한다.
 
 <p align="center">
-  <img src="figures/fig5_phase3_scores.png" width="90%" alt="Phase 3 Scores by Judge Size">
+  <img src="figures/fig8_discriminability.png" width="92%" alt="변별도 분석">
 </p>
 
-| Rank | Model | Judge 7B | Judge 14B | Judge 32B | Mean |
-|------|-------|----------|-----------|-----------|------|
+### 주요 결과
+
+**카테고리별 평균 변별도 (데이터 기반 순위):**
+
+| 순위 | 카테고리 | 평균 Std | 논문 레이블 |
+|------|---------|---------|-----------|
+| 1 | coding | **1.864** | hard |
+| 2 | **extraction** | **1.291** | **easy ⚠️** |
+| 3 | math | 1.277 | hard |
+| 4 | reasoning | 1.092 | hard |
+| 5 | **roleplay** | **0.776** | **easy** |
+| 6 | stem | 0.562 | easy |
+| 7 | writing | 0.482 | easy |
+| 8 | humanities | 0.472 | easy |
+
+**Top-20 변별도 상위 문항 카테고리 분포:**
+
+| 카테고리 | Top-20 내 개수 | 비고 |
+|---------|--------------|------|
+| coding | 8 | hard ✅ |
+| reasoning | 4 | hard ✅ |
+| math | 4 | hard ✅ |
+| **extraction** | **3** | **easy 레이블이지만 과대표** ⚠️ |
+| roleplay | 1 | easy |
+
+### 해석
+
+1. **논문 레이블 80% 타당:** Top-20 변별 문항 중 16개(80%)가 math/reasoning/coding — 균등 분포 기대값(37.5%)의 2배 이상. 레이블 기반 분류는 경험적으로 근거 있음.
+
+2. **Extraction은 숨겨진 Hard 카테고리:** 평균 변별도 2위(1.291) — math(1.277)와 reasoning(1.092)보다 높음. 논문은 "easy"로 분류했지만 실제 모델 간 점수 격차가 더 큼.
+
+3. **Writing / Humanities는 진짜 쉬운 문항:** 평균 std 0.47–0.48로 최하위. 모든 모델 점수가 밀집 → 모델 변별에 거의 기여하지 않음.
+
+4. **낮은 평균 점수 ≠ 높은 변별도:** extraction q136(평균 점수 7.58)처럼 평균이 높아도 변별도가 클 수 있음 — 난이도와 변별도는 별개 차원.
+
+> **결론:** 벤치마크를 데이터 기반으로 재설계한다면 extraction에서 2–3개 문항을 "hard" pool로 이동하고 writing/humanities 비중을 줄이는 것이 합리적이다. MT-Bench 80문항 설계는 대체로 잘 조율되어 있으나, extraction이 체계적으로 "easy"로 과소평가되고 있다.
+
+---
+
+## Phase 3 — Judge 스케일링 법칙
+
+> **평가 모델:** Phase 2 라인업(6개) + Llama-3.1-8B-Instruct (Qwen2.5-7B 대체)
+> **Judge:** Qwen2.5-7B / 14B / 32B (단일 패밀리, 크기만 변수)
+
+### Inconsistency율 곡선
+
+<p align="center">
+  <img src="figures/fig4_judge_scaling.png" width="88%" alt="Judge 스케일링 법칙">
+</p>
+
+| Judge | 파라미터 | Inconsistency율 | Clear Decision율 | 점수 범위 |
+|-------|---------|----------------|----------------|---------|
+| Qwen2.5-7B | 7B | **78.75%** | 21.25% | 0.84pt |
+| Qwen2.5-14B | 14B | 46.85% | 53.15% | 1.13pt |
+| Qwen2.5-32B | 32B | **32.86%** | 67.14% | 1.47pt |
+
+Judge 크기가 7B → 32B로 커지면서 pairwise inconsistency가 **45.9pp 감소** (단조 감소). 큰 judge일수록 더 *변별력*이 높음 — 점수 범위가 0.84pt에서 1.47pt로 확대.
+
+> **Qwen2.5-72B:** AWQ 4-bit 웨이트 자체가 ~38.95 GB를 차지해 A100 40GB에서 vLLM 활성화 메모리 공간 부재. 4차례 시도 모두 OOM. 스케일링 커브에서 제외.
+
+---
+
+### Judge 크기별 점수
+
+<p align="center">
+  <img src="figures/fig5_phase3_scores.png" width="90%" alt="Phase 3 Judge 크기별 점수">
+</p>
+
+| 순위 | 모델 | Judge 7B | Judge 14B | Judge 32B | 평균 |
+|------|------|----------|-----------|-----------|------|
 | 1 | Phi-3.5-mini-Instruct | 8.04 | 8.09 | 8.06 | **8.06** |
 | 2 | gemma-2-9b-it | 7.87 | 8.03 | 8.09 | 7.99 |
 | 3 | Llama-3.1-8B-Instruct | 7.89 | 8.17 | 7.71 | 7.92 |
@@ -236,7 +289,7 @@ As judge size increases 7B → 32B, pairwise inconsistency drops by **45.9 pp** 
 | 6 | SOLAR-10.7B-Instruct | 7.34 | 7.07 | 7.02 | 7.14 |
 | 7 | Zephyr-7B-beta | 7.20 | 7.04 | 6.62 | 6.95 |
 
-Parse failure rate: **0 / 560 (0%)** across all three judges.
+파싱 실패율: **0 / 560 (0%)** — 3가지 judge 모두 완벽한 데이터 품질.
 
 ---
 
@@ -252,179 +305,126 @@ Parse failure rate: **0 / 560 (0%)** across all three judges.
 | **Judge 14B** | 0.821 | — | 0.750 |
 | **Judge 32B** | 0.786 | 0.750 | — |
 
-Model rankings are **robustly preserved** across all judge sizes (all ρ > 0.75). The top positions (Phi/gemma) and the bottom position (Zephyr) are consistent regardless of which judge is used.
+모델 순위는 judge 크기와 무관하게 **안정적으로 보존됨** (모든 쌍 ρ > 0.75). 상위(Phi/gemma)와 하위(Zephyr) 포지션은 어떤 judge를 써도 일관됨.
 
 ---
 
-### Question Count Sensitivity
+### 문항 수 민감도
 
 <p align="center">
-  <img src="figures/fig7_qsize_sensitivity.png" width="62%" alt="Question Count Sensitivity">
+  <img src="figures/fig7_qsize_sensitivity.png" width="62%" alt="문항 수 민감도">
 </p>
 
-| N Questions | Mean Spearman ρ | Min | Max |
-|-------------|----------------|-----|-----|
+| 문항 수 | 평균 Spearman ρ | 최소 | 최대 |
+|--------|---------------|------|------|
 | 10 | 0.777 | 0.321 | 0.964 |
 | 20 | 0.839 | 0.464 | 1.000 |
 | 40 | 0.857 | 0.607 | 1.000 |
 | **60** | **0.952** | 0.643 | 1.000 |
 | 80 | 1.000 | — | — |
 
-Ranking stabilizes at **≥ 60 questions** (ρ ≥ 0.95). At 10 questions, rankings can be highly unreliable (min ρ = 0.32). MT-Bench's 80-question design is empirically well-calibrated.
+**60문항 이상**(ρ ≥ 0.95)에서 순위가 안정된다. 10문항에서는 순위 신뢰도가 매우 낮음(최소 ρ = 0.32). MT-Bench의 80문항 설계는 경험적으로 잘 조율된 규모임을 실증.
 
 ---
 
-## Phase 2 — Discriminability-Based Gap Analysis
+## 원본 논문과 비교
 
-> **Research question:** If we define "hard" by *inter-model score variance* instead of fixed category labels, what pattern emerges?
+| 지표 | 원본 (GPT-4 judge, 2023) | 이번 재현 (Qwen judge, 2026) |
+|------|--------------------------|------------------------------|
+| 점수 범위 | 2.61 – 8.99 **(6.38pt)** | 7.04 – 8.09 (1.05pt) |
+| Hard/Easy 갭 패턴 | ✅ 상위 모델일수록 갭 작음 | ✅ 동일하게 재현 |
+| Single ↔ Pairwise 수렴 | ✅ | ⚠️ 부분 재현 — ρ=0.943, 상위 2위 역전 |
+| Pairwise inconsistency율 | ~20% (추정) | 46.1% (14B) → 32.9% (32B) |
+| 파싱 실패율 | — | **0%** 전 Phase |
 
-### Methodology
-
-For each of the 80 MT-Bench questions, we compute the **standard deviation of scores across all 6 models**.
-A high std means models disagree sharply — the question genuinely separates good from bad models.
-We then compare this data-driven ranking with the paper's label-based hard/easy split (math / reasoning / coding = hard).
-
-<p align="center">
-  <img src="figures/fig8_discriminability.png" width="92%" alt="Discriminability Analysis">
-</p>
-
-### Key Findings
-
-**Top-20 most discriminative questions by category:**
-
-| Rank | QID | Category | Std | Mean | Paper Label |
-|------|-----|----------|-----|------|-------------|
-| 1 | 128 | coding | 2.961 | 5.67 | hard ✅ |
-| 2 | 126 | coding | 2.957 | 4.92 | hard ✅ |
-| 3 | **136** | **extraction** | **2.746** | 7.58 | **easy ⚠️** |
-| 4 | 104 | reasoning | 2.558 | 6.58 | hard ✅ |
-| 5–6 | 125, 127 | coding | 2.4–2.5 | 5.8–6.4 | hard ✅ |
-| 8 | **140** | **extraction** | **2.295** | 6.67 | **easy ⚠️** |
-| 10 | **95** | **roleplay** | **2.178** | 5.08 | **easy ⚠️** |
-
-**Mean discriminability per category (data-driven ranking):**
-
-| Rank | Category | Mean Std | Paper Label |
-|------|----------|----------|-------------|
-| 1 | coding | **1.864** | hard |
-| 2 | **extraction** | **1.291** | **easy** ⚠️ |
-| 3 | math | 1.277 | hard |
-| 4 | reasoning | 1.092 | hard |
-| 5 | **roleplay** | **0.776** | **easy** |
-| 6 | stem | 0.562 | easy |
-| 7 | writing | 0.482 | easy |
-| 8 | humanities | 0.472 | easy |
-
-### Interpretation
-
-1. **Paper's hard categories are largely validated:** 16/20 (80%) of the top discriminative questions come from math/reasoning/coding (vs. 37.5% expected if uniform). The label-based split is empirically grounded.
-
-2. **Extraction is a hidden hard category:** Extraction ranks **2nd** in mean discriminability (mean std = 1.29), above math (1.28) and reasoning (1.09). Three extraction questions crack the top-20. The paper treats extraction as easy, but it produces larger inter-model score spreads than math.
-
-3. **Low mean score ≠ high discriminability:** Panel (D) shows the top discriminative questions cluster at mean score 5–7 (hard difficulty), but the relationship is not monotone — some high-mean questions (e.g., q136 extraction, mean 7.58) are also highly discriminative.
-
-4. **Writing / Humanities are genuinely easy:** Lowest discriminability (mean std 0.47–0.48). All models cluster tightly on these tasks — not useful for model comparison.
-
-> **Takeaway:** A data-driven benchmark design would move 2–3 extraction questions into the "hard" pool and de-prioritize writing/humanities. MT-Bench's 80-question design is largely well-calibrated, but extraction is systematically under-labeled as easy.
+**점수가 압축된 이유:** 2025년 세대 오픈소스 모델들은 원본 논문의 2023년 모델(GPT-4, LLaMA-13B, Vicuna-13B)보다 전반적으로 성능이 높다. 모든 평가 모델이 고점수 구간(7.0–8.1)에 밀집되어 점수 범위가 6.38pt에서 ~1.05pt로 축소됨.
 
 ---
 
-## Comparison with the Original Paper
+## 결론
 
-| Metric | Original (GPT-4 judge, 2023) | This Reproduction (Qwen judge, 2026) |
-|--------|-------------------------------|--------------------------------------|
-| Score range | 2.61 – 8.99 **(6.38 pt)** | 7.04 – 8.09 (1.05 pt) |
-| Hard/Easy gap pattern | ✅ Higher-ranked models have smaller gap | ✅ Same pattern reproduced |
-| Single ↔ Pairwise convergence | ✅ | ⚠️ Partial — ρ = 0.943, top-2 rank inverted |
-| Pairwise inconsistency rate | ~20% (estimated) | 46.1% (14B judge) → 32.9% (32B judge) |
-| Parse failure rate | — | **0%** across all phases |
+| 논문의 주장 | 재현 결과 |
+|------------|----------|
+| Hard 카테고리에서 모델 간 격차가 더 크다 | ✅ 갭 +0.13pt (Phi) ~ +1.62pt (Mistral) |
+| Single-answer와 Pairwise 순위가 수렴한다 | ⚠️ 부분 재현 — ρ=0.943; 상위 2위 역전 |
+| LLM-as-a-Judge로 모델 서열을 신뢰성 있게 식별할 수 있다 | ⚠️ 조건부 재현 — 서열은 안정적이나 inconsistency 46% (14B judge) |
+| 모델 크기가 클수록 반드시 성능이 높지 않다 | ✅ SOLAR-10.7B (5위) < Phi-3.5-mini-3.8B (1위) |
 
-**Why scores are compressed:** 2025-generation open-source models are substantially stronger than the 2023-era models (GPT-4, LLaMA-13B, Vicuna-13B) used in the original paper. All evaluated models cluster at the high end (7.0–8.1), reducing the effective score spread from 6.38 pt to ~1.05 pt.
+### Phase 3 추가 발견
 
----
+| 발견 | 결과 |
+|------|------|
+| Judge 크기 증가 → inconsistency 감소 | ✅ 7B(78.75%) → 14B(46.85%) → 32B(32.86%), 단조 감소 |
+| Judge 크기와 무관한 모델 서열 안정성 | ✅ Cross-judge ρ > 0.75 전 쌍 |
+| Judge 크기 증가 → 변별력 증가 | ✅ 점수 범위 0.84pt (7B) → 1.47pt (32B) |
+| Qwen2.5-72B AWQ, A100 40GB | ❌ OOM — 웨이트만 ~39GB |
 
-## Conclusions
+### Judge 선택 권고
 
-| Claim from the Paper | Reproduction Result |
-|----------------------|---------------------|
-| Hard categories show larger inter-model gaps | ✅ Gap +0.13 pt (Phi) to +1.62 pt (Mistral) |
-| Single-answer and pairwise rankings converge | ⚠️ Partial — ρ = 0.943; top-2 flip observed |
-| LLM-as-a-Judge can reliably rank models | ⚠️ Conditional — stable rankings but 46% inconsistency with 14B judge |
-| Larger models ≠ better performance | ✅ SOLAR-10.7B (5th) < Phi-3.5-mini-3.8B (1st) |
-
-### Phase 3 Additional Findings
-
-| Finding | Result |
-|---------|--------|
-| Larger judge → lower inconsistency | ✅ 7B (78.75%) → 14B (46.85%) → 32B (32.86%), monotone ↓ |
-| Model rankings stable across judge sizes | ✅ Cross-judge ρ > 0.75 in all pairs |
-| Larger judge → higher discriminability | ✅ Score range 0.84 pt (7B) → 1.47 pt (32B) |
-| Qwen2.5-72B AWQ on A100 40 GB | ❌ OOM — weights alone require ~39 GB |
-
-### Judge Selection Recommendation
-
-| Use Case | Minimum Judge |
-|----------|--------------|
-| Quick model ordering only | 14B (inconsistency < 50%) |
-| Fine-grained ranking / publication | 32B (clear decision ~67%) |
-| Avoid entirely | 7B (position bias dominates, 78.75% inconsistency) |
+| 사용 목적 | 최소 Judge 권고 |
+|----------|---------------|
+| 빠른 모델 서열 파악 | 14B (inconsistency < 50%) |
+| 세밀한 순위 / 연구 목적 | 32B (clear decision ~67%) |
+| 사용 비권장 | 7B (position bias 지배, inconsistency 78.75%) |
 
 ---
 
-## Paper–Code Correspondence
+## 논문–코드 대응
 
-| Paper | Implementation | Description |
-|-------|---------------|-------------|
-| Figure 5 | `prompts._SYSTEM_PAIRWISE` | Basic pairwise prompt |
-| Figure 6 | `prompts._SYSTEM_SINGLE` | Single grading prompt |
+| 논문 | 구현 위치 | 설명 |
+|------|----------|------|
+| Figure 5 | `prompts._SYSTEM_PAIRWISE` | Pairwise 기본 프롬프트 |
+| Figure 6 | `prompts._SYSTEM_SINGLE` | Single grading 프롬프트 |
 | Figure 7 | `prompts._SYSTEM_PAIRWISE_MATH_COT` | CoT pairwise |
 | Figure 8 | `prompts._SYSTEM_PAIRWISE_REFERENCE` | Reference-guided pairwise |
 | Figure 9 | `prompts.build_multiturn_pairwise_prompt` | Multi-turn pairwise |
 | Figure 10 | `prompts.build_multiturn_single_prompt` | Reference-guided multi-turn single |
-| Section 3.4 | `judge_pairwise.judge_pairwise_question` | Conservative swap (winner only if AB = BA) |
-| Table 8 | `aggregate.compute_single_scores` | MT-Bench Score (mean over 160 turns) |
+| Section 3.4 | `judge_pairwise.judge_pairwise_question` | Conservative swap (AB=BA일 때만 winner) |
+| Table 8 | `aggregate.compute_single_scores` | MT-Bench Score (160턴 평균) |
 
 ---
 
-## Repository Structure
+## 저장소 구조
 
 ```
 mt_bench_repro/
 ├── src/mtbench_repro/
-│   ├── schemas.py          # Data classes (MTBenchQuestion, ModelAnswer, JudgmentSingle, …)
-│   ├── io_utils.py         # JSONL streaming I/O with resume support
+│   ├── schemas.py          # 데이터 클래스 (MTBenchQuestion, ModelAnswer, JudgmentSingle, …)
+│   ├── io_utils.py         # JSONL 스트리밍 I/O, resume 지원
 │   ├── client.py           # ChatClient (vLLM / OpenAI API / mock)
-│   ├── prompts.py          # Judge prompts (paper Figures 5–10) + score parsers
-│   ├── generate.py         # 2-turn answer generation with resume
+│   ├── prompts.py          # Judge 프롬프트 (Figure 5–10) + 점수 파서
+│   ├── generate.py         # 2-turn 답변 생성, resume 지원
 │   ├── judge_single.py     # Single-answer grading (Fig. 6)
-│   ├── judge_pairwise.py   # Pairwise comparison with AB/BA swap (Fig. 5/9)
+│   ├── judge_pairwise.py   # Pairwise 비교, AB/BA swap (Fig. 5/9)
 │   ├── judge_reference.py  # Reference-guided grading (Fig. 8/10)
-│   ├── aggregate.py        # Aggregation, model rankings, pairwise matrix
-│   └── cli.py              # Unified CLI (5 subcommands)
+│   ├── aggregate.py        # 집계, 모델 랭킹, pairwise 행렬
+│   └── cli.py              # 통합 CLI (5개 서브커맨드)
 ├── scripts/
-│   ├── run_mock_full.sh                  # End-to-end mock pipeline (no GPU)
-│   ├── run_generate_multi_a100.sh        # Phase 2: generate 6-model answers
-│   ├── run_judge_multi_a100.sh           # Phase 2: judge + aggregate
-│   ├── run_generate_phase3_a100.sh       # Phase 3: generate Llama-3.1-8B answers
-│   ├── run_judge_phase3_a100.sh          # Phase 3: 3 judge sizes sequentially
-│   ├── analyze_phase3.py                 # Judge scaling + Q-size analysis
-│   └── generate_figures.py              # Reproduce all figures in this README
+│   ├── run_mock_full.sh                  # GPU 없이 전체 흐름 검증
+│   ├── run_generate_multi_a100.sh        # Phase 2: 6개 모델 답변 생성
+│   ├── run_judge_multi_a100.sh           # Phase 2: judge + 집계
+│   ├── run_generate_phase3_a100.sh       # Phase 3: Llama-3.1-8B 답변 생성
+│   ├── run_judge_phase3_a100.sh          # Phase 3: judge 3종 순차 실행
+│   ├── analyze_phase3.py                 # Judge 스케일링 + 문항 수 분석
+│   ├── analyze_discriminability.py       # 변별도 기반 갭 분석
+│   └── generate_figures.py              # 이 README의 모든 figure 재생성
 ├── data/
-│   ├── mt_bench_questions.jsonl          # 80 MT-Bench questions (2 turns each)
-│   ├── answers/                          # Model answers (JSONL, one file per model)
-│   ├── judgments/                        # Phase 2 judgments
-│   ├── judgments_phase3/judge_{7B,14B,32B}/   # Phase 3 judgments by judge size
-│   ├── results_multi.csv                 # Phase 2 aggregated scores
+│   ├── mt_bench_questions.jsonl          # MT-Bench 80문항 (2턴)
+│   ├── answers/                          # 모델 답변 (모델당 JSONL 1개)
+│   ├── judgments/                        # Phase 2 판정 결과
+│   ├── judgments_phase3/judge_{7B,14B,32B}/   # Phase 3 판정 (judge별 분리)
+│   ├── results_multi.csv                 # Phase 2 집계 점수
 │   ├── results_phase3_judge_{7B,14B,32B}.csv
-│   └── results_phase3_qsize.csv
-└── figures/                              # All publication-quality figures
+│   ├── results_phase3_qsize.csv
+│   └── results_discriminability.csv      # 문항별 변별도 (std, 순위)
+└── figures/                              # 논문 수준 figure 전체
 ```
 
 ---
 
-## Quick Start
+## 빠른 시작
 
-### Installation
+### 설치
 
 ```bash
 git clone https://github.com/kook222/mt_bench_repro.git
@@ -433,16 +433,16 @@ pip install -r requirements.txt
 export PYTHONPATH=src
 ```
 
-### Mock Pipeline (no GPU required)
+### Mock 파이프라인 (GPU 불필요)
 
 ```bash
 bash scripts/run_mock_full.sh
 ```
 
-### CLI Subcommands
+### CLI 서브커맨드
 
 ```bash
-# 1. Generate answers (requires vLLM running at localhost:8000)
+# 1. 답변 생성 (localhost:8000에서 vLLM 실행 필요)
 python -m mtbench_repro.cli generate \
   --questions data/mt_bench_questions.jsonl \
   --answers-dir data/answers/ \
@@ -459,7 +459,7 @@ python -m mtbench_repro.cli judge-single \
   --openai-base-url http://localhost:8000/v1 \
   --openai-api-key EMPTY
 
-# 3. Pairwise comparison (AB + BA)
+# 3. Pairwise 비교 (AB + BA)
 python -m mtbench_repro.cli judge-pairwise \
   --questions data/mt_bench_questions.jsonl \
   --answers-dir data/answers/ \
@@ -481,38 +481,39 @@ python -m mtbench_repro.cli judge-reference \
   --openai-base-url http://localhost:8000/v1 \
   --openai-api-key EMPTY
 
-# 5. Aggregate results
+# 5. 집계
 python -m mtbench_repro.cli aggregate \
   --judgments-dir data/judgments/ \
   --output-csv data/results.csv
 
-# 6. Reproduce all figures
+# 6. Figure 전체 재생성
 python3 scripts/generate_figures.py
 ```
 
-> Always run as `PYTHONPATH=src python -m mtbench_repro.cli …`. Direct `python src/…/cli.py` causes import errors.
+> 항상 `PYTHONPATH=src python -m mtbench_repro.cli …` 형태로 실행. `python src/…/cli.py` 직접 실행은 import 오류 발생.
 
-### Full A100 Pipeline
+### A100 전체 파이프라인
 
 ```bash
 # Phase 2
-bash scripts/run_generate_multi_a100.sh   # answer generation (6 models)
-bash scripts/run_judge_multi_a100.sh      # judging + aggregation
+bash scripts/run_generate_multi_a100.sh   # 6개 모델 답변 생성
+bash scripts/run_judge_multi_a100.sh      # judge + 집계
 
 # Phase 3
-bash scripts/run_generate_phase3_a100.sh  # Llama-3.1-8B only (6 others reused)
-bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B (~12–20 h)
+bash scripts/run_generate_phase3_a100.sh  # Llama-3.1-8B만 신규 생성 (나머지 6개 재사용)
+bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B 순차 (~12–20시간)
 
-# Analysis
+# 분석
 export PYTHONPATH=src
 python3 scripts/analyze_phase3.py
+python3 scripts/analyze_discriminability.py
 ```
 
 ---
 
-## Citation
+## 인용
 
-If you use this reproduction, please also cite the original paper:
+이 저장소를 사용한다면 원본 논문도 함께 인용해주세요:
 
 ```bibtex
 @inproceedings{zheng2023judging,
@@ -528,7 +529,7 @@ If you use this reproduction, please also cite the original paper:
 
 ```bibtex
 @misc{mtbench_repro,
-  title  = {{MT-Bench} Reproduction},
+  title  = {{MT-Bench} 재현},
   author = {Park, Seunghyun},
   year   = {2026},
   url    = {https://github.com/kook222/mt_bench_repro}
@@ -538,5 +539,5 @@ If you use this reproduction, please also cite the original paper:
 ---
 
 <div align="center">
-<sub>Infrastructure: A100 SXM4 40 GB · Serving: vLLM v0.6.6 · Judge family: Qwen2.5</sub>
+<sub>인프라: A100 SXM4 40GB · 서빙: vLLM v0.6.6 · Judge 패밀리: Qwen2.5</sub>
 </div>
