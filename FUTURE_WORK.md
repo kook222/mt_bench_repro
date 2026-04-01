@@ -17,6 +17,7 @@
 | 4 | **문항 수 민감도** | 랜덤 선택 기준 60문항부터 ρ≥0.95 안정, 10문항은 min ρ=0.32 | `results_phase3_qsize.csv` |
 | 5 | **변별도 기반 갭 분석** | Extraction이 데이터 기반 변별도 2위(std=1.291), 논문 "easy" 레이블 과소평가 | `results_discriminability.csv` |
 | 6 | **tinyMT-Bench** | TopDisc-15로 ρ=1.000 달성, Random은 60문항 필요 → **81% 절감** | `results_tiny_mt_bench.csv` |
+| 7 | **Turn 1 vs Turn 2 저하 분석** | Coding/Reasoning은 Turn 2 상승(+0.3/+0.5), Math/Writing은 하락(−0.58/−0.53). SOLAR 가장 취약(δ=−0.622) | `results_turn_degradation.csv` |
 
 ---
 
@@ -26,33 +27,7 @@
 
 ---
 
-### 1순위 — Turn 1 vs Turn 2 성능 저하 분석
-
-**연구 질문:** 멀티턴에서 모델별·카테고리별 Turn 2 품질 저하 패턴은 어떻게 다른가?
-
-**왜 1순위인가:**
-- `score_turn1`, `score_turn2`가 이미 분리 저장되어 있음 — 추가 실험 전혀 불필요
-- 코드 작업만으로 하루 안에 완성 가능
-- 현재 모든 집계가 Turn 1 + Turn 2 평균을 써서 가려진 패턴을 발굴
-
-**분석 내용:**
-- 모델별 `Turn 2 − Turn 1` 델타 계산 → 멀티턴 robustness 프로파일
-- 카테고리별 Turn 2 저하율 비교 (math/coding follow-up이 더 어려울 것으로 예상)
-- Phase 3 데이터 활용 → judge 크기별 Turn 2 채점 패턴 차이도 분석 가능
-
-**예상 발견:**
-
-| 카테고리 | 예상 패턴 | 이유 |
-|---------|---------|------|
-| Math / Coding | Turn 2에서 큰 폭 하락 | Follow-up이 더 복잡한 문제 요구 |
-| Writing / Roleplay | 모델별 편차 클 것 | 창의적 지속 능력이 모델마다 다름 |
-| Humanities | 변화 작을 것 | Turn 2도 단순 서술 중심 |
-
-**기여점:** 단순 overall 점수로 가려진 멀티턴 robustness 패턴 발굴. "점수는 비슷해도 대화 지속 능력이 다른 모델" 식별.
-
----
-
-### 2순위 — Position Bias 정량화
+### 1순위 — Position Bias 정량화
 
 **연구 질문:** Pairwise inconsistency가 발생할 때 먼저 제시된 모델이 유리한가? Judge 크기가 커질수록 position bias가 줄어드는가?
 
@@ -152,14 +127,16 @@ Phase 3 데이터 3종이 이미 있으므로 구현 자체는 간단. 새로운
 ## 추천 실행 순서
 
 ```
+✅ 완료
+└── Turn 1/2 저하 분석     → SOLAR 가장 취약, Coding/Reasoning은 오히려 상승
+
 즉시 착수 (기존 데이터, 추가 실험 불필요)
-├── 1. Turn 1/2 저하 분석      ← 하루 안에 완성, 새로운 멀티턴 인사이트
-├── 2. Position Bias 정량화    ← inconsistency 메커니즘 해명
-└── 3. 앙상블 Judge            ← Phase 3 데이터 재활용, 실용적 기여
+├── 1. Position Bias 정량화    ← inconsistency 메커니즘 해명
+└── 2. 앙상블 Judge            ← Phase 3 데이터 재활용, 실용적 기여
 
 추가 실험 필요 (A100 1~2일)
-└── 4. 한국어 MT-Bench         ← 독립적 논문 구성 가능, 국내 독자층
+└── 3. 한국어 MT-Bench         ← 독립적 논문 구성 가능, 국내 독자층
 
 인력 필요 (top-tier 목표 시)
-└── 5. 인간 평가자 실험
+└── 4. 인간 평가자 실험
 ```
