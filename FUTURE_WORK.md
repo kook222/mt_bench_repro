@@ -17,6 +17,7 @@
 | **Phase 3** — Judge 스케일링 법칙 | 7B(78.75%) → 14B(46.85%) → 32B(32.86%) 단조 감소, ρ>0.75 유지 | `data/results_phase3_*.csv` |
 | **문항 수 민감도** | 60문항부터 ρ≥0.95 안정, 10문항은 min ρ=0.32 신뢰 불가 | `data/results_phase3_qsize.csv` |
 | **변별도 기반 갭 분석** | Extraction이 데이터 기반 2위(mean std=1.291), 논문 "easy" 레이블 과소평가 확인 | `data/results_discriminability.csv` |
+| **tinyMT-Bench** | TopDisc-15로 ρ=1.000 달성 (Random 기준 60문항 필요), 81% 문항 절감 | `data/results_tiny_mt_bench.csv` |
 
 ---
 
@@ -26,7 +27,7 @@
 
 ---
 
-### 1순위 — tinyMT-Bench: 최소 변별 문항 세트 발굴
+### ~~1순위 — tinyMT-Bench: 최소 변별 문항 세트 발굴~~ ✅ 완료
 
 **연구 질문:** 변별도 상위 N개 문항만으로 80문항 전체와 동일한 모델 순위를 얻을 수 있는가?
 
