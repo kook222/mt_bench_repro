@@ -64,10 +64,11 @@ plt.rcParams.update({
 })
 
 # ── 상수 ──────────────────────────────────────────────────────────────────────
-GRADE_DIR  = _PROJECT_DIR / "data" / "judgments" / "single_grade"
+GRADE_DIR  = _PROJECT_DIR / "data" / "judgments_phase3" / "judge_32B" / "single_grade"
 Q_FILE     = _PROJECT_DIR / "data" / "mt_bench_questions.jsonl"
 OUTPUT_CSV = _PROJECT_DIR / "data" / "results_discriminability.csv"
 
+# Phase 3 subject 모델 7개 (Qwen 계열 제외 — judge 역할)
 MODELS = [
     "Phi-3.5-mini-Instruct",
     "gemma-2-9b-it",
@@ -75,6 +76,7 @@ MODELS = [
     "Mistral-7B-Instruct-v0.3",
     "SOLAR-10.7B-Instruct",
     "Zephyr-7B-beta",
+    "Llama-3.1-8B-Instruct",
 ]
 
 HARD_CATS = {"math", "reasoning", "coding"}

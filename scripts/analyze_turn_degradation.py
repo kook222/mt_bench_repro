@@ -29,12 +29,15 @@ DATA_DIR = ROOT / "data"
 FIG_DIR = ROOT / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 
-PHASE2_JUDGE_DIR = DATA_DIR / "judgments" / "single_grade"
+# Phase 3 데이터만 사용 (self-judge / 동일 패밀리 편향 제거)
+# Phase 2 데이터(data/judgments_phase2/)는 Qwen2.5-14B judge → 분석에서 제외
 PHASE3_JUDGE_DIRS = {
     "7B":  DATA_DIR / "judgments_phase3" / "judge_7B"  / "single_grade",
     "14B": DATA_DIR / "judgments_phase3" / "judge_14B" / "single_grade",
     "32B": DATA_DIR / "judgments_phase3" / "judge_32B" / "single_grade",
 }
+# 주 분석에 사용할 judge (불일치율 가장 낮음)
+PRIMARY_JUDGE_DIR = PHASE3_JUDGE_DIRS["32B"]
 
 CATEGORIES = ["writing", "roleplay", "extraction", "reasoning",
               "math", "coding", "stem", "humanities"]
@@ -215,10 +218,10 @@ def make_figure(delta_table: dict, phase3_tables: dict, output_path: Path):
                 ax.text(j, i, f"{v:+.1f}", ha="center", va="center",
                         fontsize=6.5, color="black")
 
-    # ── Panel D: Judge 크기별 Overall Turn2 저하 비교 ─────────────────────────
+    # ── Panel D: Judge 크기별 Overall Turn2 저하 비교 (Phase 3 only) ──────────
     ax = axes[1, 1]
-    judge_labels = ["14B (Phase2)", "7B", "14B", "32B"]
-    judge_sources = [delta_table] + [phase3_tables.get(k) for k in ["7B", "14B", "32B"]]
+    judge_labels = ["7B", "14B", "32B"]
+    judge_sources = [phase3_tables.get(k) for k in ["7B", "14B", "32B"]]
 
     # 모든 judge에 공통으로 존재하는 모델만 사용
     common_models = None
@@ -245,7 +248,7 @@ def make_figure(delta_table: dict, phase3_tables: dict, output_path: Path):
                 deltas.append(statistics.mean(p[1] - p[0] for p in all_pairs))
             else:
                 deltas.append(0.0)
-        offset = (k - 1.5) * width
+        offset = (k - 1.0) * width
         ax.bar(x + offset, deltas, width=width, label=jlabel, color=jcolor, alpha=0.85)
 
     ax.axhline(0, color="black", linewidth=0.8)
@@ -297,13 +300,14 @@ def print_summary(delta_table: dict):
 
 # ── 메인 ──────────────────────────────────────────────────────────────────────
 def main():
-    print("Phase 2 (Qwen2.5-14B judge) 데이터 로드 중...")
-    phase2_data = load_judgments(PHASE2_JUDGE_DIR)
-    print(f"  → 모델 {len(phase2_data)}개 로드 완료: {sorted(phase2_data.keys())}")
+    # 주 분석: Phase 3 judge_32B (불일치율 가장 낮음, self-judge 편향 없음)
+    print("Phase 3 (judge_32B) 데이터 로드 중...")
+    primary_data = load_judgments(PRIMARY_JUDGE_DIR)
+    print(f"  → 모델 {len(primary_data)}개 로드 완료: {sorted(primary_data.keys())}")
 
-    delta_table = compute_delta_table(phase2_data)
+    delta_table = compute_delta_table(primary_data)
 
-    # Phase 3 데이터
+    # judge 크기별 비교용 (Panel D)
     phase3_tables = {}
     for judge_size, judge_dir in PHASE3_JUDGE_DIRS.items():
         if judge_dir.exists():

@@ -63,9 +63,10 @@ plt.rcParams.update({
 
 # ── 상수 ──────────────────────────────────────────────────────────────────────
 DISC_CSV   = _PROJECT_DIR / "data" / "results_discriminability.csv"
-GRADE_DIR  = _PROJECT_DIR / "data" / "judgments" / "single_grade"
+GRADE_DIR  = _PROJECT_DIR / "data" / "judgments_phase3" / "judge_32B" / "single_grade"
 OUTPUT_CSV = _PROJECT_DIR / "data" / "results_tiny_mt_bench.csv"
 
+# Phase 3 subject 모델 7개 (Qwen 계열 제외 — judge 역할)
 MODELS = [
     "Phi-3.5-mini-Instruct",
     "gemma-2-9b-it",
@@ -73,6 +74,7 @@ MODELS = [
     "Mistral-7B-Instruct-v0.3",
     "SOLAR-10.7B-Instruct",
     "Zephyr-7B-beta",
+    "Llama-3.1-8B-Instruct",
 ]
 N_SIZES  = [5, 10, 15, 20, 25, 30, 40, 60, 80]
 N_TRIALS = 200   # 랜덤 서브샘플 반복 횟수 (많을수록 분산 추정 정확)

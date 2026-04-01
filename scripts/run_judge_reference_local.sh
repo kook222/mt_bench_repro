@@ -15,7 +15,7 @@ export PYTHONPATH=src
 
 QUESTIONS="data/mt_bench_questions_sample.jsonl"
 ANSWERS_DIR="data/answers/"
-OUTPUT_DIR="data/judgments/"
+OUTPUT_DIR="data/judgments_phase2/"
 
 echo "=============================="
 echo " Step 3.5: Reference-guided Grading"

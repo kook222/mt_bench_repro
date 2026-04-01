@@ -11,7 +11,7 @@ cd "$PROJECT_ROOT"
 
 export PYTHONPATH=src
 
-OUTPUT_DIR="data/judgments/"
+OUTPUT_DIR="data/judgments_phase2/"
 CSV_OUT="data/results.csv"
 
 echo "=============================="

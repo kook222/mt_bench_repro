@@ -21,7 +21,7 @@ export PYTHONPATH=src
 
 QUESTIONS="data/mt_bench_questions_sample.jsonl"
 ANSWERS_DIR="data/answers/"
-JUDGMENTS_DIR="data/judgments/"
+JUDGMENTS_DIR="data/judgments_phase2/"
 CSV_OUT="data/results.csv"
 MODELS=("vicuna-13b" "llama-13b")
 
