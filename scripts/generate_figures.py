@@ -422,8 +422,8 @@ def fig_judge_scaling():
 def fig_phase3_scores():
     judge_sizes = ["7B", "14B", "32B"]
     models = PHASE3_MODELS_FULL
-    # sort by 14B score (canonical)
-    models_sorted = sorted(models, key=lambda m: PHASE3_OVERALL["14B"][m], reverse=True)
+    # sort by 32B score (주 judge — 불일치율 최소)
+    models_sorted = sorted(models, key=lambda m: PHASE3_OVERALL["32B"][m], reverse=True)
 
     x = np.arange(len(models_sorted))
     width = 0.25
@@ -564,33 +564,36 @@ def fig_summary_banner():
 
     gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.52, wspace=0.38)
 
-    # ── (A) Phase 2 Overall ───────────────────────────────────────────────────
+    # ── (A) Phase 3 Overall Scores — 32B judge (primary) ─────────────────────
     ax_a = fig.add_subplot(gs[0, 0])
-    models_sorted = sorted(PHASE2_OVERALL, key=lambda m: PHASE2_OVERALL[m])
-    vals = [PHASE2_OVERALL[m] for m in models_sorted]
-    colors = [PALETTE_MAIN[i] for i in range(len(models_sorted))]
-    bars = ax_a.barh(range(len(models_sorted)), vals, color=colors, edgecolor="white", height=0.65)
-    ax_a.set_yticks(range(len(models_sorted)))
-    ax_a.set_yticklabels(models_sorted, fontsize=10)
-    ax_a.set_xlim(6.5, 8.6)
-    ax_a.set_xlabel("Score (1–10)", fontsize=10)
-    ax_a.set_title("(A) Phase 2: Single-Answer Scores\n(Qwen2.5-14B Judge)", fontsize=11, fontweight="bold")
-    for i, (bar, val) in enumerate(zip(bars, vals)):
-        ax_a.text(val + 0.02, i, f"{val:.2f}", va="center", fontsize=9.5, color="#333", fontweight="bold")
+    models_32b = sorted(PHASE3_MODELS_FULL, key=lambda m: PHASE3_OVERALL["32B"][m])
+    vals_32b = [PHASE3_OVERALL["32B"][m] for m in models_32b]
+    colors_32b = [PALETTE_MAIN[i] for i in range(len(models_32b))]
+    bars = ax_a.barh(range(len(models_32b)), vals_32b, color=colors_32b,
+                     edgecolor="white", height=0.65)
+    ax_a.set_yticks(range(len(models_32b)))
+    ax_a.set_yticklabels(models_32b, fontsize=10)
+    ax_a.set_xlim(5.5, 8.8)
+    ax_a.set_xlabel("Score (1-10)", fontsize=10)
+    ax_a.set_title("(A) Phase 3: Model Scores\n(Qwen2.5-32B Judge -- Primary)", fontsize=11, fontweight="bold")
+    for i, (bar, val) in enumerate(zip(bars, vals_32b)):
+        ax_a.text(val + 0.04, i, f"{val:.2f}", va="center", fontsize=9.5,
+                  color="#333", fontweight="bold")
     ax_a.grid(True, axis="x", linestyle="--", alpha=0.4)
     ax_a.set_axisbelow(True)
     ax_a.spines["left"].set_visible(False)
     ax_a.tick_params(left=False)
 
-    # ── (B) Phase 2 Heatmap (6 models) ───────────────────────────────────────
+    # ── (B) Phase 3 Per-Category Heatmap — 32B judge ─────────────────────────
     ax_b = fig.add_subplot(gs[0, 1:])
-    models_b = list(PHASE2_SCORES.keys())
-    data_b   = np.array([PHASE2_SCORES[m] for m in models_b])
+    models_b = sorted(PHASE3_MODELS_FULL, key=lambda m: PHASE3_OVERALL["32B"][m], reverse=True)
+    data_b   = np.array([PHASE3_SCORES["32B"][m] for m in models_b])
     im_b = ax_b.imshow(data_b, aspect="auto", cmap="RdYlGn", vmin=4.5, vmax=9.0)
     ax_b.set_xticks(range(len(CATEGORIES)))
     ax_b.set_xticklabels(CAT_LABELS, fontsize=10, fontweight="bold")
     ax_b.set_yticks(range(len(models_b)))
-    ax_b.set_yticklabels([f"{m}  ({PHASE2_OVERALL[m]:.2f})" for m in models_b], fontsize=9.5)
+    ax_b.set_yticklabels(
+        [f"{m}  ({PHASE3_OVERALL['32B'][m]:.2f})" for m in models_b], fontsize=9.5)
     for i in range(len(models_b)):
         for j in range(len(CATEGORIES)):
             val = data_b[i, j]
@@ -598,7 +601,7 @@ def fig_summary_banner():
                       fontsize=9, color="black" if val > 6.5 else "white", fontweight="bold")
     cbar_b = fig.colorbar(im_b, ax=ax_b, fraction=0.02, pad=0.01)
     cbar_b.ax.tick_params(labelsize=8)
-    ax_b.set_title("(B) Phase 2: Per-Category Heatmap", fontsize=11, fontweight="bold")
+    ax_b.set_title("(B) Phase 3: Per-Category Scores (Qwen2.5-32B Judge)", fontsize=11, fontweight="bold")
     ax_b.spines[:].set_visible(False)
     ax_b.grid(False)
     ax_b.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
@@ -626,7 +629,7 @@ def fig_summary_banner():
     # ── (D) Phase 3 Scores by Judge ───────────────────────────────────────────
     ax_d = fig.add_subplot(gs[1, 1])
     judge_sizes_d = ["7B", "14B", "32B"]
-    models_d = sorted(PHASE3_MODELS_FULL, key=lambda m: PHASE3_OVERALL["14B"][m], reverse=True)
+    models_d = sorted(PHASE3_MODELS_FULL, key=lambda m: PHASE3_OVERALL["32B"][m], reverse=True)
     x_d = np.arange(len(models_d))
     w_d = 0.25
     for i, (j, offset) in enumerate(zip(judge_sizes_d, [-w_d, 0, w_d])):
@@ -667,7 +670,7 @@ def fig_summary_banner():
     ax_e.grid(True, linestyle="--", alpha=0.4)
     ax_e.set_axisbelow(True)
 
-    fig.suptitle("MT-Bench Reproduction — Phase 1 / 2 / 3 Summary",
+    fig.suptitle("MT-Bench Reproduction -- Primary Results (Phase 3 / Qwen2.5-32B Judge)",
                  fontsize=16, fontweight="bold", y=1.01)
 
     out = FIGURES_DIR / "mt_bench_summary.png"
