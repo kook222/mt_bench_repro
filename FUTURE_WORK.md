@@ -19,6 +19,8 @@
 | 7 | **Turn 1 vs Turn 2 저하 분석** | Coding/Reasoning은 Turn 2 상승(+0.44/+0.73), Writing 가장 취약(−1.13). SOLAR 가장 취약(δ=−0.287) | `results_turn_degradation.csv` |
 | 8 | **Position Bias 정량화** | 32B judge 불일치의 94.9%가 first-pos bias. 절대 비율은 66%→31%로 감소하지만 불일치 원인은 노이즈→bias로 전환 | `results_position_bias.csv` |
 | 9 | **앙상블 Judge** | 앙상블(58.63%)이 단일 32B(32.86%)보다 오히려 나쁨. 저품질 judge의 inconsistent 표가 앙상블을 오염시킴 | `results_ensemble_judge.csv` |
+| 10 | **앙상블 기권 방식** | inconsistent를 기권 처리 시 24.70% 달성 — 단일 32B(32.86%)보다 낮음. 604쌍(36%) inconsistent→winner 전환 | `results_ensemble_v2.csv` |
+| 11 | **Bootstrap CI** | Cross-judge ρ 95% CI 전 쌍 하한 ≥0.6. 7개 모델 한계로 CI 넓음 | `results_bootstrap_ci.csv` |
 
 ---
 

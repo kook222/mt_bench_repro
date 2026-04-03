@@ -36,6 +36,7 @@
   - [Turn 1 vs Turn 2 성능 저하 분석](#turn-1-vs-turn-2-성능-저하-분석)
   - [Position Bias 정량화](#position-bias-정량화)
   - [앙상블 Judge](#앙상블-judge)
+  - [Cross-Judge Spearman ρ Bootstrap CI](#cross-judge-spearman-ρ-bootstrap-ci)
 - [원본 논문과 비교](#원본-논문과-비교)
 - [결론](#결론)
 - [저장소 구조](#저장소-구조)
@@ -466,24 +467,70 @@ Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐
   <img src="figures/fig12_ensemble_judge.png" width="96%" alt="앙상블 Judge 분석">
 </p>
 
+**설계 1 — 다수결 (현재): inconsistent를 표로 취급**
+
+```
+7B=inconsistent, 14B=A, 32B=A → A 승 (2/3)
+7B=A, 14B=B, 32B=inconsistent → inconsistent (모두 다름)
+7B=inconsistent, 14B=inconsistent, 32B=A → inconsistent (2/3)  ← 문제
+```
+
+**설계 2 — 기권 방식 (개선): inconsistent를 기권으로 처리**
+
+```
+7B=inconsistent, 14B=A, 32B=A → A 승 (결정적 표 합의)
+7B=A, 14B=B, 32B=inconsistent → inconsistent (충돌)
+7B=inconsistent, 14B=inconsistent, 32B=A → A 승  ← 개선!
+```
+
+<p align="center">
+  <img src="figures/fig13_ensemble_v2.png" width="96%" alt="앙상블 Judge 설계 비교">
+</p>
+
 **결과:**
 
-| 방식 | Inconsistency율 |
-|------|----------------|
-| 단일 7B | 78.75% |
-| 단일 14B | 46.85% |
-| 단일 32B | **32.86%** |
-| 앙상블 14B+32B | 62.68% |
-| 앙상블 7B+14B+32B | 58.63% |
+| 방식 | Inconsistency율 | 단일 32B 대비 |
+|------|----------------|-------------|
+| 단일 7B | 78.75% | +45.9pp |
+| 단일 14B | 46.85% | +14.0pp |
+| **단일 32B** | **32.86%** | 기준 |
+| 앙상블 다수결 (현재) | 58.63% | +25.8pp ↑ 악화 |
+| **앙상블 기권 방식 (개선)** | **24.70%** | **−8.2pp ↓ 개선** |
 
-**예상과 반대 결과 — 앙상블이 단일 32B보다 나쁘다.**
+**핵심 발견:**
 
-원인은 "inconsistent"가 하나의 표로 취급되기 때문이다. 7B는 78.75%를 inconsistent로 찍는다. 14B와 32B가 "A 승"으로 합의했더라도, 7B가 inconsistent를 찍고 14B나 32B 중 하나가 다른 결론을 내면 앙상블도 inconsistent가 된다.
+- **다수결 설계**: inconsistent를 표로 취급하면 7B의 높은 노이즈(78.75%)가 앙상블을 오염시켜 단일 32B보다 나빠진다.
+- **기권 방식**: inconsistent를 기권으로 처리하면 1,680쌍 중 604쌍(36%)이 inconsistent→winner로 전환되어 **단일 32B보다 8.2pp 낮은 24.70%** 달성.
 
-- **14B+32B 앙상블(62.68%)** 도 단일 32B보다 나쁘다 — 2-judge 앙상블은 한 명이라도 다른 결론이면 바로 inconsistent가 되기 때문
-- 14B가 "A 승", 32B가 "inconsistent"를 내면 합의 없음 → inconsistent
+두 설계의 차이:
 
-> **결론:** 단일 고품질 judge가 저품질 judge와의 앙상블보다 낫다. 앙상블은 judge들이 서로 독립적이고 각자 신뢰도가 충분히 높을 때만 효과가 있다. 이 실험에서는 7B의 높은 노이즈가 앙상블 전체를 오염시켰다.
+| 결과 변화 | 쌍 수 | 비율 |
+|----------|------|------|
+| 동일 | 1,042 | 62.0% |
+| 다수결=inconsistent → 기권=winner | **604** | **36.0%** |
+| 다수결=winner → 기권=inconsistent | 34 | 2.0% |
+
+> **결론:** 앙상블 설계에서 "inconsistent"를 표로 취급하느냐 기권으로 처리하느냐가 결과를 뒤바꾼다. 기권 방식 앙상블은 단일 32B보다 낮은 inconsistency율을 달성하면서도 잘못된 판정(2.0%)은 거의 늘지 않는다.
+
+---
+
+### Cross-Judge Spearman ρ Bootstrap CI
+
+> **데이터:** `judgments_phase3/judge_{7B,14B,32B}/single_grade/` → `results_bootstrap_ci.csv`
+
+7개 모델로 계산한 Spearman ρ는 표본이 작아 단일 수치만으로는 신뢰도를 판단하기 어렵다. 문항(80개) 단위로 10,000회 bootstrap 리샘플링해 95% 신뢰구간을 계산했다.
+
+<p align="center">
+  <img src="figures/fig14_bootstrap_ci.png" width="72%" alt="Bootstrap CI">
+</p>
+
+| Judge 쌍 | ρ (관측) | 95% CI |
+|---------|---------|--------|
+| 7B–14B | 0.821 | [0.643, 0.964] |
+| 7B–32B | 0.786 | [0.643, 0.964] |
+| 14B–32B | 0.750 | [0.607, 0.964] |
+
+CI가 넓은 이유는 모델 수가 7개뿐이기 때문이다. 그러나 **모든 쌍의 95% CI 하한이 0.6 이상**으로, "어떤 judge를 사용해도 모델 서열이 일정 수준 이상 유지된다"는 주장은 통계적으로 뒷받침된다.
 
 ---
 
@@ -520,7 +567,9 @@ Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐
 | tinyMT-Bench: 변별도 상위 40문항 = 80문항 동등 | ✅ Top-Disc-40 ρ=1.000, 50% 절감 |
 | Writing이 Turn 2 저하 가장 큼 | ✅ δ=−1.129; Coding/Reasoning은 오히려 향상 |
 | Position bias: 불일치 원인이 노이즈→bias로 전환 | ✅ 32B judge 불일치의 94.9%가 first-pos bias; Math/Coding에서 가장 낮음 |
-| 앙상블 judge가 단일 32B보다 나쁨 | ✅ 7B+14B+32B 앙상블 58.63% > 단일 32B 32.86%; 저품질 judge가 앙상블 오염 |
+| 앙상블 다수결이 단일 32B보다 나쁨 | ✅ 7B+14B+32B 앙상블 58.63% > 단일 32B 32.86%; 저품질 judge가 앙상블 오염 |
+| 앙상블 기권 방식은 단일 32B보다 낮음 | ✅ inconsistent 기권 처리 시 24.70%; 604쌍(36%)이 winner로 전환 |
+| Cross-judge ρ 95% CI 하한 ≥ 0.6 | ✅ Bootstrap n=10,000; 7개 모델 한계로 CI 넓음 [0.607, 0.964] |
 
 **Judge 선택 권고 (Phase 3 기반):**
 
