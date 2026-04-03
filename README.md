@@ -358,13 +358,23 @@ for N in [5, 10, 15, 20, 25, 30, 40, 60, 80]:
 
 > **연구 질문:** Pairwise inconsistency의 원인이 "무작위 노이즈"인가, "체계적 position bias"인가? Judge 크기가 커지면 position bias가 줄어드는가?
 
-Pairwise judge는 동일 문항에 대해 AB / BA 두 순서로 실행한다. 불일치 시 `inconsistent` 처리되는데, 이 불일치에서 **먼저 제시된 모델이 체계적으로 유리한지** 측정한다.
+Pairwise judge는 동일 문항에 대해 AB / BA 두 순서로 실행한다.
 
 ```
-AB 순서: A가 position-1. winner_ab == "A" → first-position 승
-BA 순서: B가 position-1. winner_ba == "B" → first-position 승
-→ 불일치 케이스에서 first-position 승리율 > 50% = position bias 확정
+AB 순서: A 답변 먼저, B 답변 나중
+BA 순서: B 답변 먼저, A 답변 나중
+
+두 번 다 같은 결과 → winner 확정
+두 번 결과가 다름  → inconsistent
 ```
+
+불일치가 발생했을 때 **먼저 제시된 모델이 체계적으로 유리한지** 측정한다.
+
+- AB 순서에서 A가 이겼다 → A가 position-1 (first-position 승)
+- BA 순서에서 B가 이겼다 → B가 position-1 (first-position 승)
+- 불일치 케이스에서 first-position 승리율 > 50% = position bias 확정
+
+반대로 **second-position 승리**(나중에 제시된 모델이 이기는 경우)는 순서가 아닌 실제 답변 품질로 판단한 것으로 해석할 수 있다.
 
 <p align="center">
   <img src="figures/fig11_position_bias.png" width="96%" alt="Position Bias 분석">
@@ -380,30 +390,39 @@ BA 순서: B가 position-1. winner_ba == "B" → first-position 승
 
 **예상과 다른 발견 — 핵심 해석:**
 
-Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는 불일치에서 position bias 비율은 오히려 증가**한다. 이는 다음을 의미한다:
+Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는 불일치에서 position bias 비율은 오히려 증가**한다.
 
-- **7B judge의 불일치** = 진짜 불확실성(모델 품질이 비슷한 경우) + position bias가 혼재
-- **32B judge의 불일치** = position bias가 지배. 명확한 품질 차이는 대부분 일관되게 판정 → 남은 불일치의 94.9%가 순서 효과
+7B의 불일치는 두 종류가 섞여 있다:
+1. **진짜 노이즈** — 두 모델 실력이 비슷해서 판단 자체가 어려운 경우
+2. **Position bias** — 판단이 안 될 때 먼저 본 쪽을 고르는 경우
 
-*절대 비율*로 보면 position bias는 감소한다:
-- 7B: 전체 대비 66.3% (78.8% × 84.2%)
-- 14B: 전체 대비 43.7%
-- 32B: 전체 대비 **31.2%** ← 여전히 크지만 감소
+32B는 판단력이 좋아서 실력 차이가 있는 쌍은 대부분 일관되게 맞힌다. 남은 불일치는 **"32B도 구분 못 하는 진짜 비슷한 쌍"** 뿐이고, 그 경우엔 순서에 의존할 수밖에 없다 → 94.9%가 first-position 승리.
+
+*절대 수치*로 보면 position bias는 감소한다:
+- 7B: 전체 1,680쌍의 66.3% (≈ 1,110쌍) 가 position bias 영향
+- 14B: 전체의 43.7%
+- 32B: 전체의 **31.2%** ← 여전히 크지만 감소
+
+즉 **전체 오류는 줄었지만, 남은 오류의 성격이 "무작위 실수 → 고질적 편향"으로 바뀐다.**
 
 **카테고리별 bias (32B judge):**
 
-| 카테고리 | 불일치 N | First-pos 승률 | 해석 |
-|---------|---------|--------------|------|
-| **STEM** | 82 | **100%** | 품질 구분 불가 → 순서에 완전 의존 |
-| Roleplay | 54 | 98.1% | 주관적 평가 → 거의 완전한 position bias |
-| **Writing** | 86 | 98.8% | 주관적 평가 → 거의 완전한 position bias |
-| Extraction | 82 | 96.3% | 높은 bias |
-| Reasoning | 64 | 96.9% | 높은 bias |
-| Humanities | 71 | 95.8% | 높은 bias |
-| **Coding** | 56 | 87.5% | 상대적으로 낮음 — 객관적 정답 일부 존재 |
-| **Math** | 57 | 80.7% | 가장 낮음 — 명확한 정오 기준이 bias 억제 |
+불일치 N = 해당 카테고리에서 AB/BA 판정이 엇갈린 쌍의 수. 카테고리당 문항 수 10개 × 21쌍 = 210쌍이 모수.
 
-> **결론:** Judge 스케일링은 전체 inconsistency를 줄이지만, 남은 불일치의 원인을 "무작위 노이즈 → 체계적 position bias"로 전환시킨다. 객관적 정답이 있는 Math/Coding에서 bias가 상대적으로 낮은 것은 이 해석을 뒷받침한다.
+| 카테고리 | 불일치 N | First-pos 승률 | Second-pos 승리 수 | 해석 |
+|---------|---------|--------------|-----------------|------|
+| **STEM** | 82 | **100%** | 0 | 내용으로 품질 구분 불가 → 순서에 완전 의존 |
+| **Writing** | 86 | 98.8% | 1 | 주관적 평가 → 거의 완전한 position bias |
+| Reasoning | 64 | 96.9% | 2 | 높은 bias |
+| Roleplay | 54 | 98.1% | 1 | 높은 bias |
+| Extraction | 82 | 96.3% | 3 | 높은 bias |
+| Humanities | 71 | 95.8% | 3 | 높은 bias |
+| **Coding** | 56 | 87.5% | 7 | 상대적으로 낮음 — 정오 여부 일부 판단 가능 |
+| **Math** | 57 | 80.7% | 11 | 가장 낮음 — 정답/오답이 명확해 순서 무관 판정 가능 |
+
+Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐도 B가 이긴다 → 불일치가 아닌 일관된 판정. 불일치가 나더라도 정오 기준이 second-position 승리를 만들어낼 수 있어 first-pos 승률이 상대적으로 낮다(80.7%).
+
+> **결론:** Judge 스케일링은 전체 inconsistency를 줄이지만, 남은 불일치의 원인을 "무작위 노이즈 → 체계적 position bias"로 전환시킨다. 객관적 정답이 있는 Math/Coding에서 second-position 승리가 상대적으로 많은 것은 이 해석을 뒷받침한다.
 
 ---
 
