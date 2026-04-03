@@ -36,6 +36,7 @@
   - [변별도 기반 갭 분석](#변별도-기반-갭-분석)
   - [tinyMT-Bench — 최소 변별 문항 세트 발굴](#tinymT-bench--최소-변별-문항-세트-발굴)
   - [Turn 1 vs Turn 2 성능 저하 분석](#turn-1-vs-turn-2-성능-저하-분석)
+  - [Position Bias 정량화](#position-bias-정량화)
   - [문항 수 민감도](#문항-수-민감도)
 - [원본 논문과 비교](#원본-논문과-비교)
 - [결론](#결론)
@@ -335,6 +336,56 @@ for N in [5, 10, 15, 20, 25, 30, 40, 60, 80]:
 **해석:** Math 저하를 예상했지만 실제로는 거의 중립. Coding과 Reasoning은 오히려 상승했다. Turn 2가 "이전 답을 구체화"하는 형태이므로 문맥이 오히려 도움이 되는 것으로 보인다. Overall 1위 Phi가 멀티턴에서도 유일하게 향상(+0.075)되는 반면, SOLAR는 전체 순위와 무관하게 멀티턴에서 가장 취약하다.
 
 > **결론:** Overall 점수만으로는 대화 지속 품질을 알 수 없다. 멀티턴 환경에서는 Turn 2 저하율이 모델 선택의 추가 기준이 된다.
+
+---
+
+### Position Bias 정량화
+
+> **연구 질문:** Pairwise inconsistency의 원인이 "무작위 노이즈"인가, "체계적 position bias"인가? Judge 크기가 커지면 position bias가 줄어드는가?
+
+Pairwise judge는 동일 문항에 대해 AB / BA 두 순서로 실행한다. 불일치 시 `inconsistent` 처리되는데, 이 불일치에서 **먼저 제시된 모델이 체계적으로 유리한지** 측정한다.
+
+```
+AB 순서: A가 position-1. winner_ab == "A" → first-position 승
+BA 순서: B가 position-1. winner_ba == "B" → first-position 승
+→ 불일치 케이스에서 first-position 승리율 > 50% = position bias 확정
+```
+
+<p align="center">
+  <img src="figures/fig11_position_bias.png" width="96%" alt="Position Bias 분석">
+</p>
+
+**Judge별 전체 결과:**
+
+| Judge | Inconsistency율 | First-pos 승률 (불일치 중) | Bias |
+|-------|----------------|--------------------------|------|
+| Qwen2.5-7B | 78.8% | 84.2% | **+34.2pp** |
+| Qwen2.5-14B | 46.8% | 93.5% | **+43.5pp** |
+| Qwen2.5-32B | 32.9% | 94.9% | **+44.9pp** |
+
+**예상과 다른 발견 — 핵심 해석:**
+
+Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는 불일치에서 position bias 비율은 오히려 증가**한다. 이는 다음을 의미한다:
+
+- **7B judge의 불일치** = 진짜 불확실성(모델 품질이 비슷한 경우) + position bias가 혼재
+- **32B judge의 불일치** = position bias가 지배. 명확한 품질 차이는 대부분 일관되게 판정 → 남은 불일치의 94.9%가 순서 효과
+
+*절대 비율*로 보면 position bias는 감소한다:
+- 7B: 전체 대비 66.3% (78.8% × 84.2%)
+- 14B: 전체 대비 43.7%
+- 32B: 전체 대비 **31.2%** ← 여전히 크지만 감소
+
+**카테고리별 bias (32B judge):**
+
+| 카테고리 | 불일치 N | First-pos 승률 | 해석 |
+|---------|---------|--------------|------|
+| **STEM** | 82 | **100%** | 품질 구분 불가 → 순서에 완전 의존 |
+| **Writing** | 86 | 98.8% | 주관적 평가 → 거의 완전한 position bias |
+| Reasoning | 64 | 96.9% | 높은 bias |
+| **Coding** | 56 | 87.5% | 상대적으로 낮음 — 객관적 정답 일부 존재 |
+| **Math** | 57 | 80.7% | 가장 낮음 — 명확한 정오 기준이 bias 억제 |
+
+> **결론:** Judge 스케일링은 전체 inconsistency를 줄이지만, 남은 불일치의 원인을 "무작위 노이즈 → 체계적 position bias"로 전환시킨다. 객관적 정답이 있는 Math/Coding에서 bias가 상대적으로 낮은 것은 이 해석을 뒷받침한다.
 
 ---
 

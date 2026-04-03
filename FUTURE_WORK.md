@@ -17,7 +17,8 @@
 | 4 | **문항 수 민감도** | 랜덤 선택 기준 60문항부터 ρ≥0.95 안정, 10문항은 min ρ=0.32 | `results_phase3_qsize.csv` |
 | 5 | **변별도 기반 갭 분석** | Extraction이 데이터 기반 변별도 2위(std=1.291), 논문 "easy" 레이블 과소평가 | `results_discriminability.csv` |
 | 6 | **tinyMT-Bench** | TopDisc-15로 ρ=1.000 달성, Random은 60문항 필요 → **81% 절감** | `results_tiny_mt_bench.csv` |
-| 7 | **Turn 1 vs Turn 2 저하 분석** | Coding/Reasoning은 Turn 2 상승(+0.3/+0.5), Math/Writing은 하락(−0.58/−0.53). SOLAR 가장 취약(δ=−0.622) | `results_turn_degradation.csv` |
+| 7 | **Turn 1 vs Turn 2 저하 분석** | Coding/Reasoning은 Turn 2 상승(+0.44/+0.73), Writing 가장 취약(−1.13). SOLAR 가장 취약(δ=−0.287) | `results_turn_degradation.csv` |
+| 8 | **Position Bias 정량화** | 32B judge 불일치의 94.9%가 first-pos bias. 절대 비율은 66%→31%로 감소하지만 불일치 원인은 노이즈→bias로 전환 | `results_position_bias.csv` |
 
 ---
 
