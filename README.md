@@ -439,6 +439,7 @@ Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는
 | Extraction은 데이터 기반 준-Hard 카테고리 | ✅ 변별도 4위 (1.296) — reasoning(1.362)과 근접 |
 | tinyMT-Bench: 변별도 상위 40문항 = 80문항 동등 | ✅ Top-Disc-40 ρ=1.000, 50% 절감 |
 | Writing이 Turn 2 저하 가장 큼 | ✅ δ=−1.129; Coding/Reasoning은 오히려 향상 |
+| Position bias: 불일치 원인이 노이즈→bias로 전환 | ✅ 32B judge 불일치의 94.9%가 first-pos bias; Math/Coding에서 가장 낮음 |
 
 **Judge 선택 권고 (Phase 3 기반):**
 
@@ -490,6 +491,7 @@ mt_bench_repro/
 │   ├── analyze_discriminability.py       # 변별도 기반 갭 분석
 │   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석
 │   ├── analyze_turn_degradation.py       # Turn 1 vs Turn 2 저하 분석
+│   ├── analyze_position_bias.py          # Position Bias 정량화
 │   └── generate_figures.py              # README figure 전체 재생성
 ├── data/
 │   ├── mt_bench_questions.jsonl              # MT-Bench 80문항 (2턴)
@@ -508,7 +510,8 @@ mt_bench_repro/
 │   ├── results_phase3_qsize.csv              # 문항 수 민감도
 │   ├── results_discriminability.csv          # 문항별 변별도 (Phase 3 기반)
 │   ├── results_tiny_mt_bench.csv             # tinyMT-Bench (Phase 3 기반)
-│   └── results_turn_degradation.csv          # Turn 1/2 저하 (Phase 3 기반)
+│   ├── results_turn_degradation.csv          # Turn 1/2 저하 (Phase 3 기반)
+│   └── results_position_bias.csv             # Position Bias 정량화 (Phase 3 기반)
 └── figures/                                  # 논문 수준 figure 전체
 ```
 
@@ -585,6 +588,7 @@ python3 scripts/analyze_phase3.py
 python3 scripts/analyze_discriminability.py
 python3 scripts/analyze_tiny_mt_bench.py
 python3 scripts/analyze_turn_degradation.py
+python3 scripts/analyze_position_bias.py
 ```
 
 ---
