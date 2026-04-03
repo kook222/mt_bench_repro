@@ -395,8 +395,11 @@ Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는
 | 카테고리 | 불일치 N | First-pos 승률 | 해석 |
 |---------|---------|--------------|------|
 | **STEM** | 82 | **100%** | 품질 구분 불가 → 순서에 완전 의존 |
+| Roleplay | 54 | 98.1% | 주관적 평가 → 거의 완전한 position bias |
 | **Writing** | 86 | 98.8% | 주관적 평가 → 거의 완전한 position bias |
+| Extraction | 82 | 96.3% | 높은 bias |
 | Reasoning | 64 | 96.9% | 높은 bias |
+| Humanities | 71 | 95.8% | 높은 bias |
 | **Coding** | 56 | 87.5% | 상대적으로 낮음 — 객관적 정답 일부 존재 |
 | **Math** | 57 | 80.7% | 가장 낮음 — 명확한 정오 기준이 bias 억제 |
 
