@@ -37,6 +37,7 @@
   - [tinyMT-Bench — 최소 변별 문항 세트 발굴](#tinymT-bench--최소-변별-문항-세트-발굴)
   - [Turn 1 vs Turn 2 성능 저하 분석](#turn-1-vs-turn-2-성능-저하-분석)
   - [Position Bias 정량화](#position-bias-정량화)
+  - [앙상블 Judge](#앙상블-judge)
 - [원본 논문과 비교](#원본-논문과-비교)
 - [결론](#결론)
 - [저장소 구조](#저장소-구조)
@@ -442,6 +443,52 @@ Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐
 
 ---
 
+### 앙상블 Judge
+
+> **데이터:** `judgments_phase3/judge_{7B,14B,32B}/pairwise/` → `results_ensemble_judge.csv`
+
+> **연구 질문:** 7B+14B+32B 다수결 투표 시 inconsistency율이 단일 32B보다 낮아지는가?
+
+각 judge의 winner(모델명 또는 "inconsistent")를 모아 2/3 이상 일치하면 winner를 선언하고, 모두 다르면 inconsistent로 처리한다.
+
+```
+예시:
+  7B → inconsistent
+  14B → A 승
+  32B → A 승
+  → 앙상블: A 승 (2/3 일치)
+
+  7B → A 승
+  14B → B 승
+  32B → inconsistent
+  → 앙상블: inconsistent (모두 다름)
+```
+
+<p align="center">
+  <img src="figures/fig12_ensemble_judge.png" width="96%" alt="앙상블 Judge 분석">
+</p>
+
+**결과:**
+
+| 방식 | Inconsistency율 |
+|------|----------------|
+| 단일 7B | 78.75% |
+| 단일 14B | 46.85% |
+| 단일 32B | **32.86%** |
+| 앙상블 14B+32B | 62.68% |
+| 앙상블 7B+14B+32B | 58.63% |
+
+**예상과 반대 결과 — 앙상블이 단일 32B보다 나쁘다.**
+
+원인은 "inconsistent"가 하나의 표로 취급되기 때문이다. 7B는 78.75%를 inconsistent로 찍는다. 14B와 32B가 "A 승"으로 합의했더라도, 7B가 inconsistent를 찍고 14B나 32B 중 하나가 다른 결론을 내면 앙상블도 inconsistent가 된다.
+
+- **14B+32B 앙상블(62.68%)** 도 단일 32B보다 나쁘다 — 2-judge 앙상블은 한 명이라도 다른 결론이면 바로 inconsistent가 되기 때문
+- 14B가 "A 승", 32B가 "inconsistent"를 내면 합의 없음 → inconsistent
+
+> **결론:** 단일 고품질 judge가 저품질 judge와의 앙상블보다 낫다. 앙상블은 judge들이 서로 독립적이고 각자 신뢰도가 충분히 높을 때만 효과가 있다. 이 실험에서는 7B의 높은 노이즈가 앙상블 전체를 오염시켰다.
+
+---
+
 ## 원본 논문과 비교
 
 | 지표 | 원본 (GPT-4 judge, 2023) | 이번 재현 (Phase 3 / 32B judge, 2026) |
@@ -475,6 +522,7 @@ Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐
 | tinyMT-Bench: 변별도 상위 40문항 = 80문항 동등 | ✅ Top-Disc-40 ρ=1.000, 50% 절감 |
 | Writing이 Turn 2 저하 가장 큼 | ✅ δ=−1.129; Coding/Reasoning은 오히려 향상 |
 | Position bias: 불일치 원인이 노이즈→bias로 전환 | ✅ 32B judge 불일치의 94.9%가 first-pos bias; Math/Coding에서 가장 낮음 |
+| 앙상블 judge가 단일 32B보다 나쁨 | ✅ 7B+14B+32B 앙상블 58.63% > 단일 32B 32.86%; 저품질 judge가 앙상블 오염 |
 
 **Judge 선택 권고 (Phase 3 기반):**
 
@@ -527,6 +575,7 @@ mt_bench_repro/
 │   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석
 │   ├── analyze_turn_degradation.py       # Turn 1 vs Turn 2 저하 분석
 │   ├── analyze_position_bias.py          # Position Bias 정량화
+│   ├── analyze_ensemble_judge.py         # 앙상블 Judge 분석
 │   └── generate_figures.py              # README figure 전체 재생성
 ├── data/
 │   ├── mt_bench_questions.jsonl              # MT-Bench 80문항 (2턴)
@@ -546,7 +595,8 @@ mt_bench_repro/
 │   ├── results_discriminability.csv          # 문항별 변별도 (Phase 3 기반)
 │   ├── results_tiny_mt_bench.csv             # tinyMT-Bench (Phase 3 기반)
 │   ├── results_turn_degradation.csv          # Turn 1/2 저하 (Phase 3 기반)
-│   └── results_position_bias.csv             # Position Bias 정량화 (Phase 3 기반)
+│   ├── results_position_bias.csv             # Position Bias 정량화 (Phase 3 기반)
+│   └── results_ensemble_judge.csv            # 앙상블 Judge 비교 (Phase 3 기반)
 └── figures/                                  # 논문 수준 figure 전체
 ```
 
@@ -624,6 +674,7 @@ python3 scripts/analyze_discriminability.py
 python3 scripts/analyze_tiny_mt_bench.py
 python3 scripts/analyze_turn_degradation.py
 python3 scripts/analyze_position_bias.py
+python3 scripts/analyze_ensemble_judge.py
 ```
 
 ---
