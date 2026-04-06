@@ -42,19 +42,28 @@
 
 ---
 
+### 🔶 6/1 최종본 추가 예정
+
+**④ Phase 4 — InternLM2.5 교차 아키텍처 검증** (스크립트 완료, GPU 실행 대기)
+
+InternLM2.5-7B-Chat + 20B-Chat을 judge로 추가해 "Qwen 패밀리에만 해당하는 결과 아닌가?" 반박 차단.
+
+- eval 모델: Phase 3와 동일한 7개 (비교 가능성 확보)
+- self-judge 없음 (InternLM2.5는 eval 모델 셋 미포함)
+- 비교 포인트: inconsistency율, position bias, 모델 서열 Spearman ρ
+- 스크립트: `scripts/run_judge_phase4_a100.sh`
+
+---
+
 ### 🟡 KCC 이후 확장 (2026 하반기)
 
-**④ API Judge 1개 추가**
+**⑤ API Judge 추가**
 
-GPT-4o-mini 또는 Claude Haiku를 judge로 추가해 "Qwen 패밀리에만 해당하는 결과 아닌가?" 반박 차단.
+GPT-4o-mini 또는 Claude Haiku를 judge로 추가해 오픈소스 vs API judge 비교.
 
 비교 포인트:
 - Qwen2.5-32B vs GPT-4o-mini: inconsistency율, position bias, 모델 서열 일치도
 - 목표 학술대회: HCLT 2026 (한국어정보처리학술대회, 9월 예정) 또는 국내저널
-
-**⑤ 다른 Judge 패밀리 추가** (A100 1~2일)
-
-Llama-3.1-8B 또는 Mistral-7B를 judge로 사용해 아키텍처 변수 분리. "Qwen이라서 그런 결과" 반박 완전 차단.
 
 **⑥ 한국어 MT-Bench** (A100 1~2일)
 
@@ -73,15 +82,20 @@ pairwise 문항 50개 샘플링, 평가자 3명 직접 판정. 오픈소스 judg
 ## 추천 실행 순서
 
 ```
-KCC 2026 제출 (D-14, 마감 4/17)           ← 지금 당장
+KCC 2026 초고 (D-11, 마감 4/17)            ← 지금 당장
 └── ③ 논문 작성 (4~6페이지, 한글)
       - 실험 결과 11개 → 논문 구조로 정리
       - contribution 3가지 중심으로 프레이밍
       - 기존 figures/ 및 data/ 전량 활용 가능
 
+KCC 2026 최종본 (마감 6/1)                 ← 병렬 진행
+└── ④ Phase 4 InternLM 결과 추가
+      - GPU: run_judge_phase4_a100.sh 실행
+      - 분석: analyze_phase4.py 작성
+
 KCC 이후 → HCLT 2026 또는 국내저널 확장
-├── ④ API Judge 추가 (GPT-4o-mini)         ← API 비용만 필요
-└── ⑤ 한국어 MT-Bench                      ← A100 필요
+├── ⑤ API Judge 추가 (GPT-4o-mini)         ← API 비용만 필요
+└── ⑥ 한국어 MT-Bench                      ← A100 필요
 
 top-tier 목표 시 (ACL/EMNLP)
 └── ⑦ 인간 평가자 실험
