@@ -158,7 +158,7 @@ def make_figure(results: list[dict], output_path: Path):
     ax.set_xticklabels([f"Judge\n{p}" for p in pairs], fontsize=9)
     ax.set_ylabel("Spearman ρ")
     ax.set_ylim(0, 1.15)
-    ax.axhline(0.75, color="gray", linestyle="--", linewidth=1, alpha=0.6, label="ρ=0.75 기준선")
+    ax.axhline(0.75, color="gray", linestyle="--", linewidth=1, alpha=0.6, label="ρ=0.75 reference")
     ax.legend(fontsize=8)
 
     for bar, rho, lo, hi in zip(bars, rhos, lowers, uppers):

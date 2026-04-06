@@ -101,8 +101,14 @@ def compute_stats(records: dict) -> dict:
     def _s(recs):
         total  = len(recs)
         incons = sum(1 for r in recs if r["winner"] == "inconsistent")
-        return {"total": total, "inconsistent_n": incons,
-                "inconsistency_rate": incons / total if total else 0.0}
+        decisive = total - incons
+        return {
+            "total": total,
+            "inconsistent_n": incons,
+            "decisive_n": decisive,
+            "inconsistency_rate": incons / total if total else 0.0,
+            "decisive_rate": decisive / total if total else 0.0,
+        }
 
     all_recs = list(records.values())
     return {
@@ -142,12 +148,15 @@ def print_summary(single_stats, ens_cur_stats, ens_abs_stats, diff):
     print("\n" + "=" * 65)
     print("  앙상블 Judge 설계 비교")
     print("=" * 65)
-    print(f"\n{'방식':<30} {'Inconsistency율':>16}")
-    print("-" * 50)
+    print(f"\n{'방식':<30} {'Inconsistency율':>16} {'Decisive율':>14}")
+    print("-" * 66)
     for j in ["7B", "14B", "32B"]:
-        print(f"  단일 {j:<24} {single_stats[j]['overall']['inconsistency_rate']:>15.2%}")
-    print(f"  {'앙상블 현재 (다수결)':<28} {ens_cur_stats['overall']['inconsistency_rate']:>15.2%}")
-    print(f"  {'앙상블 개선 (기권 방식)':<28} {ens_abs_stats['overall']['inconsistency_rate']:>15.2%}")
+        overall = single_stats[j]["overall"]
+        print(f"  단일 {j:<24} {overall['inconsistency_rate']:>15.2%} {overall['decisive_rate']:>13.2%}")
+    overall = ens_cur_stats["overall"]
+    print(f"  {'앙상블 현재 (다수결)':<28} {overall['inconsistency_rate']:>15.2%} {overall['decisive_rate']:>13.2%}")
+    overall = ens_abs_stats["overall"]
+    print(f"  {'앙상블 개선 (기권 방식)':<28} {overall['inconsistency_rate']:>15.2%} {overall['decisive_rate']:>13.2%}")
 
     print(f"\n[두 설계 차이 분석] (총 {diff['total']}쌍)")
     print(f"  동일 결과:                {diff['same']:>6}쌍 ({diff['same']/diff['total']:.1%})")
@@ -180,12 +189,16 @@ def save_csv(single_stats, ens_cur_stats, ens_abs_stats, output_path: Path):
         s = stats["overall"]
         rows.append({"method": label, "category": "overall",
                      "total_pairs": s["total"], "inconsistent_n": s["inconsistent_n"],
-                     "inconsistency_rate": round(s["inconsistency_rate"], 4)})
+                     "decisive_n": s["decisive_n"],
+                     "inconsistency_rate": round(s["inconsistency_rate"], 4),
+                     "decisive_rate": round(s["decisive_rate"], 4)})
         for cat in CATEGORIES:
             s = stats["by_category"][cat]
             rows.append({"method": label, "category": cat,
                          "total_pairs": s["total"], "inconsistent_n": s["inconsistent_n"],
-                         "inconsistency_rate": round(s["inconsistency_rate"], 4)})
+                         "decisive_n": s["decisive_n"],
+                         "inconsistency_rate": round(s["inconsistency_rate"], 4),
+                         "decisive_rate": round(s["decisive_rate"], 4)})
 
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
@@ -205,7 +218,7 @@ def make_figure(single_stats, ens_cur_stats, ens_abs_stats, diff, output_path: P
 
     # ── Panel A: Overall 비교 ─────────────────────────────────────────────────
     ax = axes[0]
-    labels = ["Single\n7B", "Single\n14B", "Single\n32B", "Ensemble\n현재", "Ensemble\n개선(기권)"]
+    labels = ["Single\n7B", "Single\n14B", "Single\n32B", "Ensemble\nMajority", "Ensemble\nAbstain"]
     rates  = [
         single_stats["7B"]["overall"]["inconsistency_rate"] * 100,
         single_stats["14B"]["overall"]["inconsistency_rate"] * 100,
@@ -238,8 +251,8 @@ def make_figure(single_stats, ens_cur_stats, ens_abs_stats, diff, output_path: P
     y = np.arange(len(cats))
     w = 0.25
     ax.barh(y - w, r32,  w, color=COLORS["32B"], label="Single 32B",      edgecolor="white")
-    ax.barh(y,     rcur, w, color=COLORS["cur"],  label="Ensemble 현재",   edgecolor="white")
-    ax.barh(y + w, rabs, w, color=COLORS["abs"],  label="Ensemble 개선(기권)", edgecolor="white")
+    ax.barh(y,     rcur, w, color=COLORS["cur"],  label="Ensemble majority vote", edgecolor="white")
+    ax.barh(y + w, rabs, w, color=COLORS["abs"],  label="Ensemble abstain", edgecolor="white")
     ax.set_yticks(y)
     ax.set_yticklabels([CAT_LABEL[c] for c in cats])
     ax.set_xlabel("Inconsistency Rate (%)")
@@ -250,9 +263,16 @@ def make_figure(single_stats, ens_cur_stats, ens_abs_stats, diff, output_path: P
     ax2 = ax.twinx()
     ax2.set_ylim(ax.get_ylim())
     ax2.set_yticks([])
-    fig.text(0.97, 0.02,
-             f"개선→현재 대비 변화: +{diff['changed_to_winner']}쌍 결정 / −{diff['changed_to_incons']}쌍 결정",
-             ha="right", fontsize=7.5, color="gray")
+    axes[0].text(
+        0.03, 0.08,
+        f"Abstain vs. majority:\n+{diff['changed_to_winner']} resolved / -{diff['changed_to_incons']} abstained",
+        transform=axes[0].transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=7.8,
+        color="gray",
+        bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="none", alpha=0.85),
+    )
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
