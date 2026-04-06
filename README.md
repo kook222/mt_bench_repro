@@ -313,6 +313,7 @@ for N in [5, 10, 15, 20, 25, 30, 40, 60, 80]:
 - Random N=5에서 최악 ρ=−0.143 — writing 문항만 뽑히면 서열이 뒤집힌다. Top-Disc는 이런 분산이 없다.
 - 변별도 기반 선택은 작은 N에서 효과가 크고, N이 커질수록 Random과의 격차가 줄어든다.
 - 현재 tinyMT-Bench는 **동일 7개 모델 집합에서 뽑은 변별도 기준을 같은 집합에 다시 적용한 same-set post-hoc subsampling** 결과다. 따라서 독립적인 40문항-only 재실행과 외부 모델 검증이 추가로 필요하다.
+- 별도 unseen split 일반화 검증(`results_tiny_mt_bench_generalization_summary.csv`, Qwen-32B judge, 20 splits, dev 4 / test 3)에서는 Top-Disc가 same-set처럼 항상 random을 압도하지는 않았다. 예를 들어 N=40에서 Top-Disc 평균 ρ는 0.900, Random 평균 ρ는 0.913으로 유사 수준이었고, N=60에서는 Top-Disc 0.975, Random 0.938로 다시 우세했다. 즉 Top-Disc는 **same-set에서는 매우 강하지만, unseen 모델 일반화는 더 보수적으로 해석해야 한다.**
 
 > **문항 수 민감도 참고:** tinyMT-Bench의 Random 평균 기준으로는 약 30문항에서 ρ ≥ 0.95에 도달한다. 다만 60문항에서도 random 최솟값은 0.893이라 worst-case 기준의 ρ ≥ 0.95를 보장하지는 못한다. 별도 Phase 2 qsize 분석(6모델 baseline)에서는 60문항부터 평균 ρ ≥ 0.95가 관찰된다. 변별도 기반 선택은 tinyMT-Bench 기준 이를 25문항으로 단축한다.
 
@@ -607,7 +608,7 @@ mt_bench_repro/
 ├── src/mtbench_repro/
 │   ├── schemas.py          # 데이터 클래스 (MTBenchQuestion, ModelAnswer, …)
 │   ├── io_utils.py         # JSONL 스트리밍 I/O, resume 지원
-│   ├── client.py           # ChatClient (vLLM / OpenAI API / mock)
+│   ├── client.py           # ChatClient (vLLM / OpenAI API / Claude API / mock)
 │   ├── prompts.py          # Judge 프롬프트 (Figure 5–10) + 점수 파서
 │   ├── generate.py         # 2-turn 답변 생성
 │   ├── judge_single.py     # Single-answer grading
@@ -621,9 +622,11 @@ mt_bench_repro/
 │   ├── run_judge_multi_a100.sh           # Phase 2: judge + 집계
 │   ├── run_generate_phase3_a100.sh       # Phase 3: Llama-3.1-8B 추가 생성
 │   ├── run_judge_phase3_a100.sh          # Phase 3: judge 3종 순차 실행
+│   ├── run_judge_claude_api.sh           # Claude judge 실행 (Anthropic native SDK)
 │   ├── analyze_phase3.py                 # Judge 스케일링 + 문항 수 분석
 │   ├── analyze_discriminability.py       # 변별도 기반 갭 분석
 │   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석
+│   ├── analyze_tiny_mt_bench_generalization.py # unseen split 일반화 검증
 │   ├── analyze_turn_degradation.py       # Turn 1 vs Turn 2 저하 분석
 │   ├── analyze_position_bias.py          # Position Bias 정량화
 │   ├── analyze_ensemble_judge.py         # 앙상블 Judge 분석
@@ -645,6 +648,7 @@ mt_bench_repro/
 │   ├── results_phase3_qsize.csv              # 문항 수 민감도
 │   ├── results_discriminability.csv          # 문항별 변별도 (Phase 3 기반)
 │   ├── results_tiny_mt_bench.csv             # tinyMT-Bench (Phase 3 기반)
+│   ├── results_tiny_mt_bench_generalization_summary.csv # unseen split 요약
 │   ├── results_turn_degradation.csv          # Turn 1/2 저하 (Phase 3 기반)
 │   ├── results_position_bias.csv             # Position Bias 정량화 (Phase 3 기반)
 │   └── results_ensemble_judge.csv            # 앙상블 Judge 비교 (Phase 3 기반)
@@ -728,11 +732,16 @@ bash scripts/run_judge_multi_a100.sh      # judge + 집계
 bash scripts/run_generate_phase3_a100.sh  # Llama-3.1-8B 추가 생성 (나머지 재사용)
 bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B 순차 (~12–20시간)
 
+# Claude judge (Anthropic native SDK)
+export ANTHROPIC_API_KEY=sk-ant-...
+bash scripts/run_judge_claude_api.sh
+
 # 분석 (로컬 실행 가능)
 export PYTHONPATH=src
 python3 scripts/analyze_phase3.py
 python3 scripts/analyze_discriminability.py
 python3 scripts/analyze_tiny_mt_bench.py
+python3 scripts/analyze_tiny_mt_bench_generalization.py
 python3 scripts/analyze_turn_degradation.py
 python3 scripts/analyze_position_bias.py
 python3 scripts/analyze_ensemble_judge.py

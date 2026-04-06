@@ -1,17 +1,28 @@
 # src/client.py
 """
-OpenAI-compatible ChatClient 구현.
+OpenAI-compatible / Anthropic-native ChatClient 구현.
 
 왜 별도 파일로 분리하는가:
 - judge_*.py와 generate.py가 모두 LLM API를 호출하므로
   retry, timeout, mock 등의 로직을 한 곳에서 관리한다.
-- vLLM은 OpenAI-compatible endpoint를 제공하므로
-  base_url만 바꾸면 OpenAI API와 vLLM을 동일 코드로 쓸 수 있다.
-  로컬 mock(A100 없이 테스트)도 동일 인터페이스로 제공한다.
+- OpenAI API, vLLM, Anthropic Claude API를 하나의 인터페이스로 감싼다.
+- 로컬 mock(A100 없이 테스트)도 동일 인터페이스로 제공한다.
 
 사용 방법:
     # OpenAI API 사용 시
-    client = ChatClient(api_key="sk-...", base_url="https://api.openai.com/v1")
+    client = ChatClient(
+        api_key="sk-...",
+        base_url="https://api.openai.com/v1",
+        provider="openai_compatible",
+    )
+
+    # Anthropic Claude API 사용 시 (native SDK)
+    client = ChatClient(
+        api_key="sk-ant-...",
+        base_url="https://api.anthropic.com",
+        provider="anthropic",
+        default_model="claude-sonnet-4-6",
+    )
 
     # A100의 vLLM 서버 사용 시 (--served-model-name 옵션으로 모델명 설정)
     client = ChatClient(api_key="EMPTY", base_url="http://localhost:8000/v1")
@@ -32,15 +43,17 @@ logger = logging.getLogger(__name__)
 
 class ChatClient:
     """
-    OpenAI Chat Completions API 호환 클라이언트.
+    OpenAI-compatible / Anthropic-native 채팅 클라이언트.
 
     vLLM을 A100에서 --api-key EMPTY --served-model-name <name> 옵션으로
     실행하면 이 클라이언트를 그대로 사용할 수 있다.
 
     Attributes:
         api_key: API 키 (vLLM은 "EMPTY" 사용)
-        base_url: API 엔드포인트 (OpenAI: "https://api.openai.com/v1",
-                  vLLM: "http://localhost:8000/v1")
+        base_url: API 엔드포인트
+                  (OpenAI: "https://api.openai.com/v1",
+                   vLLM: "http://localhost:8000/v1",
+                   Anthropic: "https://api.anthropic.com")
         default_model: 기본 모델명
         timeout: 요청 타임아웃 (초)
         max_retries: 실패 시 최대 재시도 횟수
@@ -56,32 +69,66 @@ class ChatClient:
         timeout: float = 120.0,
         max_retries: int = 3,
         retry_delay: float = 5.0,
+        provider: str = "openai_compatible",
         _mock: bool = False,
     ) -> None:
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "EMPTY")
-        self.base_url = base_url.rstrip("/")
+        self.provider = provider
+        self.api_key = api_key or self._default_api_key(provider)
+        self.base_url = self._normalize_base_url(base_url, provider)
         self.default_model = default_model
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self._mock = _mock
 
-        # openai 패키지를 선택적 임포트:
-        # mock 모드에서는 패키지가 없어도 동작하게 해서
-        # A100 환경 없는 로컬 개발을 가능하게 한다.
+        if not _mock and provider == "anthropic" and self.api_key in {"", "EMPTY"}:
+            raise ValueError(
+                "Anthropic provider requires a real API key. "
+                "Set ANTHROPIC_API_KEY or pass --api-key."
+            )
+
         if not _mock:
-            try:
-                import openai  # type: ignore
-                self._client = openai.OpenAI(
-                    api_key=self.api_key,
-                    base_url=self.base_url,
-                    timeout=self.timeout,
-                )
-            except ImportError:
-                raise ImportError(
-                    "openai 패키지가 필요합니다: pip install openai\n"
-                    "mock 모드로 쓰려면 ChatClient.mock()을 사용하세요."
-                )
+            if provider == "anthropic":
+                try:
+                    from anthropic import Anthropic  # type: ignore
+
+                    self._client = Anthropic(
+                        api_key=self.api_key,
+                        base_url=self.base_url,
+                        timeout=self.timeout,
+                    )
+                except ImportError:
+                    raise ImportError(
+                        "anthropic 패키지가 필요합니다: pip install anthropic\n"
+                        "mock 모드로 쓰려면 ChatClient.mock()을 사용하세요."
+                    )
+            else:
+                try:
+                    import openai  # type: ignore
+
+                    self._client = openai.OpenAI(
+                        api_key=self.api_key,
+                        base_url=self.base_url,
+                        timeout=self.timeout,
+                    )
+                except ImportError:
+                    raise ImportError(
+                        "openai 패키지가 필요합니다: pip install openai\n"
+                        "mock 모드로 쓰려면 ChatClient.mock()을 사용하세요."
+                    )
+
+    @staticmethod
+    def _default_api_key(provider: str) -> str:
+        if provider == "anthropic":
+            return os.environ.get("ANTHROPIC_API_KEY", "EMPTY")
+        return os.environ.get("OPENAI_API_KEY", "EMPTY")
+
+    @staticmethod
+    def _normalize_base_url(base_url: str, provider: str) -> str:
+        normalized = base_url.rstrip("/")
+        if provider == "anthropic" and normalized.endswith("/v1"):
+            return normalized[:-3]
+        return normalized
 
     @classmethod
     def mock(cls) -> "ChatClient":
@@ -119,6 +166,7 @@ class ChatClient:
             api_key="EMPTY",
             base_url=f"http://{host}:{port}/v1",
             default_model=model,
+            provider="openai_compatible",
             **kwargs,
         )
 
@@ -132,6 +180,11 @@ class ChatClient:
     ) -> str:
         """
         Chat Completions API를 호출하고 assistant 메시지 텍스트를 반환.
+
+        provider="anthropic"인 경우:
+        - Anthropic native SDK의 messages.create를 사용한다.
+        - system 메시지는 최상위 system 파라미터로 분리하고,
+          user/assistant 메시지들은 messages 배열로 넘긴다.
 
         temperature=0.0인 이유:
         - 논문에서 judge는 결정론적 판정을 위해 greedy decoding을 사용한다.
@@ -148,7 +201,7 @@ class ChatClient:
             model: 사용할 모델명 (None이면 default_model 사용)
             temperature: 생성 온도
             max_tokens: 최대 생성 토큰
-            **kwargs: openai API에 전달할 추가 파라미터
+            **kwargs: provider API에 전달할 추가 파라미터
 
         Returns:
             assistant 응답 텍스트. 실패 시 빈 문자열.
@@ -160,14 +213,21 @@ class ChatClient:
 
         for attempt in range(1, self.max_retries + 1):
             try:
-                response = self._client.chat.completions.create(
-                    model=model,
+                if self.provider == "anthropic":
+                    return self._chat_anthropic(
+                        messages=messages,
+                        model=model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        **kwargs,
+                    )
+                return self._chat_openai_compatible(
                     messages=messages,
+                    model=model,
                     temperature=temperature,
                     max_tokens=max_tokens,
                     **kwargs,
                 )
-                return response.choices[0].message.content or ""
 
             except Exception as e:
                 error_str = str(e)
@@ -183,6 +243,73 @@ class ChatClient:
                     logger.error(f"All {self.max_retries} attempts failed. Returning empty string.")
 
         return ""
+
+    def _chat_openai_compatible(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> str:
+        response = self._client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        )
+        return response.choices[0].message.content or ""
+
+    def _chat_anthropic(
+        self,
+        messages: List[Dict[str, str]],
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        **kwargs: Any,
+    ) -> str:
+        system_prompt, anthropic_messages = self._prepare_anthropic_messages(messages)
+        request_kwargs = dict(kwargs)
+        if "stop" in request_kwargs and "stop_sequences" not in request_kwargs:
+            stop = request_kwargs.pop("stop")
+            request_kwargs["stop_sequences"] = stop if isinstance(stop, list) else [stop]
+
+        response = self._client.messages.create(
+            model=model,
+            system=system_prompt,
+            messages=anthropic_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **request_kwargs,
+        )
+        text_parts = []
+        for block in response.content:
+            text = getattr(block, "text", None)
+            if text:
+                text_parts.append(text)
+        return "\n".join(text_parts).strip()
+
+    @staticmethod
+    def _prepare_anthropic_messages(
+        messages: List[Dict[str, str]]
+    ) -> tuple[str, List[Dict[str, str]]]:
+        system_parts: List[str] = []
+        converted: List[Dict[str, str]] = []
+        for message in messages:
+            role = message.get("role", "user")
+            content = message.get("content", "")
+            if role == "system":
+                if content:
+                    system_parts.append(content)
+                continue
+            if role not in {"user", "assistant"}:
+                role = "user"
+            converted.append({"role": role, "content": content})
+
+        if not converted:
+            converted.append({"role": "user", "content": ""})
+        return "\n\n".join(system_parts).strip(), converted
 
     def _mock_response(self, messages: List[Dict[str, str]]) -> str:
         """
@@ -232,7 +359,9 @@ class ChatClient:
 
         try:
             models = self._client.models.list()
-            return [m.id for m in models.data]
+            if hasattr(models, "data"):
+                return [m.id for m in models.data]
+            return [m.id for m in models]
         except Exception as e:
             logger.error(f"Failed to list models: {e}")
             return []

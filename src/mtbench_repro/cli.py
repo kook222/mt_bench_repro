@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 def _add_common_args(parser: argparse.ArgumentParser) -> None:
     """여러 서브커맨드에서 공통으로 쓰는 인자를 한 곳에서 정의."""
     parser.add_argument(
+        "--provider", type=str,
+        choices=["openai_compatible", "anthropic"],
+        default="openai_compatible",
+        help="judge/generate API provider",
+    )
+    parser.add_argument(
         "--questions", type=str,
         default="data/mt_bench_questions.jsonl",
         help="MT-Bench 질문 JSONL 경로",
@@ -56,14 +62,24 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
         help="judge로 사용할 모델명",
     )
     parser.add_argument(
+        "--api-key", type=str,
+        default=None,
+        help="provider용 API 키 (없으면 provider별 환경변수 사용)",
+    )
+    parser.add_argument(
+        "--base-url", type=str,
+        default=None,
+        help="provider용 base URL (Anthropic native SDK는 https://api.anthropic.com 사용)",
+    )
+    parser.add_argument(
         "--openai-api-key", type=str,
         default=None,
-        help="OpenAI API 키 (없으면 환경변수 OPENAI_API_KEY 사용)",
+        help="구버전 호환용 alias (--api-key 권장)",
     )
     parser.add_argument(
         "--openai-base-url", type=str,
-        default="https://api.openai.com/v1",
-        help="OpenAI-compatible API base URL (vLLM: http://localhost:8000/v1)",
+        default=None,
+        help="구버전 호환용 alias (--base-url 권장)",
     )
     parser.add_argument(
         "--sleep", type=float,
@@ -86,10 +102,20 @@ def _build_client(args: argparse.Namespace):
     if args.mock:
         logger.info("Mock 모드로 ChatClient 생성")
         return ChatClient.mock()
+
+    provider = getattr(args, "provider", "openai_compatible")
+    api_key = getattr(args, "api_key", None) or getattr(args, "openai_api_key", None)
+    base_url = getattr(args, "base_url", None) or getattr(args, "openai_base_url", None)
+    if not base_url:
+        if provider == "anthropic":
+            base_url = "https://api.anthropic.com"
+        else:
+            base_url = "https://api.openai.com/v1"
     return ChatClient(
-        api_key=args.openai_api_key,
-        base_url=args.openai_base_url,
+        api_key=api_key,
+        base_url=base_url,
         default_model=args.judge_model,
+        provider=provider,
     )
 
 
