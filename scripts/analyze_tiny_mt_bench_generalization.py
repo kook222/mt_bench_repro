@@ -15,7 +15,7 @@ tinyMT-Bench generalization validation on unseen test models.
 예시:
   export PYTHONPATH=src
   python3 scripts/analyze_tiny_mt_bench_generalization.py \
-    --judge qwen32=data/judgments_phase3/judge_32B/single_grade \
+    --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
     --test-size 3 \
     --n-splits 20
 """
@@ -130,25 +130,35 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_judge_specs(values: list[str]) -> list[tuple[str, Path]]:
+def parse_judge_specs(values: list[str]) -> list[tuple[str, list[Path]]]:
     if not values:
         default_dir = DATA_DIR / "judgments_phase3" / "judge_32B" / "single_grade"
-        return [("qwen32", default_dir)]
+        return [("qwen32", [default_dir])]
 
-    parsed: list[tuple[str, Path]] = []
+    parsed: list[tuple[str, list[Path]]] = []
     for value in values:
         if "=" not in value:
             raise ValueError(f"--judge 형식 오류: {value} (label=dir 필요)")
         label, raw_dir = value.split("=", 1)
-        parsed.append((label.strip(), Path(raw_dir).expanduser()))
+        grade_dirs = [Path(part.strip()).expanduser() for part in raw_dir.split(",") if part.strip()]
+        if not grade_dirs:
+            raise ValueError(f"--judge 경로 오류: {value}")
+        parsed.append((label.strip(), grade_dirs))
     return parsed
 
 
-def load_per_question_scores(grade_dir: Path, models: list[str]) -> dict[int, dict[str, float]]:
+def load_per_question_scores(grade_dirs: list[Path], models: list[str]) -> dict[int, dict[str, float]]:
     raw: dict[int, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     for model in models:
-        path = grade_dir / f"{model}.jsonl"
-        if not path.exists():
+        path = next(
+            (
+                grade_dir / f"{model}.jsonl"
+                for grade_dir in grade_dirs
+                if (grade_dir / f"{model}.jsonl").exists()
+            ),
+            None,
+        )
+        if path is None:
             continue
         with path.open(encoding="utf-8") as f:
             for line in f:
@@ -449,14 +459,18 @@ def main() -> None:
     split_rows: list[dict] = []
     summary_rows: list[dict] = []
 
-    for judge_label, grade_dir in judge_specs:
-        if not grade_dir.exists():
-            print(f"[skip] judge dir 없음: {grade_dir}")
+    for judge_label, grade_dirs in judge_specs:
+        existing_dirs = [grade_dir for grade_dir in grade_dirs if grade_dir.exists()]
+        if not existing_dirs:
+            print(f"[skip] judge dir 없음: {', '.join(str(path) for path in grade_dirs)}")
             continue
 
-        q_model_scores = load_per_question_scores(grade_dir, args.models)
+        q_model_scores = load_per_question_scores(existing_dirs, args.models)
         if not q_model_scores:
-            print(f"[skip] 점수 로드 실패: {judge_label} ({grade_dir})")
+            print(
+                "[skip] 점수 로드 실패: "
+                f"{judge_label} ({', '.join(str(path) for path in existing_dirs)})"
+            )
             continue
 
         all_qids = sorted(q_model_scores.keys())

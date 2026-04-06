@@ -23,7 +23,7 @@
 #   InternLM2.5-7B-Chat  : internlm/internlm2_5-7b-chat
 #   InternLM2.5-20B-Chat : internlm/internlm2_5-20b-chat
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -43,7 +43,17 @@ QUESTIONS="$PROJECT_DIR/data/mt_bench_questions.jsonl"
 ANSWERS_DIR="$PROJECT_DIR/data/answers/"
 PHASE4_DIR="$PROJECT_DIR/data/judgments_phase4"
 VLLM_PORT=8000
-VLLM_LOG="$HOME_DIR/vllm_judge_phase4.log"
+VLLM_LOG="/tmp/vllm_judge_phase4.log"
+VLLM_PID=""
+
+cleanup_server() {
+  if [ -n "${VLLM_PID:-}" ]; then
+    kill "$VLLM_PID" 2>/dev/null || true
+    wait "$VLLM_PID" 2>/dev/null || true
+    VLLM_PID=""
+  fi
+}
+trap cleanup_server EXIT INT TERM
 
 # ── 경량 의존성 설치 ──────────────────────────────────────────────────────────
 echo "[Init] 경량 의존성 설치..."
@@ -219,8 +229,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
   echo "[OK] CSV: $OUTPUT_CSV"
 
   # judge 서버 종료
-  kill "$VLLM_PID" 2>/dev/null || true
-  wait "$VLLM_PID" 2>/dev/null || true
+  cleanup_server
   echo "[OK] $JUDGE_LABEL 서버 종료"
 
 done

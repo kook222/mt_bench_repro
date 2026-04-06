@@ -8,7 +8,7 @@
 # - 로컬 vLLM judge: JUDGE_USE_VLLM=true (기본)
 # - GPT-4o-mini judge: JUDGE_USE_VLLM=false + OPENAI_API_KEY 필요
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -30,7 +30,17 @@ ANSWERS_DIR="$PROJECT_DIR/data/answers/"
 JUDGMENTS_DIR="$PROJECT_DIR/data/judgments_phase2/"
 OUTPUT_CSV="$PROJECT_DIR/data/results_multi.csv"
 VLLM_PORT=8000
-VLLM_LOG="$HOME_DIR/vllm_judge.log"
+VLLM_LOG="/tmp/vllm_judge.log"
+VLLM_PID=""
+
+cleanup_server() {
+  if [ -n "${VLLM_PID:-}" ]; then
+    kill "$VLLM_PID" 2>/dev/null || true
+    wait "$VLLM_PID" 2>/dev/null || true
+    VLLM_PID=""
+  fi
+}
+trap cleanup_server EXIT INT TERM
 
 # ── 경량 의존성 설치 (vllm/vllm-openai 이미지 전용) ──────────────────────
 echo "[Init] 경량 의존성 설치..."
@@ -183,8 +193,7 @@ python3 -m mtbench_repro.cli aggregate \
 
 # ── judge 서버 종료 ────────────────────────────────────────────────────────
 if [ "$JUDGE_USE_VLLM" = "true" ] && [ -n "${VLLM_PID:-}" ]; then
-  kill "$VLLM_PID" 2>/dev/null || true
-  wait "$VLLM_PID" 2>/dev/null || true
+  cleanup_server
   echo "[OK] judge 서버 종료"
 fi
 

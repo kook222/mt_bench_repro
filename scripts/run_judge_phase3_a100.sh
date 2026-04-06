@@ -25,7 +25,7 @@
 #   Qwen2.5-32B-Instruct : Qwen/Qwen2.5-32B-Instruct-AWQ  (AWQ 4-bit)
 #   Qwen2.5-72B-Instruct : Qwen/Qwen2.5-72B-Instruct-AWQ  (AWQ 4-bit)
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -45,7 +45,17 @@ QUESTIONS="$PROJECT_DIR/data/mt_bench_questions.jsonl"
 ANSWERS_DIR="$PROJECT_DIR/data/answers/"
 PHASE3_DIR="$PROJECT_DIR/data/judgments_phase3"
 VLLM_PORT=8000
-VLLM_LOG="$HOME_DIR/vllm_judge_phase3.log"
+VLLM_LOG="/tmp/vllm_judge_phase3.log"
+VLLM_PID=""
+
+cleanup_server() {
+  if [ -n "${VLLM_PID:-}" ]; then
+    kill "$VLLM_PID" 2>/dev/null || true
+    wait "$VLLM_PID" 2>/dev/null || true
+    VLLM_PID=""
+  fi
+}
+trap cleanup_server EXIT INT TERM
 
 # ── 경량 의존성 설치 (vllm/vllm-openai 이미지 전용) ──────────────────────
 echo "[Init] 경량 의존성 설치..."
@@ -241,8 +251,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
   echo "[OK] CSV: $OUTPUT_CSV"
 
   # judge 서버 종료
-  kill "$VLLM_PID" 2>/dev/null || true
-  wait "$VLLM_PID" 2>/dev/null || true
+  cleanup_server
   echo "[OK] $JUDGE_LABEL 서버 종료"
 
 done

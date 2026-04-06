@@ -31,6 +31,10 @@ BASE_URL="${BASE_URL:-https://api.anthropic.com}"
 SLEEP_SINGLE="${SLEEP_SINGLE:-0.8}"
 SLEEP_PAIRWISE="${SLEEP_PAIRWISE:-1.2}"
 SLEEP_REF="${SLEEP_REF:-0.8}"
+RUN_SINGLE="${RUN_SINGLE:-true}"
+RUN_PAIRWISE="${RUN_PAIRWISE:-true}"
+RUN_REFERENCE="${RUN_REFERENCE:-true}"
+RUN_AGGREGATE="${RUN_AGGREGATE:-true}"
 
 DEFAULT_MODELS=(
   "Llama-3.1-8B-Instruct"
@@ -55,67 +59,72 @@ echo " Output dir: $OUTPUT_DIR"
 echo " Models: ${MODELS[*]}"
 echo "=============================="
 
-echo ""
-echo "[Step 1] Single-answer grading"
-for MODEL_ID in "${MODELS[@]}"; do
-  echo "  - $MODEL_ID"
-  python3 -m mtbench_repro.cli judge-single \
-    --provider anthropic \
-    --questions "$QUESTIONS" \
-    --answers-dir "$ANSWERS_DIR" \
-    --output-dir "$OUTPUT_DIR" \
-    --model-id "$MODEL_ID" \
-    --judge-model "$CLAUDE_MODEL" \
-    --api-key "$ANTHROPIC_API_KEY" \
-    --base-url "$BASE_URL" \
-    --sleep "$SLEEP_SINGLE"
-done
-
-echo ""
-echo "[Step 2] Pairwise comparison"
-for ((i=0; i<${#MODELS[@]}; i++)); do
-  for ((j=i+1; j<${#MODELS[@]}; j++)); do
-    MODEL_A="${MODELS[$i]}"
-    MODEL_B="${MODELS[$j]}"
-    echo "  - $MODEL_A vs $MODEL_B"
-    python3 -m mtbench_repro.cli judge-pairwise \
+if [ "$RUN_SINGLE" = "true" ]; then
+  echo ""
+  echo "[Step 1] Single-answer grading"
+  for MODEL_ID in "${MODELS[@]}"; do
+    echo "  - $MODEL_ID"
+    python3 -m mtbench_repro.cli judge-single \
       --provider anthropic \
       --questions "$QUESTIONS" \
       --answers-dir "$ANSWERS_DIR" \
       --output-dir "$OUTPUT_DIR" \
-      --model-a "$MODEL_A" \
-      --model-b "$MODEL_B" \
+      --model-id "$MODEL_ID" \
       --judge-model "$CLAUDE_MODEL" \
-      --api-key "$ANTHROPIC_API_KEY" \
       --base-url "$BASE_URL" \
-      --sleep "$SLEEP_PAIRWISE"
+      --sleep "$SLEEP_SINGLE"
   done
-done
+fi
 
-echo ""
-echo "[Step 3] Reference-guided grading"
-for MODEL_ID in "${MODELS[@]}"; do
-  echo "  - $MODEL_ID"
-  python3 -m mtbench_repro.cli judge-reference \
-    --provider anthropic \
-    --questions "$QUESTIONS" \
-    --answers-dir "$ANSWERS_DIR" \
-    --output-dir "$OUTPUT_DIR" \
-    --mode single \
-    --model-id "$MODEL_ID" \
-    --judge-model "$CLAUDE_MODEL" \
-    --api-key "$ANTHROPIC_API_KEY" \
-    --base-url "$BASE_URL" \
-    --sleep "$SLEEP_REF"
-done
+if [ "$RUN_PAIRWISE" = "true" ]; then
+  echo ""
+  echo "[Step 2] Pairwise comparison"
+  for ((i=0; i<${#MODELS[@]}; i++)); do
+    for ((j=i+1; j<${#MODELS[@]}; j++)); do
+      MODEL_A="${MODELS[$i]}"
+      MODEL_B="${MODELS[$j]}"
+      echo "  - $MODEL_A vs $MODEL_B"
+      python3 -m mtbench_repro.cli judge-pairwise \
+        --provider anthropic \
+        --questions "$QUESTIONS" \
+        --answers-dir "$ANSWERS_DIR" \
+        --output-dir "$OUTPUT_DIR" \
+        --model-a "$MODEL_A" \
+        --model-b "$MODEL_B" \
+        --judge-model "$CLAUDE_MODEL" \
+        --base-url "$BASE_URL" \
+        --sleep "$SLEEP_PAIRWISE"
+    done
+  done
+fi
 
-echo ""
-echo "[Step 4] Aggregate"
-python3 -m mtbench_repro.cli aggregate \
-  --judgments-dir "$OUTPUT_DIR" \
-  --questions-path "$QUESTIONS" \
-  --output-csv "$OUTPUT_CSV" \
-  --output-ref-csv "$OUTPUT_REF_CSV"
+if [ "$RUN_REFERENCE" = "true" ]; then
+  echo ""
+  echo "[Step 3] Reference-guided grading"
+  for MODEL_ID in "${MODELS[@]}"; do
+    echo "  - $MODEL_ID"
+    python3 -m mtbench_repro.cli judge-reference \
+      --provider anthropic \
+      --questions "$QUESTIONS" \
+      --answers-dir "$ANSWERS_DIR" \
+      --output-dir "$OUTPUT_DIR" \
+      --mode single \
+      --model-id "$MODEL_ID" \
+      --judge-model "$CLAUDE_MODEL" \
+      --base-url "$BASE_URL" \
+      --sleep "$SLEEP_REF"
+  done
+fi
+
+if [ "$RUN_AGGREGATE" = "true" ]; then
+  echo ""
+  echo "[Step 4] Aggregate"
+  python3 -m mtbench_repro.cli aggregate \
+    --judgments-dir "$OUTPUT_DIR" \
+    --questions-path "$QUESTIONS" \
+    --output-csv "$OUTPUT_CSV" \
+    --output-ref-csv "$OUTPUT_REF_CSV"
+fi
 
 echo ""
 echo "=============================="

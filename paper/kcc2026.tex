@@ -212,9 +212,12 @@ worst-case 기준의 $\rho \geq 0.95$를 보장하지는 못한다.
 TopDisc-40에서 $\rho=1.000$을 달성하여 동일 7개 모델 집합 내 서열을
 보존하면서 평가 비용을 50\% 절감하였다.
 TopDisc-25는 $\rho=0.964$를 달성하여 69\% 절감이 가능하다. 단, 선택 기준과
-검증 대상이 동일 모델 집합이므로 selection bias가 존재한다. 현재
-tinyMT-Bench는 \textbf{same-set post-hoc subsampling} 결과이며, 독립적인
-40문항-only 재실행이나 외부 모델 집합 검증은 아직 수행하지 않았다.
+검증 대상이 동일 모델 집합이므로 selection bias가 존재한다. 따라서 본 절의
+일반화 대상은 7개 개발 모델의 답변 자체가 아니라, 개발 집합에서 선택한
+변별도 기반 문항 subset이 hold-out 모델에도 이전되는지 여부이다. 현재
+tinyMT-Bench는 \textbf{same-set post-hoc subsampling} 결과이므로, 본 결과는
+비용 절감형 subset construction의 same-set 상한으로 해석해야 하며,
+독립적인 40문항-only 재실행이나 hold-out 모델 검증은 아직 수행하지 않았다.
 $N=7$에서 $\rho=1.000$과 $\rho=0.964$의 차이는 1개 순위 역전에 해당한다.
 
 \begin{figure}[t]

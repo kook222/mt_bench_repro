@@ -313,6 +313,7 @@ for N in [5, 10, 15, 20, 25, 30, 40, 60, 80]:
 - Random N=5에서 최악 ρ=−0.143 — writing 문항만 뽑히면 서열이 뒤집힌다. Top-Disc는 이런 분산이 없다.
 - 변별도 기반 선택은 작은 N에서 효과가 크고, N이 커질수록 Random과의 격차가 줄어든다.
 - 현재 tinyMT-Bench는 **동일 7개 모델 집합에서 뽑은 변별도 기준을 같은 집합에 다시 적용한 same-set post-hoc subsampling** 결과다. 따라서 독립적인 40문항-only 재실행과 외부 모델 검증이 추가로 필요하다.
+- 여기서 일반화하려는 대상은 `7개 개발 모델의 답변 자체`가 아니라, 개발 집합에서 선택한 변별도 기반 문항 subset이 hold-out 모델에도 이전되는지 여부다.
 - 별도 unseen split 일반화 검증(`results_tiny_mt_bench_generalization_summary.csv`, Qwen-32B judge, 20 splits, dev 4 / test 3)에서는 Top-Disc가 same-set처럼 항상 random을 압도하지는 않았다. 예를 들어 N=40에서 Top-Disc 평균 ρ는 0.900, Random 평균 ρ는 0.913으로 유사 수준이었고, N=60에서는 Top-Disc 0.975, Random 0.938로 다시 우세했다. 즉 Top-Disc는 **same-set에서는 매우 강하지만, unseen 모델 일반화는 더 보수적으로 해석해야 한다.**
 
 > **문항 수 민감도 참고:** tinyMT-Bench의 Random 평균 기준으로는 약 30문항에서 ρ ≥ 0.95에 도달한다. 다만 60문항에서도 random 최솟값은 0.893이라 worst-case 기준의 ρ ≥ 0.95를 보장하지는 못한다. 별도 Phase 2 qsize 분석(6모델 baseline)에서는 60문항부터 평균 ρ ≥ 0.95가 관찰된다. 변별도 기반 선택은 tinyMT-Bench 기준 이를 25문항으로 단축한다.
@@ -732,7 +733,10 @@ bash scripts/run_judge_multi_a100.sh      # judge + 집계
 bash scripts/run_generate_phase3_a100.sh  # Llama-3.1-8B 추가 생성 (나머지 재사용)
 bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B 순차 (~12–20시간)
 
-# Claude judge (Anthropic native SDK)
+# Phase 4 (교차 아키텍처 InternLM judge)
+bash scripts/run_judge_phase4_a100.sh
+
+# Phase 5 (Claude judge, Anthropic native SDK)
 export ANTHROPIC_API_KEY=sk-ant-...
 bash scripts/run_judge_claude_api.sh
 
@@ -745,6 +749,66 @@ python3 scripts/analyze_tiny_mt_bench_generalization.py
 python3 scripts/analyze_turn_degradation.py
 python3 scripts/analyze_position_bias.py
 python3 scripts/analyze_ensemble_judge.py
+```
+
+### unseen 일반화 검증 실행 순서
+
+```bash
+# 1) unseen 4개 full-80 answer generation
+bash scripts/run_generate_unseen_a100.sh
+
+# 2) Qwen / InternLM / Claude judge
+RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
+  JUDGE_MODEL_ID=Qwen2.5-32B-Instruct \
+  QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=2048 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
+  bash scripts/run_judge_unseen_vllm_a100.sh
+
+RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
+  JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat \
+  TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=4096 \
+  bash scripts/run_judge_unseen_vllm_a100.sh
+
+export ANTHROPIC_API_KEY=...
+ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/claude_sonnet OUTPUT_CSV=data/results_unseen_claude_sonnet.csv \
+  bash scripts/run_judge_claude_api.sh \
+  EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
+
+# 3) hold-out generalization summary
+#    judge별로 seen 7 + unseen 4 single_grade 디렉토리를 함께 넘긴다.
+export PYTHONPATH=src
+python3 scripts/analyze_tiny_mt_bench_generalization.py \
+  --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
+  --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
+  --judge claude=data/judgments_phase5/judge_claude_sonnet/single_grade,data/judgments_unseen/claude_sonnet/single_grade \
+  --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt \
+  --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
+  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
+
+# 4) TopDisc-40 subset 생성
+python3 scripts/prepare_topdisc_subset.py --top-n 40
+
+# 5) TopDisc-40 only 재실행
+QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
+  bash scripts/run_generate_unseen_a100.sh
+
+QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
+  OUTPUT_DIR=data/judgments_unseen_topdisc40/qwen32 OUTPUT_CSV=data/results_unseen_topdisc40_qwen32.csv \
+  RUN_REFERENCE=false \
+  JUDGE_MODEL_ID=Qwen2.5-32B-Instruct QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=2048 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
+  bash scripts/run_judge_unseen_vllm_a100.sh
+
+QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
+  OUTPUT_DIR=data/judgments_unseen_topdisc40/internlm OUTPUT_CSV=data/results_unseen_topdisc40_internlm.csv \
+  RUN_REFERENCE=false \
+  JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat \
+  TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=4096 \
+  bash scripts/run_judge_unseen_vllm_a100.sh
+
+QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
+  OUTPUT_DIR=data/judgments_unseen_topdisc40/claude_sonnet OUTPUT_CSV=data/results_unseen_topdisc40_claude_sonnet.csv \
+  RUN_REFERENCE=false \
+  bash scripts/run_judge_claude_api.sh \
+  EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
 ```
 
 ---

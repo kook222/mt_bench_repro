@@ -15,7 +15,7 @@
 #   - meta-llama/Llama-3.1-8B-Instruct 모델이 MODEL_BASE_DIR에 다운로드되어 있어야 함.
 #   - Phase 2 answers가 data/answers/ 에 있어야 함.
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -34,7 +34,17 @@ MODEL_BASE_DIR="$HOME_DIR/models"
 QUESTIONS="$PROJECT_DIR/data/mt_bench_questions.jsonl"
 ANSWERS_DIR="$PROJECT_DIR/data/answers/"
 VLLM_PORT=8000
-VLLM_LOG="$HOME_DIR/vllm_generate_phase3.log"
+VLLM_LOG="/tmp/vllm_generate_phase3.log"
+VLLM_PID=""
+
+cleanup_server() {
+  if [ -n "${VLLM_PID:-}" ]; then
+    kill "$VLLM_PID" 2>/dev/null || true
+    wait "$VLLM_PID" 2>/dev/null || true
+    VLLM_PID=""
+  fi
+}
+trap cleanup_server EXIT INT TERM
 
 # ── 경량 의존성 설치 (vllm/vllm-openai 이미지 전용) ──────────────────────
 echo "[Init] 경량 의존성 설치..."
@@ -124,8 +134,7 @@ python3 -m mtbench_repro.cli generate \
 echo "[OK] 생성 완료: $ANSWER_FILE"
 
 # vLLM 서버 종료
-kill "$VLLM_PID" 2>/dev/null || true
-wait "$VLLM_PID" 2>/dev/null || true
+cleanup_server
 echo "[OK] 서버 종료"
 
 echo ""

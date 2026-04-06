@@ -21,7 +21,7 @@
 #         export OPENAI_API_KEY=sk-xxx && \
 #         bash MT_BENCH_REPRO/scripts/run_full_a100.sh > full_run.out 2>&1"
 
-set -e
+set -euo pipefail
 
 # ── 경로 및 설정 ──
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -35,7 +35,17 @@ ANSWERS_DIR="$PROJECT_DIR/data/answers/"
 JUDGMENTS_DIR="$PROJECT_DIR/data/judgments_phase2/"
 CSV_OUT="$PROJECT_DIR/data/results.csv"
 VLLM_PORT=8000
-VLLM_LOG="$HOME_DIR/vllm_server.log"
+VLLM_LOG="/tmp/vllm_server.log"
+VLLM_PID=""
+
+cleanup_server() {
+  if [ -n "${VLLM_PID:-}" ]; then
+    kill "$VLLM_PID" 2>/dev/null || true
+    wait "$VLLM_PID" 2>/dev/null || true
+    VLLM_PID=""
+  fi
+}
+trap cleanup_server EXIT INT TERM
 
 export HOME="/tmp"
 export LOGNAME="$(whoami)"
@@ -127,8 +137,7 @@ python -m mtbench_repro.cli generate \
 echo "  답변 생성 완료: $ANSWERS_DIR"
 
 echo "vLLM 서버 종료..."
-kill $VLLM_PID 2>/dev/null || true
-wait $VLLM_PID 2>/dev/null || true
+cleanup_server
 
 # ── Step 2: GPT-4 judge-single ──
 echo ""
