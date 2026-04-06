@@ -1,2 +1,2 @@
 model,writing,roleplay,extraction,reasoning,math,coding,stem,humanities,overall,n_questions,n_samples,coverage,expected_count
-Qwen2.5-7B-Instruct,7.6000,7.9500,7.4500,7.2000,8.8000,8.8000,8.5500,8.6000,8.1188,80.0000,160.0000,1.0000,80.0000
+Qwen2.5-7B-Instruct,NaN,NaN,NaN,7.0000,9.2000,8.8750,NaN,NaN,8.3214,29.0000,28.0000,1.0000,29.0000

@@ -236,6 +236,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
   echo "[Step 4/$JUDGE_LABEL] 집계..."
   python3 -m mtbench_repro.cli aggregate \
     --judgments-dir "$JUDGMENTS_DIR" \
+    --questions-path "$QUESTIONS" \
     --output-csv "$OUTPUT_CSV"
   echo "[OK] CSV: $OUTPUT_CSV"
 

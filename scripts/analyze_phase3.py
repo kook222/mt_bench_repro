@@ -388,7 +388,7 @@ def main() -> None:
     project_dir = Path(args.project_dir) if args.project_dir else _PROJECT_DIR
 
     phase3_dir = project_dir / "data" / "judgments_phase3"
-    phase2_judgments_dir = project_dir / "data" / "judgments"
+    phase2_judgments_dir = project_dir / "data" / "judgments_phase2"
     scaling_csv = project_dir / "data" / "results_phase3_scaling.csv"
     qsize_csv = project_dir / "data" / "results_phase3_qsize.csv"
 

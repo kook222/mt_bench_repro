@@ -25,12 +25,14 @@ from typing import Dict, List, Optional, Tuple
 from mtbench_repro.io_utils import (
     list_available_models,
     load_pairwise_judgments,
+    load_questions,
     load_single_judgments,
 )
 from mtbench_repro.schemas import (
     JudgmentPairwise,
     JudgmentSingle,
     MT_BENCH_CATEGORIES,
+    REFERENCE_GUIDED_CATEGORIES,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,6 +55,8 @@ PAPER_REFERENCE_SCORES: Dict[str, float] = {
 def compute_single_scores(
     judgments_dir: str,
     model_ids: Optional[List[str]] = None,
+    expected_questions: Optional[int] = None,
+    allow_partial: bool = False,
 ) -> Dict[str, Dict[str, float]]:
     """
     Single-answer grading 결과에서 모델별·카테고리별 평균 점수 계산.
@@ -108,13 +112,119 @@ def compute_single_scores(
             logger.warning(f"No valid scores for model: {model_id}")
             continue
 
+        if expected_questions is not None and len(judgments) < expected_questions:
+            coverage = len(judgments) / expected_questions
+            if not allow_partial:
+                logger.warning(
+                    "Skipping incomplete single grading result for %s: "
+                    "%d/%d questions (%.1f%% coverage)",
+                    model_id,
+                    len(judgments),
+                    expected_questions,
+                    coverage * 100.0,
+                )
+                continue
+        else:
+            coverage = (
+                len(judgments) / expected_questions
+                if expected_questions
+                else float("nan")
+            )
+
         model_result: Dict[str, float] = {}
         for cat in MT_BENCH_CATEGORIES:
             scores = cat_scores.get(cat, [])
             model_result[cat] = sum(scores) / len(scores) if scores else float("nan")
 
         model_result["overall"] = sum(all_scores) / len(all_scores)
+        model_result["n_questions"] = float(len(judgments))
         model_result["n_samples"] = float(len(all_scores))
+        model_result["coverage"] = coverage
+        model_result["expected_count"] = (
+            float(expected_questions)
+            if expected_questions is not None
+            else float("nan")
+        )
+        results[model_id] = model_result
+
+    return results
+
+
+def compute_reference_scores(
+    judgments_dir: str,
+    model_ids: Optional[List[str]] = None,
+    expected_questions: Optional[int] = None,
+    allow_partial: bool = False,
+) -> Dict[str, Dict[str, float]]:
+    """
+    Reference-guided single grading 결과를 별도 집계.
+
+    Figure 10 기반 점수는 math/reasoning/coding 3개 카테고리의 2nd turn에만 해당하므로,
+    main MT-Bench 점수와 섞지 않고 별도 표/CSV로 보고한다.
+    """
+    grade_dir = Path(judgments_dir) / "single_grade_ref"
+    if not grade_dir.exists():
+        return {}
+
+    if model_ids is None:
+        model_ids = list_available_models(grade_dir)
+
+    results: Dict[str, Dict[str, float]] = {}
+
+    for model_id in model_ids:
+        safe_id = model_id.replace("/", "_")
+        path = grade_dir / f"{safe_id}.jsonl"
+        if not path.exists():
+            continue
+
+        judgments = load_single_judgments(str(path))
+
+        cat_scores: Dict[str, List[float]] = defaultdict(list)
+        all_scores: List[float] = []
+
+        for j in judgments:
+            if j.score_turn2 >= 0:
+                cat = j.category if j.category else "unknown"
+                cat_scores[cat].append(j.score_turn2)
+                all_scores.append(j.score_turn2)
+
+        if not all_scores:
+            logger.warning(f"No valid reference-guided scores for model: {model_id}")
+            continue
+
+        if expected_questions is not None and len(judgments) < expected_questions:
+            coverage = len(judgments) / expected_questions
+            if not allow_partial:
+                logger.warning(
+                    "Skipping incomplete reference-guided result for %s: "
+                    "%d/%d questions (%.1f%% coverage)",
+                    model_id,
+                    len(judgments),
+                    expected_questions,
+                    coverage * 100.0,
+                )
+                continue
+        else:
+            coverage = (
+                len(judgments) / expected_questions
+                if expected_questions
+                else float("nan")
+            )
+
+        model_result = {cat: float("nan") for cat in MT_BENCH_CATEGORIES}
+        for cat in REFERENCE_GUIDED_CATEGORIES:
+            scores = cat_scores.get(cat, [])
+            model_result[cat] = sum(scores) / len(scores) if scores else float("nan")
+
+        model_result["overall"] = sum(all_scores) / len(all_scores)
+        model_result["n_questions"] = float(len(judgments))
+        model_result["n_samples"] = float(len(all_scores))
+        model_result["coverage"] = coverage
+        model_result["expected_count"] = (
+            float(expected_questions)
+            if expected_questions is not None
+            else float("nan")
+        )
         results[model_id] = model_result
 
     return results
@@ -373,6 +483,80 @@ def print_win_rate_table(
     print(f"{'='*max(70, len(header))}\n")
 
 
+def print_reference_table(
+    reference_scores: Dict[str, Dict[str, float]],
+    title: str = "Reference-Guided Scores",
+) -> None:
+    """
+    Reference-guided single grading 결과를 별도 표로 출력.
+
+    main score와 동일 척도로 섞지 않기 위해 대상 카테고리만 보여준다.
+    """
+    if not reference_scores:
+        return
+
+    print(f"\n{'='*70}")
+    print(f"  {title}")
+    print(f"{'='*70}")
+
+    cats = REFERENCE_GUIDED_CATEGORIES
+    sorted_models = sorted(
+        reference_scores.keys(),
+        key=lambda m: reference_scores[m].get("overall", float("-inf")),
+        reverse=True,
+    )
+
+    col_w = max(len(m) for m in sorted_models + ["Model"]) + 2
+    cat_w = max(len(c) for c in cats + ["Overall"]) + 2
+    header = (
+        f"{'Model':<{col_w}}"
+        + "".join(f"{c:>{cat_w}}" for c in cats)
+        + f"{'Overall':>{cat_w}}"
+    )
+    print(header)
+    print("-" * len(header))
+
+    for model in sorted_models:
+        row = f"{model:<{col_w}}"
+        for cat in cats:
+            val = reference_scores[model].get(cat, float("nan"))
+            row += f"{val:>{cat_w}.2f}" if val == val else f"{'N/A':>{cat_w}}"
+        overall = reference_scores[model].get("overall", float("nan"))
+        row += f"{overall:>{cat_w}.2f}" if overall == overall else f"{'N/A':>{cat_w}}"
+        print(row)
+
+    print(f"{'='*max(70, len(header))}\n")
+
+
+def print_reference_comparison(
+    single_scores: Dict[str, Dict[str, float]],
+    reference_scores: Dict[str, Dict[str, float]],
+) -> None:
+    """
+    Default single grading과 reference-guided grading의 target category 평균을 비교.
+    """
+    common_models = [m for m in single_scores if m in reference_scores]
+    if not common_models:
+        return
+
+    print(f"\n{'='*70}")
+    print("  REFERENCE VS DEFAULT (target category 평균 비교)")
+    print(f"{'='*70}")
+    print(f"{'Model':<32}{'default_avg':>12}{'ref_avg':>10}{'delta':>10}")
+    print("-" * 64)
+
+    for model in common_models:
+        default_avg = _safe_avg(
+            [single_scores[model].get(cat, float('nan')) for cat in REFERENCE_GUIDED_CATEGORIES]
+        )
+        ref_avg = reference_scores[model].get("overall", float("nan"))
+        delta = ref_avg - default_avg if default_avg == default_avg and ref_avg == ref_avg else float("nan")
+        delta_str = f"{delta:+.2f}" if delta == delta else "N/A"
+        print(f"{model:<32}{default_avg:>12.2f}{ref_avg:>10.2f}{delta_str:>10}")
+
+    print(f"{'='*70}\n")
+
+
 def print_pairwise_matrix(
     all_judgments: List["JudgmentPairwise"],
     model_ids: List[str],
@@ -476,8 +660,13 @@ def print_trend_summary(
     ranked = sorted(overall_scores.items(), key=lambda x: x[1], reverse=True)
     print("\n[1] 모델 서열 (overall score 기준)")
     for rank, (model, score) in enumerate(ranked, start=1):
-        n = int(single_scores[model].get("n_samples", 0))
-        print(f"    {rank}. {model:<30} {score:.2f}  (n={n})")
+        n_q = int(single_scores[model].get("n_questions", 0))
+        coverage = single_scores[model].get("coverage", float("nan"))
+        if coverage == coverage:
+            note = f"(questions={n_q}, coverage={coverage*100:.0f}%)"
+        else:
+            note = f"(questions={n_q})"
+        print(f"    {rank}. {model:<30} {score:.2f}  {note}")
 
     # ── 2. Pairwise head-to-head matrix ──
     if all_judgments:
@@ -576,7 +765,15 @@ def save_scores_csv(
         output_path: 저장할 CSV 파일 경로
     """
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = ["model"] + MT_BENCH_CATEGORIES + ["overall", "n_samples"]
+    fieldnames = [
+        "model",
+        *MT_BENCH_CATEGORIES,
+        "overall",
+        "n_questions",
+        "n_samples",
+        "coverage",
+        "expected_count",
+    ]
 
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -590,6 +787,12 @@ def save_scores_csv(
     logger.info(f"Scores saved to CSV: {output_path}")
 
 
+def _default_reference_csv_path(output_csv: str) -> str:
+    """main 결과 CSV 경로에서 reference-guided 결과 CSV 경로를 유도."""
+    output_path = Path(output_csv)
+    return str(output_path.with_name(f"{output_path.stem}_reference{output_path.suffix}"))
+
+
 # ===========================================================================
 # 통합 실행 함수
 # ===========================================================================
@@ -598,6 +801,9 @@ def run_aggregate(
     judgments_dir: str,
     model_ids: Optional[List[str]] = None,
     output_csv: Optional[str] = None,
+    questions_path: Optional[str] = None,
+    include_partial: bool = False,
+    output_ref_csv: Optional[str] = None,
 ) -> Tuple[Dict[str, Dict[str, float]], Dict[str, Dict[str, float]]]:
     """
     모든 집계를 실행하고 결과를 출력하는 통합 함수.
@@ -610,11 +816,37 @@ def run_aggregate(
     Returns:
         (single_scores, win_rates) tuple
     """
+    expected_questions: Optional[int] = None
+    expected_reference_questions: Optional[int] = None
+    if questions_path:
+        questions = load_questions(questions_path)
+        expected_questions = len(questions)
+        expected_reference_questions = sum(
+            1
+            for q in questions
+            if q.reference is not None and q.category in REFERENCE_GUIDED_CATEGORIES
+        )
+
     logger.info("Aggregating single-answer scores...")
-    single_scores = compute_single_scores(judgments_dir, model_ids)
+    single_scores = compute_single_scores(
+        judgments_dir,
+        model_ids,
+        expected_questions=expected_questions,
+        allow_partial=include_partial,
+    )
+
+    selected_models = sorted(single_scores.keys()) if single_scores else model_ids
 
     logger.info("Aggregating pairwise win rates...")
-    win_rates = compute_win_rates(judgments_dir, model_ids)
+    win_rates = compute_win_rates(judgments_dir, selected_models)
+
+    logger.info("Aggregating reference-guided scores...")
+    reference_scores = compute_reference_scores(
+        judgments_dir,
+        selected_models,
+        expected_questions=expected_reference_questions,
+        allow_partial=include_partial,
+    )
 
     # head-to-head matrix를 위해 pairwise 판정 전체 로드
     pairwise_dir = Path(judgments_dir) / "pairwise"
@@ -626,10 +858,15 @@ def run_aggregate(
     judge_label = "Judge"
     print_score_table(single_scores, title=f"MT-Bench Single-Answer Scores ({judge_label})")
     print_win_rate_table(win_rates, title="Pairwise Win Rates (category별)")
+    print_reference_table(reference_scores, title="Reference-Guided Scores (math/reasoning/coding)")
+    print_reference_comparison(single_scores, reference_scores)
     print_trend_summary(single_scores, win_rates, all_judgments=all_pairwise or None)
 
     if output_csv:
         save_scores_csv(single_scores, output_csv)
+        if reference_scores:
+            reference_csv = output_ref_csv or _default_reference_csv_path(output_csv)
+            save_scores_csv(reference_scores, reference_csv)
 
     return single_scores, win_rates
 
@@ -642,10 +879,16 @@ def parse_args() -> "argparse.Namespace":
     parser = argparse.ArgumentParser(description="MT-Bench 결과 집계 및 Trend 분석")
     parser.add_argument("--judgments-dir", type=str, default="data/judgments/",
                         help="판정 결과 디렉토리")
+    parser.add_argument("--questions-path", type=str, default=None,
+                        help="질문 JSONL 경로 (지정 시 complete coverage 검증 수행)")
     parser.add_argument("--models", type=str, nargs="+", default=None,
                         help="집계할 모델 ID 목록 (기본: 자동 탐색)")
     parser.add_argument("--output-csv", type=str, default=None,
                         help="결과 CSV 저장 경로")
+    parser.add_argument("--output-ref-csv", type=str, default=None,
+                        help="reference-guided 결과 CSV 저장 경로")
+    parser.add_argument("--include-partial", action="store_true",
+                        help="불완전한 partial 결과도 집계에 포함")
     return parser.parse_args()
 
 
@@ -661,6 +904,9 @@ def main() -> None:
         judgments_dir=args.judgments_dir,
         model_ids=args.models,
         output_csv=args.output_csv,
+        questions_path=args.questions_path,
+        include_partial=args.include_partial,
+        output_ref_csv=args.output_ref_csv,
     )
 
 

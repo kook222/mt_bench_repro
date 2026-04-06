@@ -11,22 +11,39 @@ data/
 ├── mt_bench_questions.jsonl          # 전체 80문항 (git 제외, 별도 다운로드)
 ├── mt_bench_questions_sample.jsonl   # 샘플 3문항 (로컬 mock 테스트용)
 │
-├── answers/                          # 각 모델의 답변 (Phase 2 완료)
+├── answers/                          # 각 모델의 답변 (Phase 1~3)
 │   ├── Qwen2.5-7B-Instruct.jsonl     # Phase 1
 │   ├── SOLAR-10.7B-Instruct.jsonl    # Phase 2
-│   ├── Mistral-7B-Instruct-v0.3.jsonl
-│   ├── Yi-1.5-9B-Chat.jsonl
-│   ├── Phi-3.5-mini-Instruct.jsonl
-│   ├── gemma-2-9b-it.jsonl
-│   └── Zephyr-7B-beta.jsonl
+│   ├── Llama-3.1-8B-Instruct.jsonl   # Phase 3
+│   └── ...
 │
-├── judgments/                        # judge 채점 결과 (Phase 2 완료)
-│   ├── single_grade/                 # 단순 점수 채점 (1~10점) — 7개 모델 × 80문항
-│   ├── single_grade_ref/             # 정답 기반 채점 (math/reasoning/coding) — 7개 모델 × 29문항
-│   └── pairwise/                     # 모델 간 비교 (AB/BA swap) — 15쌍 × 80문항
+├── archive/                          # legacy 결과 보관
+│   └── results_qwen7b_legacy.csv
+│
+├── mock/                             # 로컬 mock 검증 산출물 (실제 결과와 분리)
+│   ├── answers/
+│   ├── judgments/
+│   ├── results.csv
+│   └── results_reference.csv
+│
+├── judgments_phase1/                 # Phase 1: self-judge
+│   ├── single_grade/
+│   └── single_grade_ref/
+│
+├── judgments_phase2/                 # Phase 2: Qwen2.5-14B judge
+│   ├── single_grade/
+│   ├── single_grade_ref/
+│   └── pairwise/
+│
+├── judgments_phase3/                 # Phase 3: judge size scaling
+│   ├── judge_7B/  {single_grade, single_grade_ref, pairwise}
+│   ├── judge_14B/ {single_grade, single_grade_ref, pairwise}
+│   └── judge_32B/ {single_grade, single_grade_ref, pairwise}
 │
 ├── results.csv                       # Phase 1 단일 모델 집계 결과
-└── results_multi.csv                 # Phase 2 다중 모델 집계 결과
+├── results_reference.csv             # Phase 1 reference-guided 요약
+├── results_multi.csv                 # Phase 2 다중 모델 집계 결과
+└── results_multi_reference.csv       # Phase 2 reference-guided 요약
 ```
 
 ---
@@ -38,25 +55,34 @@ data/
 - 1줄 = 1문항 (question_id, turn1 답변, turn2 답변 포함)
 - `run_generate_multi_a100.sh` 실행 시 생성
 
-### judgments/single_grade/{모델명}.jsonl
+### judgments_phase*/single_grade/{모델명}.jsonl
 - judge 모델이 각 답변에 매긴 점수 (1~10점)
 - 1줄 = 1문항 × 1턴
 - `judge-single` 서브커맨드 실행 시 생성
 
-### judgments/single_grade_ref/{모델명}.jsonl
+### judgments_phase*/single_grade_ref/{모델명}.jsonl
 - 정답(reference)을 참고한 채점 결과
 - math / reasoning / coding 카테고리만 해당
 - `judge-reference` 서브커맨드 실행 시 생성
 
-### judgments/pairwise/{모델A}_vs_{모델B}.jsonl
+### judgments_phase*/pairwise/{모델A}_vs_{모델B}.jsonl
 - 두 모델 답변을 비교한 결과 (A wins / B wins / tie)
 - AB 순서와 BA 순서 둘 다 포함 (position bias 제거)
 - `judge-pairwise` 서브커맨드 실행 시 생성
 
 ### results.csv / results_multi.csv
-- 모든 채점 결과를 집계한 최종 점수표
-- 모델별 카테고리별 평균 점수 포함
+- 모델별 카테고리별 평균 점수표
 - `aggregate` 서브커맨드 실행 시 생성
+- `--questions-path`를 지정하면 complete coverage를 검사하고 partial 결과는 기본 제외
+
+### results_reference.csv / results_multi_reference.csv
+- reference-guided single grading 요약표
+- math / reasoning / coding 카테고리만 포함
+- main MT-Bench 점수와 다른 척도이므로 별도 보고
+
+### archive/results_qwen7b_legacy.csv
+- coverage/expected_count 컬럼 추가 전의 legacy Phase 1 요약표
+- 현재 기준선은 `results.csv`와 `results_reference.csv`를 참조
 
 ---
 

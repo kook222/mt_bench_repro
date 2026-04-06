@@ -20,9 +20,9 @@ cd "$PROJECT_ROOT"
 export PYTHONPATH=src
 
 QUESTIONS="data/mt_bench_questions_sample.jsonl"
-ANSWERS_DIR="data/answers/"
-JUDGMENTS_DIR="data/judgments_phase2/"
-CSV_OUT="data/results.csv"
+ANSWERS_DIR="data/mock/answers/"
+JUDGMENTS_DIR="data/mock/judgments/"
+CSV_OUT="data/mock/results.csv"
 MODELS=("vicuna-13b" "llama-13b")
 
 echo "=============================================="
@@ -98,6 +98,7 @@ echo ""
 echo "[Step 5] 집계 및 Trend 분석"
 python -m mtbench_repro.cli aggregate \
     --judgments-dir "$JUDGMENTS_DIR" \
+    --questions-path "$QUESTIONS" \
     --output-csv "$CSV_OUT"
 
 echo ""

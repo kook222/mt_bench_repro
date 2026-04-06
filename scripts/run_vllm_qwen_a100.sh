@@ -190,6 +190,7 @@ echo ""
 echo "[Step 9] 결과 집계 및 Trend 분석..."
 python3 -m mtbench_repro.cli aggregate \
     --judgments-dir "$JUDGMENTS_DIR" \
+    --questions-path "$QUESTIONS" \
     --output-csv "$OUTPUT_CSV"
 echo "[Step 9] 집계 완료. CSV: $OUTPUT_CSV"
 

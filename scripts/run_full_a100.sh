@@ -209,6 +209,7 @@ echo "=============================="
 
 python -m mtbench_repro.cli aggregate \
     --judgments-dir "$JUDGMENTS_DIR" \
+    --questions-path "$QUESTIONS" \
     --output-csv "$CSV_OUT"
 
 echo "  CSV 저장 완료: $CSV_OUT"

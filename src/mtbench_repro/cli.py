@@ -275,14 +275,22 @@ def cmd_aggregate(args: argparse.Namespace) -> None:
         judgments_dir=args.judgments_dir,
         model_ids=args.models,
         output_csv=args.output_csv,
+        questions_path=args.questions_path,
+        include_partial=args.include_partial,
+        output_ref_csv=args.output_ref_csv,
     )
 
 
 def add_aggregate_parser(subparsers) -> None:
     p = subparsers.add_parser("aggregate", help="결과 집계 및 trend 분석")
     p.add_argument("--judgments-dir", type=str, default="data/judgments/")
+    p.add_argument("--questions-path", type=str, default=None,
+                   help="질문 JSONL 경로 (지정 시 complete coverage 검증 수행)")
     p.add_argument("--models", type=str, nargs="+", default=None)
     p.add_argument("--output-csv", type=str, default=None)
+    p.add_argument("--output-ref-csv", type=str, default=None)
+    p.add_argument("--include-partial", action="store_true",
+                   help="불완전한 partial 결과도 집계에 포함")
     p.set_defaults(func=cmd_aggregate)
 
 

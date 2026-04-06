@@ -12,7 +12,7 @@ cd "$PROJECT_ROOT"
 export PYTHONPATH=src
 
 OUTPUT_DIR="data/judgments_phase2/"
-CSV_OUT="data/results.csv"
+CSV_OUT="data/results_multi.csv"
 
 echo "=============================="
 echo " Step 4: 집계 및 Trend 분석"
@@ -20,6 +20,7 @@ echo "=============================="
 
 python -m mtbench_repro.cli aggregate \
     --judgments-dir "$OUTPUT_DIR" \
+    --questions-path "data/mt_bench_questions.jsonl" \
     --output-csv "$CSV_OUT"
 
 echo ""

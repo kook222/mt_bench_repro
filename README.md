@@ -307,11 +307,11 @@ for N in [5, 10, 15, 20, 25, 30, 40, 60, 80]:
 
 **해석:**
 
-- Top-Disc-40은 ρ=1.000을 달성한다 — 80문항과 동일한 서열을 절반의 문항으로.
+- Top-Disc-40은 ρ=1.000을 달성한다 — 동일 7개 모델 집합 기준으로 80문항 baseline과 같은 서열을 절반의 문항으로 재현한다.
 - Random N=5에서 최악 ρ=−0.143 — writing 문항만 뽑히면 서열이 뒤집힌다. Top-Disc는 이런 분산이 없다.
 - 변별도 기반 선택은 작은 N에서 효과가 크고, N이 커질수록 Random과의 격차가 줄어든다.
 
-> **문항 수 민감도 참고:** 랜덤 선택만 놓고 보면 ρ ≥ 0.95를 얻으려면 60문항이 필요해 MT-Bench 80문항 설계가 경험적으로 타당함을 보여준다. 변별도 기반 선택은 이를 25문항으로 단축한다.
+> **문항 수 민감도 참고:** tinyMT-Bench의 Random 평균 기준으로는 약 30문항에서 ρ ≥ 0.95에 도달한다. 별도 Phase 2 qsize 분석(6모델 baseline)에서는 60문항부터 평균 ρ ≥ 0.95가 안정적으로 관찰된다. 변별도 기반 선택은 tinyMT-Bench 기준 이를 25문항으로 단축한다.
 
 ---
 
@@ -372,7 +372,7 @@ Overall 1위 Phi가 멀티턴에서도 유일하게 향상(+0.075)되는 반면,
 
 > **데이터:** `judgments_phase3/judge_{7B,14B,32B}/pairwise/` → `results_position_bias.csv`
 
-> **연구 질문:** Pairwise inconsistency의 원인이 "무작위 노이즈"인가, "체계적 position bias"인가? Judge 크기가 커지면 position bias가 줄어드는가?
+> **연구 질문:** Pairwise inconsistency에서 position bias의 상대적 기여도는 judge 크기에 따라 어떻게 달라지는가?
 
 Pairwise judge는 동일 문항에 대해 AB / BA 두 순서로 실행한다.
 
@@ -419,7 +419,7 @@ Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는
 - 14B: 전체의 43.7%
 - 32B: 전체의 **31.2%** ← 여전히 크지만 감소
 
-즉 **전체 오류는 줄었지만, 남은 오류의 성격이 "무작위 실수 → 고질적 편향"으로 바뀐다.**
+즉 **전체 오류는 줄지만, 남은 오류에서는 체계적 position bias의 상대적 비중이 커진다.**
 
 **카테고리별 bias (32B judge):**
 
@@ -438,7 +438,7 @@ Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는
 
 Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐도 B가 이긴다 → 불일치가 아닌 일관된 판정. 불일치가 나더라도 정오 기준이 second-position 승리를 만들어낼 수 있어 first-pos 승률이 상대적으로 낮다(80.7%).
 
-> **결론:** Judge 스케일링은 전체 inconsistency를 줄이지만, 남은 불일치의 원인을 "무작위 노이즈 → 체계적 position bias"로 전환시킨다. 객관적 정답이 있는 Math/Coding에서 second-position 승리가 상대적으로 많은 것은 이 해석을 뒷받침한다.
+> **결론:** Judge 스케일링은 전체 inconsistency를 줄이지만, 남아 있는 불일치에서는 체계적 position bias의 상대적 기여도가 커진다. 객관적 정답이 있는 Math/Coding에서 second-position 승리가 상대적으로 많은 것은 이 해석을 뒷받침한다.
 
 ---
 
@@ -564,9 +564,9 @@ CI가 넓은 이유는 모델 수가 7개뿐이기 때문이다. 그러나 **모
 | Judge 크기 ↑ → inconsistency ↓ | ✅ 7B(78.75%) → 14B(46.85%) → 32B(32.86%), 단조 감소 |
 | Judge 크기 무관 모델 서열 안정성 | ✅ Cross-judge ρ > 0.75 전 쌍 |
 | Extraction은 데이터 기반 준-Hard 카테고리 | ✅ 변별도 4위 (1.296) — reasoning(1.362)과 근접 |
-| tinyMT-Bench: 변별도 상위 40문항 = 80문항 동등 | ✅ Top-Disc-40 ρ=1.000, 50% 절감 |
+| tinyMT-Bench: 변별도 상위 40문항으로 동일 7개 모델 집합 서열 유지 | ✅ Top-Disc-40 ρ=1.000, 50% 절감 |
 | Writing이 Turn 2 저하 가장 큼 | ✅ δ=−1.129; Coding/Reasoning은 오히려 향상 |
-| Position bias: 불일치 원인이 노이즈→bias로 전환 | ✅ 32B judge 불일치의 94.9%가 first-pos bias; Math/Coding에서 가장 낮음 |
+| Position bias: 남은 불일치에서 bias 상대 기여도 증가 | ✅ 32B judge 불일치의 94.9%가 first-pos bias; Math/Coding에서 가장 낮음 |
 | 앙상블 다수결이 단일 32B보다 나쁨 | ✅ 7B+14B+32B 앙상블 58.63% > 단일 32B 32.86%; 저품질 judge가 앙상블 오염 |
 | 앙상블 기권 방식은 단일 32B보다 낮음 | ✅ inconsistent 기권 처리 시 24.70%; 604쌍(36%)이 winner로 전환 |
 | Cross-judge ρ 95% CI 하한 ≥ 0.6 | ✅ Bootstrap n=10,000; 7개 모델 한계로 CI 넓음 [0.607, 0.964] |
@@ -666,6 +666,9 @@ export PYTHONPATH=src
 bash scripts/run_mock_full.sh
 ```
 
+- mock 산출물은 `data/mock/` 아래에만 저장된다.
+- 실제 실험 결과와 섞이지 않도록 mock answers/judgments/results를 분리한다.
+
 ### CLI 서브커맨드
 
 ```bash
@@ -695,13 +698,20 @@ python -m mtbench_repro.cli judge-pairwise \
 # 4. 집계
 python -m mtbench_repro.cli aggregate \
   --judgments-dir data/judgments_phase2/ \
-  --output-csv data/results.csv
+  --questions-path data/mt_bench_questions.jsonl \
+  --output-csv data/results_multi.csv
 
 # 5. Figure 전체 재생성
 python3 scripts/generate_figures.py
 ```
 
 > 항상 `PYTHONPATH=src python -m mtbench_repro.cli …` 형태로 실행.
+
+집계 기본 동작:
+- `--questions-path`를 주면 전체 질문 수를 기준으로 coverage를 검사한다.
+- partial 결과는 기본적으로 메인 표에서 제외된다.
+- partial 결과까지 보고 싶으면 `--include-partial` 플래그를 사용한다.
+- reference-guided 결과는 별도 `*_reference.csv`로 저장되며 main MT-Bench 점수와 섞지 않는다.
 
 ### A100 전체 파이프라인
 

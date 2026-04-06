@@ -1,0 +1,4 @@
+judge_label,params_B,total_pairwise,n_inconsistent,inconsistency_rate
+judge_7B,7,1680,1323,0.787500
+judge_14B,14,1680,787,0.468452
+judge_32B,32,1680,552,0.328571

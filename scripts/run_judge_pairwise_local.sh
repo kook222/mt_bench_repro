@@ -12,8 +12,8 @@ cd "$PROJECT_ROOT"
 export PYTHONPATH=src
 
 QUESTIONS="data/mt_bench_questions_sample.jsonl"
-ANSWERS_DIR="data/answers/"
-OUTPUT_DIR="data/judgments_phase2/"
+ANSWERS_DIR="data/mock/answers/"
+OUTPUT_DIR="data/mock/judgments/"
 
 echo "=============================="
 echo " Step 3: Pairwise Comparison"

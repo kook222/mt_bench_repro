@@ -178,6 +178,7 @@ echo ""
 echo "[Step 4] 집계 및 추이 분석..."
 python3 -m mtbench_repro.cli aggregate \
   --judgments-dir "$JUDGMENTS_DIR" \
+  --questions-path "$QUESTIONS" \
   --output-csv "$OUTPUT_CSV"
 
 # ── judge 서버 종료 ────────────────────────────────────────────────────────
