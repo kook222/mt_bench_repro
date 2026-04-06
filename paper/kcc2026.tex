@@ -1,0 +1,280 @@
+% KCC 2026 학부생/주니어 논문경진대회
+% 한국정보과학회 KCC 템플릿 기반
+% Overleaf에서 컴파일: leejaymin/Kiise-Latex-template 클래스 사용
+
+\documentclass{kcc}
+
+\usepackage{kotex}          % 한글
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{amsmath}
+
+% ─────────────────────────────────────────────────────
+%  제목
+% ─────────────────────────────────────────────────────
+\title{오픈소스 LLM-as-a-Judge의 신뢰도 분석:\\
+판사 크기 스케일링, 위치 편향 전이, 그리고 비용 효율적 평가}
+
+\title*{Reliability Analysis of Open-Source LLM-as-a-Judge:\\
+Judge Size Scaling, Position Bias Transition, and Cost-Efficient Evaluation}
+
+% ─────────────────────────────────────────────────────
+%  저자 (심사용 제출 시 주석 처리)
+% ─────────────────────────────────────────────────────
+\author{박\,승\,현$^\circ$}
+\author*{Seunghyun Park$^\circ$}
+\affil{부산대학교 정보컴퓨터공학부 인공지능전공}
+\affil*{Department of Computer Science and Engineering (AI), Pusan National University}
+\email{[이메일 기입]}
+
+\begin{document}
+\maketitle
+
+% ─────────────────────────────────────────────────────
+%  요약
+% ─────────────────────────────────────────────────────
+\begin{abstract}
+대형 언어 모델(LLM)을 평가자로 활용하는 LLM-as-a-Judge 방식이 확산되고 있으나,
+오픈소스 모델을 평가자로 사용할 때의 신뢰도는 체계적으로 검증되지 않았다.
+본 논문은 MT-Bench 80문항을 기반으로 Qwen2.5 계열 7B·14B·32B를 평가자로,
+7종의 오픈소스 LLM을 피평가자로 설정하여 신뢰도를 다각도로 분석한다.
+실험 결과, 평가자 크기가 증가할수록 pairwise 불일치율은
+단조 감소(78.75\%→46.85\%→32.86\%)하나,
+불일치 원인이 무작위 노이즈에서 위치 편향(position bias)으로 전환됨을 확인하였다.
+또한 다수결 앙상블은 단일 고품질 평가자보다 성능이 저하되며,
+inconsistent 판정을 기권으로 처리하는 개선 앙상블이 이를 해결함을 실증하였다.
+아울러 변별도 기반 40문항(tinyMT-Bench)으로 전체 순위를 보존하면서
+평가 비용을 50\% 절감할 수 있음을 보인다.
+\end{abstract}
+
+% ─────────────────────────────────────────────────────
+\section{서론}
+% ─────────────────────────────────────────────────────
+
+LLM의 성능 평가는 모델 개발과 선택에 있어 핵심 과제이다.
+인간 평가는 비용과 확장성 문제가 있으며, 객관식 벤치마크는
+개방형 태스크를 충분히 평가하기 어렵다.
+이러한 배경에서 LLM 자체를 평가자로 활용하는
+LLM-as-a-Judge 방식이 주목받고 있다~\cite{zheng2023}.
+
+상용 API(GPT-4 등)의 비용 및 접근성 제약으로 인해
+오픈소스 평가자 활용 수요가 증가하고 있으나,
+그 신뢰도는 충분히 검증되지 않았다.
+기존 연구는 위치 편향~\cite{shi2024} 또는 불일치 측정~\cite{park2024}에
+집중하였으나, 평가자 크기 증가에 따른 불일치 원인의 전환,
+앙상블 설계의 효과, 최소 문항 수를 통합 분석한 연구는 부족하다.
+
+본 논문은 다음 네 가지 연구 질문을 다룬다:
+\textbf{RQ1} 평가자 크기 스케일링이 불일치율에 미치는 영향,
+\textbf{RQ2} 불일치의 원인(노이즈 vs. 위치 편향) 분석,
+\textbf{RQ3} 앙상블 설계가 신뢰도에 미치는 영향,
+\textbf{RQ4} 변별도 기반 문항 선택으로 비용을 절감하면서
+모델 서열을 보존할 수 있는가.
+
+% ─────────────────────────────────────────────────────
+\section{관련 연구}
+% ─────────────────────────────────────────────────────
+
+\textbf{LLM-as-a-Judge.}
+Zheng et al.~\cite{zheng2023}은 MT-Bench와 Chatbot Arena를 통해
+GPT-4 기반 평가 방식을 제안하였으며,
+인간 평가자와 80\% 이상의 일치율을 보고하였다.
+
+\textbf{신뢰도 분석.}
+Shi et al.~\cite{shi2024}은 15개 LLM 평가자를 대상으로
+위치 편향을 정량화하였다.
+Park et al.~\cite{park2024}은 AB/BA 양방향 평가를 통해
+불일치율이 25.3\%--76.2\% 범위임을 보고하였다.
+그러나 이들 연구는 평가자 크기 증가에 따른
+불일치 원인의 질적 전환, 앙상블 설계의 효과,
+최소 평가 문항 수 분석을 다루지 않았다.
+
+% ─────────────────────────────────────────────────────
+\section{실험 설계}
+% ─────────────────────────────────────────────────────
+
+\subsection{실험 환경}
+
+MT-Bench~\cite{zheng2023}의 80문항(8개 카테고리 $\times$ 10문항, 2턴)을 사용한다.
+피평가 모델은 7종: Llama-3.1-8B, SOLAR-10.7B, Gemma-2-9B,
+Yi-1.5-9B, Zephyr-7B, Mistral-7B, Phi-3.5-mini.
+평가자는 Qwen2.5-7B/14B/32B-Instruct를 사용하였으며,
+vLLM 서버 기반으로 실행하였다.
+답변 생성 temperature=0.7, 평가 temperature=0.0.
+
+\subsection{평가 방식 및 지표}
+
+\textbf{Single-grade}: 1--10점 채점, Turn 1·2 평균을 모델 점수로 사용.
+
+\textbf{Pairwise (conservative verdict~\cite{zheng2023})}: AB·BA 양방향 비교.
+두 판정이 일치할 때만 winner 선언, 불일치 시 ``inconsistent'' 처리.
+
+주요 지표:
+(1) \textbf{불일치율}: AB/BA 판정이 다른 쌍의 비율 ($7\binom{7}{2}\times 80=1{,}680$쌍),
+(2) \textbf{First-position 승률}: 불일치 쌍 중 첫 번째 제시 모델 승리 비율,
+(3) \textbf{Spearman $\rho$}: 두 평가자 간 모델 서열 순위 상관계수.
+
+\subsection{앙상블 설계 2종}
+
+\textbf{다수결}: inconsistent를 표로 취급, 2/3 이상 일치 시 winner.
+
+\textbf{기권}: inconsistent를 기권으로 처리.
+결정적 표(A 또는 B)가 존재하고 충돌하지 않을 때만 winner 선언.
+
+% ─────────────────────────────────────────────────────
+\section{실험 결과}
+% ─────────────────────────────────────────────────────
+
+\subsection{평가자 크기 스케일링과 불일치율 (RQ1)}
+
+그림~\ref{fig:scaling}은 평가자 크기별 불일치율을 보여준다.
+전체 불일치율은 7B(78.75\%) $\to$ 14B(46.85\%) $\to$ 32B(32.86\%)로
+단조 감소하였다.
+Math(27.14\%)와 Coding(26.67\%)이 가장 낮고,
+Writing(40.95\%)과 STEM(39.05\%)이 가장 높았다.
+정오 기준이 명확한 카테고리일수록 평가자가 일관된 판정을 내림을 시사한다.
+
+Cross-judge Spearman $\rho$ 분석 결과(Bootstrap 95\% CI, $n=10{,}000$):
+7B--14B $\rho=0.821$ [0.643, 0.964],
+7B--32B $\rho=0.786$ [0.643, 0.964],
+14B--32B $\rho=0.750$ [0.607, 0.964].
+평가자 크기가 달라도 모델 서열 판단은 유사하게 나타났다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/fig4_judge_scaling.png}
+  \caption{Qwen2.5 평가자 크기별 불일치율 (전체 및 카테고리별).
+  크기 증가에 따른 단조 감소가 확인된다.}
+  \label{fig:scaling}
+\end{figure}
+
+\subsection{불일치 원인의 전환: 노이즈에서 위치 편향으로 (RQ2)}
+
+불일치율 감소만으로 신뢰도 향상을 단정할 수 없다.
+그림~\ref{fig:bias}는 불일치 쌍 내 first-position 승률을 보여준다.
+first-position 승률은 7B(84.2\%) $\to$ 14B(93.5\%) $\to$ 32B(94.9\%)로
+평가자 크기가 커질수록 오히려 증가하였다.
+
+이는 다음을 의미한다:
+7B에서는 불일치의 상당 부분이 무작위 노이즈이지만,
+32B에서는 남은 불일치의 원인이 거의 모두 위치 편향이다.
+즉, \textbf{평가자 크기 증가는 불일치율을 낮추지만,
+불일치 원인이 노이즈에서 체계적 편향으로 전환}된다.
+
+Math(32B 기준 80.7\%)가 가장 낮은 first-position 승률을 보인 것은
+명확한 정오 기준이 위치 편향을 부분적으로 억제하기 때문으로 해석된다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/fig11_position_bias.png}
+  \caption{평가자 크기별 불일치율(좌) 및 first-position 승률(우).
+  불일치율은 감소하지만 first-position 승률은 증가한다.}
+  \label{fig:bias}
+\end{figure}
+
+\subsection{앙상블 평가자 설계 비교 (RQ3)}
+
+표~\ref{tab:ensemble}은 평가 방식별 전체 불일치율을 보여준다.
+다수결 앙상블(58.63\%)은 단일 32B(32.86\%)보다 오히려 악화되었다.
+7B의 높은 inconsistency율(78.75\%)로 인해
+``inconsistent'' 표가 다수를 차지하며 앙상블을 오염시키기 때문이다.
+
+기권 방식(24.70\%)은 단일 32B보다 낮은 불일치율을 달성하였다.
+1,680쌍 중 604쌍(36\%)이 inconsistent에서 winner로 전환되었으며,
+34쌍(2\%)만이 winner에서 inconsistent로 변경되었다.
+기권 방식은 저품질 평가자의 불확실한 판정을 집계에서 제외함으로써
+앙상블 신뢰도를 높인다.
+
+\begin{table}[t]
+  \caption{평가 방식별 전체 불일치율}
+  \label{tab:ensemble}
+  \centering
+  \begin{tabular}{lc}
+    \toprule
+    평가 방식 & 불일치율 \\
+    \midrule
+    단일 7B    & 78.75\% \\
+    단일 14B   & 46.85\% \\
+    단일 32B   & 32.86\% \\
+    앙상블 다수결 (7B+14B+32B) & 58.63\% \\
+    \textbf{앙상블 기권 (7B+14B+32B)} & \textbf{24.70\%} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{tinyMT-Bench: 변별도 기반 문항 최소화 (RQ4)}
+
+그림~\ref{fig:tiny}는 문항 수 $N$별 Spearman $\rho$를 보여준다.
+무작위 선택의 경우 60문항 이상에서 $\rho \geq 0.95$가 안정되며,
+10문항에서는 최솟값 $\rho = 0.32$로 불안정하다.
+변별도(모델 간 점수 표준편차) 상위 $N$개를 선택하는 TopDisc-$N$ 방식은
+TopDisc-40에서 $\rho = 1.000$을 달성하여 전체 순위를 완전 보존하면서
+평가 비용을 50\% 절감하였다.
+TopDisc-25는 $\rho \geq 0.95$를 달성하여 69\% 절감이 가능하다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/fig9_tiny_mt_bench.png}
+  \caption{문항 수 $N$별 Spearman $\rho$ (무작위 vs. 변별도 기반).
+  TopDisc-40은 $\rho=1.000$으로 80문항과 동일한 서열을 보존한다.}
+  \label{fig:tiny}
+\end{figure}
+
+% ─────────────────────────────────────────────────────
+\section{결론}
+% ─────────────────────────────────────────────────────
+
+본 논문은 오픈소스 LLM-as-a-Judge의 신뢰도를 판사 크기 스케일링,
+위치 편향 전이, 앙상블 설계, 비용 효율적 평가의 네 측면에서 분석하였다.
+실험 결과를 바탕으로 세 가지 가이드라인을 제안한다.
+
+\textbf{가이드라인 1.}
+오픈소스 평가자는 32B 이상 사용을 권장한다.
+단, 크기가 커질수록 불일치 원인이 위치 편향으로 집중되므로
+맹목적 스케일링은 위험하다.
+
+\textbf{가이드라인 2.}
+앙상블 사용 시 다수결보다 기권 방식을 채택한다.
+단일 최고 품질 평가자 대비 불일치율을 추가로 8\%p 절감할 수 있다.
+
+\textbf{가이드라인 3.}
+평가 비용 절감 시 변별도 상위 40문항(tinyMT-Bench)을 사용하면
+전체 80문항 대비 순위를 보존하면서 비용을 50\% 절감할 수 있다.
+
+\textbf{한계 및 향후 연구.}
+본 연구는 단일 judge 패밀리(Qwen2.5)만을 사용하였으며,
+7개 피평가 모델로 계산한 Spearman $\rho$는 신뢰구간이 넓다.
+향후 InternLM2.5(7B/20B)를 평가자로 추가하여 교차 아키텍처 검증을 수행하고,
+GPT-4o-mini와의 비교 및 한국어 MT-Bench 적용을 계획하고 있다.
+
+% ─────────────────────────────────────────────────────
+%  참고문헌
+% ─────────────────────────────────────────────────────
+\begin{thebibliography}{9}
+
+\bibitem{zheng2023}
+L.~Zheng et al.,
+``Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena,''
+\textit{NeurIPS}, 2023.
+
+\bibitem{shi2024}
+W.~Shi et al.,
+``Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge,''
+\textit{IJCNLP}, 2025.
+arXiv:2406.07791.
+
+\bibitem{park2024}
+Anonymous,
+``Are We on the Right Way to Assessing LLM-as-a-Judge?''
+arXiv:2512.16041, 2024.
+
+\bibitem{survey2024}
+T.~Vu et al.,
+``A Survey on LLM-as-a-Judge,''
+arXiv:2411.15594, 2024.
+
+\end{thebibliography}
+
+\end{document}
