@@ -724,6 +724,8 @@ python3 scripts/generate_figures.py
 
 ### A100 전체 파이프라인
 
+실전 제출 순서와 `k8s_create_job.py` 예시는 [A100_CROSS_JUDGE_RUNBOOK.md](/Users/parkseunghyun/Desktop/프로젝트/mt_bench_재현/mt_bench_repro/A100_CROSS_JUDGE_RUNBOOK.md)에 정리했다.
+
 ```bash
 # Phase 2 (예비 실험)
 bash scripts/run_generate_multi_a100.sh   # 6개 모델 답변 생성
