@@ -211,6 +211,77 @@ python3 scripts/analyze_phase3.py
 
 ---
 
+---
+
+## 현재 진행 상황 (2026-04-08 기준)
+
+### ✅ 완료
+
+| 단계 | 내용 | 결과 파일 |
+|------|------|---------|
+| Phase 1 | Qwen2.5-7B self-judge (seen 7) | `results.csv` |
+| Phase 2 | Qwen2.5-14B judge (seen 7) | `results_multi.csv` |
+| Phase 3 | Qwen2.5-7B/14B/32B judge (seen 7) | `results_phase3_judge_*.csv` |
+| Phase 4 | InternLM2.5-7B/20B judge (seen 7) | `judgments_phase4/` |
+| Phase 5 | GPT-4o-mini judge (seen 7) | `results_phase5_gpt4omini.csv` |
+| unseen 답변 생성 | EXAONE / granite / Falcon3 / OLMo-2-1124-7B | `data/answers_unseen/` |
+
+**seen 7 모델:** Llama-3.1-8B, SOLAR-10.7B, gemma-2-9b-it, Yi-1.5-9B, Zephyr-7B, Mistral-7B, Phi-3.5-mini
+**unseen 4 모델:** EXAONE-3.5-7.8B, granite-3.1-8b, Falcon3-7B, OLMo-2-1124-7B
+**bloomz-7b1-mt 제외 이유:** chat template 없음 → 빈 응답 80/80
+
+---
+
+### ⏳ 다음 할 일 (내일)
+
+**unseen 4에 대해 judge 3종 순차 실행** (A100_CROSS_JUDGE_RUNBOOK.md Step 8 참고):
+
+```bash
+# 1. Qwen32 (GPU, ~2~3시간)
+cd /home/clink-seunghyun
+python3 k8s_create_job.py -i "vllm/vllm-openai:v0.6.6" -g 1 -n "clink-unseen-qwen32" \
+  -c "cd /home/clink-seunghyun/MT_BENCH_REPRO && RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true JUDGE_MODEL_ID=Qwen2.5-32B-Instruct QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=2048 ENFORCE_EAGER=true MAX_NUM_SEQS=1 bash scripts/run_judge_unseen_vllm_a100.sh > /tmp/run_judge_unseen_qwen32.out 2>&1 && echo DONE"
+
+# 2. InternLM20B (GPU, Qwen32 끝난 후, ~2~3시간)
+python3 k8s_create_job.py -i "vllm/vllm-openai:v0.6.6" -g 1 -n "clink-unseen-ilm20b" \
+  -c "cd /home/clink-seunghyun/MT_BENCH_REPRO && RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=4096 bash scripts/run_judge_unseen_vllm_a100.sh > /tmp/run_judge_unseen_ilm20b.out 2>&1 && echo DONE"
+
+# 3. GPT-4o-mini (SSH 병렬, GPU 불필요 — Qwen32 돌아가는 동안 실행 가능)
+export OPENAI_API_KEY=...
+export PYTHONPATH=src
+for MODEL in EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct; do
+  python3 -m mtbench_repro.cli judge-single \
+    --questions data/mt_bench_questions.jsonl \
+    --answers-dir data/answers_unseen/ \
+    --output-dir data/judgments_unseen/judge_gpt4omini/ \
+    --model-id "$MODEL" --judge-model gpt-4o-mini \
+    --provider openai_compatible \
+    --base-url https://api.openai.com/v1 \
+    --api-key "$OPENAI_API_KEY" --sleep 1.0
+done
+python3 -m mtbench_repro.cli aggregate \
+  --judgments-dir data/judgments_unseen/judge_gpt4omini/ \
+  --questions-path data/mt_bench_questions.jsonl \
+  --output-csv data/results_unseen_gpt4omini.csv
+```
+
+**그 다음: hold-out generalization 분석** (Runbook Step 9)
+
+```bash
+export PYTHONPATH=src
+python3 scripts/analyze_tiny_mt_bench_generalization.py \
+  --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
+  --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
+  --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \
+  --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct \
+  --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
+  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
+```
+
+**전부 완료 후: git 대대적 수정** (결과 데이터 + README + 분석 스크립트)
+
+---
+
 ### ✅ Phase 2 완료 (2026-03-30)
 
 답변 생성 + judge (single / pairwise / reference) + 집계 전 완료.
