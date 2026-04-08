@@ -12,7 +12,7 @@
 
 ---
 
-> **목표:** NeurIPS 2023 MT-Bench 논문의 *모델 서열*과 *카테고리별 성능 추이*를 오픈소스 모델(2024–2025 세대)과 로컬 vLLM judge로 재현.
+> **목표:** NeurIPS 2023 MT-Bench 논문의 *모델 서열*과 *카테고리별 성능 추이*를 오픈소스 모델(2024–2025 세대), 로컬 vLLM judge, 그리고 보조 외부 API judge로 재현.
 > 정확한 점수 일치는 목표가 아님.
 
 <p align="center">
@@ -202,7 +202,7 @@ Judge가 7B → 32B로 커지면서 pairwise inconsistency가 **45.9pp 감소** 
 | 6 | SOLAR-10.7B-Instruct | 7.34 | 7.07 | **7.02** | 7.14 |
 | 7 | Zephyr-7B-beta | 7.20 | 7.04 | **6.62** | 6.95 |
 
-파싱 실패율: **0 / 560 (0%)** — 3가지 judge 모두 완벽한 데이터 품질.
+Phase 3 single-grade 파싱 실패율: **0 / 560 (0%)** — Qwen2.5 7B/14B/32B의 main single-grade 경로에서는 완전한 데이터 품질을 확보했다.
 
 ---
 
@@ -565,7 +565,7 @@ Phase 3는 Qwen2.5 동일 패밀리의 judge 크기 효과를 보기 위한 **ma
 핵심 해석은 세 가지다.
 
 - **메인 claim은 여전히 Phase 3**다. Qwen2.5 동일 패밀리에서는 judge 크기가 커질수록 inconsistency가 단조 감소한다.
-- **Cross-family rank pattern은 broadly 유지된다.** Qwen2.5-32B와의 Spearman ρ는 InternLM2.5-20B에서 `0.893`, GPT-4o-mini에서 `0.964`로 높다.
+- **Cross-family rank pattern은 broadly 유지된다.** Qwen2.5-32B와의 Spearman ρ는 InternLM2.5-20B에서 `0.893`, GPT-4o-mini에서 `0.964`로 높다. 즉 Qwen-only 현상으로만 보기는 어렵지만, 여전히 `n=7` seen-set 기반의 보조 검증으로 해석하는 것이 안전하다.
 - **InternLM2.5-7B pairwise는 불안정하다.** pairwise record의 `72.6%`가 `winner=error`라서, 이 judge는 single-grade rank sanity check 용도로만 해석하고 pairwise 신뢰도 비교의 주 판단 근거로 쓰지 않는다.
 
 exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보다 낮게 나온다. 이 값은 **common valid pairwise records(에러 제외)** 에서 question-level winner가 정확히 일치한 비율이다. 예를 들어 Qwen2.5-32B와 GPT-4o-mini의 exact pairwise agreement는 `0.580`이며, judge 간 broad ranking은 유사하지만 question-level decision은 여전히 상당한 차이를 보인다는 뜻이다.
@@ -580,7 +580,7 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 | Hard/Easy 갭 패턴 | ✅ 상위 모델일수록 갭 작음 | ✅ 동일하게 재현 |
 | Single ↔ Pairwise 수렴 | ✅ | ⚠️ 부분 재현 — ρ=0.943, 상위 2위 역전 |
 | Pairwise inconsistency율 | ~20% (GPT-4 추정) | 32.9% (32B) — GPT-4보다 높지만 단조 감소 확인 |
-| 파싱 실패율 | — | **0%** (전 Phase) |
+| 파싱 안정성 | — | Phase 3 Qwen single-grade **0%**, InternLM2.5-7B pairwise **72.6% error** |
 
 **점수가 압축된 이유:** 2025년 세대 오픈소스 모델은 원본 논문의 2023년 모델(LLaMA-13B, Vicuna-13B 등)보다 전반적으로 성능이 높다. 모든 평가 모델이 고점수 구간(6.6–8.1)에 밀집되어 점수 범위가 대폭 축소됨.
 
@@ -602,7 +602,7 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 | Judge 크기 ↑ → inconsistency ↓ | ✅ Qwen2.5 동일 패밀리에서 7B(78.75%) → 14B(46.85%) → 32B(32.86%), 단조 감소 |
 | Judge 크기 무관 모델 서열 안정성 | ✅ Cross-judge ρ > 0.75 전 쌍 |
 | Extraction은 데이터 기반 준-Hard 카테고리 | ✅ 변별도 4위 (1.296) — reasoning(1.362)과 근접 |
-| tinyMT-Bench: 변별도 상위 40문항으로 동일 7개 모델 집합 서열 유지 | ✅ Top-Disc-40 ρ=1.000, 50% 절감 |
+| tinyMT-Bench: 변별도 상위 40문항으로 동일 7개 모델 집합 서열 유지 | ✅ Top-Disc-40 ρ=1.000, 50% 절감 **(same-set upper bound)** |
 | Writing이 Turn 2 저하 가장 큼 | ✅ δ=−1.129; Coding/Reasoning은 오히려 향상 |
 | Position bias: 남은 불일치에서 bias 상대 기여도 증가 | ✅ 32B judge 불일치의 94.9%가 first-pos bias; Math/Coding에서 가장 낮음 |
 | 앙상블 다수결이 단일 32B보다 나쁨 | ✅ 7B+14B+32B 앙상블 58.63% > 단일 32B 32.86%; 저품질 judge가 앙상블 오염 |
