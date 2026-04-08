@@ -102,7 +102,9 @@ vllm serve "$JUDGE_MODEL_DIR" \
   --api-key EMPTY \
   --port "$VLLM_PORT" \
   --max-model-len 8192 \
-  --dtype auto \
+  --dtype float16 \
+  --quantization bitsandbytes \
+  --load-format bitsandbytes \
   --gpu-memory-utilization "$GPU_UTIL" \
   --trust-remote-code \
   > "$VLLM_LOG" 2>&1 &
