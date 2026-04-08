@@ -55,7 +55,7 @@ DEFAULT_MODELS=(
   "EXAONE-3.5-7.8B-Instruct"
   "granite-3.1-8b-instruct"
   "Falcon3-7B-Instruct"
-  "bloomz-7b1-mt"
+  "OLMo-2-1124-7B-Instruct"
 )
 
 if [ "$#" -gt 0 ]; then

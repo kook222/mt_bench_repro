@@ -171,7 +171,7 @@ kubectl delete pod clink-seunghyun-53
 cd /home/clink-seunghyun/mt_bench_repro
 export PYTHONPATH=src
 export ANTHROPIC_API_KEY=...
-ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/claude_sonnet OUTPUT_CSV=data/results_unseen_claude_sonnet.csv OUTPUT_REF_CSV=data/results_unseen_claude_sonnet_reference.csv bash scripts/run_judge_claude_api.sh EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt > /tmp/run_judge_claude_unseen.out 2>&1
+ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/claude_sonnet OUTPUT_CSV=data/results_unseen_claude_sonnet.csv OUTPUT_REF_CSV=data/results_unseen_claude_sonnet_reference.csv bash scripts/run_judge_claude_api.sh EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct > /tmp/run_judge_claude_unseen.out 2>&1
 tail -f /tmp/run_judge_claude_unseen.out
 ```
 

@@ -47,7 +47,7 @@ MODEL_LIST=(
   "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct:EXAONE-3.5-7.8B-Instruct:0.92:true:4096"
   "ibm-granite/granite-3.1-8b-instruct:granite-3.1-8b-instruct:0.90:false:4096"
   "tiiuae/Falcon3-7B-Instruct:Falcon3-7B-Instruct:0.90:false:4096"
-  "bigscience/bloomz-7b1-mt:bloomz-7b1-mt:0.88:false:2048"
+  "allenai/OLMo-2-1124-7B-Instruct:OLMo-2-1124-7B-Instruct:0.90:false:4096"
 )
 
 echo "=============================="
