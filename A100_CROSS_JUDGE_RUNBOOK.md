@@ -124,17 +124,29 @@ kubectl logs -f clink-seunghyun-41
 kubectl delete pod clink-seunghyun-41
 ```
 
-### 6.2 Claude Sonnet
+### 6.2 GPT-4o-mini (seen 7)
 
-이 단계는 GPU가 필요 없으므로, A100 pod와 별도로 SSH 세션에서 실행한다.
+GPU 불필요 — A100 pod와 별도 SSH 세션에서 실행 가능.
 
 ```bash
-cd /home/clink-seunghyun/mt_bench_repro
+cd /home/clink-seunghyun/MT_BENCH_REPRO
 export PYTHONPATH=src
-export ANTHROPIC_API_KEY=...
-bash scripts/run_judge_claude_api.sh > /tmp/run_judge_claude_seen7.out 2>&1
-tail -f /tmp/run_judge_claude_seen7.out
+export OPENAI_API_KEY=...
+for MODEL in Llama-3.1-8B-Instruct SOLAR-10.7B-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Zephyr-7B-beta Mistral-7B-Instruct-v0.3 Phi-3.5-mini-Instruct; do
+  python3 -m mtbench_repro.cli judge-single \
+    --questions data/mt_bench_questions.jsonl \
+    --answers-dir data/answers/ \
+    --output-dir data/judgments_phase5/judge_gpt4omini/ \
+    --model-id "$MODEL" \
+    --judge-model gpt-4o-mini \
+    --provider openai_compatible \
+    --base-url https://api.openai.com/v1 \
+    --api-key "$OPENAI_API_KEY" \
+    --sleep 1.0
+done
 ```
+
+> ✅ Phase 5 이미 완료 — 재실행 불필요
 
 ## 7. unseen 4 answer generation
 
@@ -165,28 +177,44 @@ kubectl logs -f clink-seunghyun-53
 kubectl delete pod clink-seunghyun-53
 ```
 
-### 8.3 Claude Sonnet
+### 8.3 GPT-4o-mini (unseen 4)
+
+GPU 불필요 — SSH 세션에서 실행.
 
 ```bash
-cd /home/clink-seunghyun/mt_bench_repro
+cd /home/clink-seunghyun/MT_BENCH_REPRO
 export PYTHONPATH=src
-export ANTHROPIC_API_KEY=...
-ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/claude_sonnet OUTPUT_CSV=data/results_unseen_claude_sonnet.csv OUTPUT_REF_CSV=data/results_unseen_claude_sonnet_reference.csv bash scripts/run_judge_claude_api.sh EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct > /tmp/run_judge_claude_unseen.out 2>&1
-tail -f /tmp/run_judge_claude_unseen.out
+export OPENAI_API_KEY=...
+for MODEL in EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct; do
+  python3 -m mtbench_repro.cli judge-single \
+    --questions data/mt_bench_questions.jsonl \
+    --answers-dir data/answers_unseen/ \
+    --output-dir data/judgments_unseen/judge_gpt4omini/ \
+    --model-id "$MODEL" \
+    --judge-model gpt-4o-mini \
+    --provider openai_compatible \
+    --base-url https://api.openai.com/v1 \
+    --api-key "$OPENAI_API_KEY" \
+    --sleep 1.0
+done
+python3 -m mtbench_repro.cli aggregate \
+  --judgments-dir data/judgments_unseen/judge_gpt4omini/ \
+  --questions-path data/mt_bench_questions.jsonl \
+  --output-csv data/results_unseen_gpt4omini.csv
 ```
 
 ## 9. hold-out generalization 분석
 
 ```bash
-cd /home/clink-seunghyun/mt_bench_repro
+cd /home/clink-seunghyun/MT_BENCH_REPRO
 export PYTHONPATH=src
 python3 scripts/analyze_tiny_mt_bench_generalization.py \
   --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
   --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
-  --judge claude=data/judgments_phase5/judge_claude_sonnet/single_grade,data/judgments_unseen/claude_sonnet/single_grade \
-  --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt \
+  --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \
+  --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct \
   --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
-  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
+  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
 ```
 
 ## 10. TopDisc-40 subset 생성
@@ -226,14 +254,28 @@ kubectl logs -f clink-seunghyun-63
 kubectl delete pod clink-seunghyun-63
 ```
 
-### 11.4 Claude Sonnet judge
+### 11.4 GPT-4o-mini judge (TopDisc-40)
 
 ```bash
-cd /home/clink-seunghyun/mt_bench_repro
+cd /home/clink-seunghyun/MT_BENCH_REPRO
 export PYTHONPATH=src
-export ANTHROPIC_API_KEY=...
-QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 OUTPUT_DIR=data/judgments_unseen_topdisc40/claude_sonnet OUTPUT_CSV=data/results_unseen_topdisc40_claude_sonnet.csv OUTPUT_REF_CSV=data/results_unseen_topdisc40_claude_sonnet_reference.csv RUN_REFERENCE=false bash scripts/run_judge_claude_api.sh EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt > /tmp/run_judge_claude_topdisc40.out 2>&1
-tail -f /tmp/run_judge_claude_topdisc40.out
+export OPENAI_API_KEY=...
+for MODEL in EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct; do
+  python3 -m mtbench_repro.cli judge-single \
+    --questions data/mt_bench_questions_topdisc40.jsonl \
+    --answers-dir data/answers_topdisc40/ \
+    --output-dir data/judgments_unseen_topdisc40/judge_gpt4omini/ \
+    --model-id "$MODEL" \
+    --judge-model gpt-4o-mini \
+    --provider openai_compatible \
+    --base-url https://api.openai.com/v1 \
+    --api-key "$OPENAI_API_KEY" \
+    --sleep 1.0
+done
+python3 -m mtbench_repro.cli aggregate \
+  --judgments-dir data/judgments_unseen_topdisc40/judge_gpt4omini/ \
+  --questions-path data/mt_bench_questions_topdisc40.jsonl \
+  --output-csv data/results_unseen_topdisc40_gpt4omini.csv
 ```
 
 ## 최소 체크포인트
