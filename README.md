@@ -37,6 +37,8 @@
   - [Position Bias 정량화](#position-bias-정량화)
   - [앙상블 Judge](#앙상블-judge)
   - [Cross-Judge Spearman ρ Bootstrap CI](#cross-judge-spearman-ρ-bootstrap-ci)
+- [Phase 4 — InternLM2.5 교차 아키텍처 Judge 검증](#phase-4--internlm25-교차-아키텍처-judge-검증)
+- [Phase 5 — GPT-4o-mini 외부 Judge 검증](#phase-5--gpt-4o-mini-외부-judge-검증)
 - [Phase 3/4/5 — 통합 Judge 요약](#phase-345--통합-judge-요약)
 - [원본 논문과 비교](#원본-논문과-비교)
 - [결론](#결론)
@@ -543,6 +545,86 @@ CI가 넓은 이유는 모델 수가 7개뿐이기 때문이다. 그러나 **모
 
 ---
 
+## Phase 4 — InternLM2.5 교차 아키텍처 Judge 검증
+
+> **데이터:** `results_phase4_judge_{internlm7b,internlm20b}.csv`, `judgments_phase4/judge_internlm{7b,20b}/pairwise/` → `results_phase4_summary.csv`, `fig17_phase4_internlm.png`
+
+> **목적:** Phase 3의 Qwen same-family 결과가 완전히 Qwen 특수현상인지 점검하기 위해, 다른 open-weight family(InternLM2.5)에서 동일 seen-7 모델 집합을 별도로 평가한다.
+
+<p align="center">
+  <img src="figures/fig17_phase4_internlm.png" width="94%" alt="Phase 4 InternLM judge summary">
+</p>
+
+### 모델 서열 (single-grade)
+
+| 순위 | 모델 | InternLM2.5-7B | **InternLM2.5-20B** |
+|------|------|---------------|--------------------|
+| 1 | gemma-2-9b-it | 9.089 | **9.116** |
+| 2 | Phi-3.5-mini-Instruct | 9.081 | **9.063** |
+| 3 | Yi-1.5-9B-Chat | 9.089 | **8.951** |
+| 4 | Llama-3.1-8B-Instruct | 9.013 | **8.934** |
+| 5 | Mistral-7B-Instruct-v0.3 | 8.982 | **8.969** |
+| 6 | SOLAR-10.7B-Instruct | 8.965 | **8.836** |
+| 7 | Zephyr-7B-beta | 8.905 | **8.716** |
+
+InternLM2.5-7B는 `Yi`와 `gemma`가 사실상 공동 1위권에 묶이고 전체 점수 범위도 `0.184pt`에 불과해, 모델 간 변별력이 거의 없다. 반면 20B는 점수 범위가 `0.399pt`까지 늘어나고 `gemma > Phi > Yi/Llama/Mistral > SOLAR > Zephyr` 흐름이 드러나, single-grade rank sanity check로는 읽을 만한 서열을 제공한다.
+
+### Pairwise 품질과 해석
+
+| Judge | Score range | Pairwise error | Inconsistency (valid) | Spearman vs Qwen32 | Spearman vs GPT-4o-mini |
+|------|------------|---------------|-----------------------|-------------------|-------------------------|
+| InternLM2.5-7B | 0.184pt | **72.62%** | 55.00% | 0.937 | 0.883 |
+| **InternLM2.5-20B** | **0.399pt** | **8.15%** | **47.44%** | **0.893** | **0.857** |
+
+핵심 해석은 두 가지다.
+
+- **InternLM2.5-7B는 pairwise judge로는 부적합**하다. 전체 1,680개 pairwise record 중 `72.62%`가 `winner=error`였고, 이는 모델이 pairwise verdict format을 안정적으로 따르지 못했기 때문이다. single-grade parsing은 정상적으로 동작했지만, pairwise는 rank sanity check 이상으로 해석하면 위험하다.
+- **InternLM2.5-20B는 “쓸 수 있는 보조 judge”**다. Qwen2.5-32B와 Spearman `ρ=0.893`, GPT-4o-mini와 `ρ=0.857`로 broad rank pattern은 유지하지만, pairwise inconsistency(valid 기준)는 `47.44%`로 Qwen32보다 여전히 높다.
+
+즉 Phase 4는 “Qwen scaling을 InternLM이 그대로 재현했다”가 아니라, **cross-family에서도 seen-7의 대략적인 single-grade rank pattern은 유지되지만 pairwise 신뢰도는 judge family에 따라 크게 달라진다**는 보조 증거로 읽는 것이 맞다.
+
+---
+
+## Phase 5 — GPT-4o-mini 외부 Judge 검증
+
+> **데이터:** `results_phase5_gpt4omini.csv`, `judgments_phase5/judge_gpt4omini/pairwise/` → `results_phase5_summary.csv`, `fig18_phase5_gpt4omini.png`
+
+> **목적:** 로컬 open-weight judge 밖의 외부 API judge에서도 seen-7 서열과 pairwise 품질 패턴이 유지되는지 점검한다.
+
+<p align="center">
+  <img src="figures/fig18_phase5_gpt4omini.png" width="94%" alt="Phase 5 GPT-4o-mini summary">
+</p>
+
+### 모델 서열 (Qwen32와 비교)
+
+| 순위 | 모델 | Qwen2.5-32B | **GPT-4o-mini** |
+|------|------|------------|----------------|
+| 1 | Phi-3.5-mini-Instruct | 8.056 | **7.975** |
+| 2 | gemma-2-9b-it | 8.094 | **7.963** |
+| 3 | Yi-1.5-9B-Chat | 7.794 | **7.781** |
+| 4 | Llama-3.1-8B-Instruct | 7.712 | **7.763** |
+| 5 | Mistral-7B-Instruct-v0.3 | 7.094 | **7.200** |
+| 6 | SOLAR-10.7B-Instruct | 7.019 | **6.819** |
+| 7 | Zephyr-7B-beta | 6.619 | **6.656** |
+
+절대 점수 스케일은 Qwen32보다 전반적으로 낮지만, **상위 4개와 하위 3개 블록은 거의 그대로 유지**된다. 실질적인 차이는 `Phi ↔ gemma` 1–2위 swap 정도이며, 이는 Spearman `ρ=0.964`와도 일치한다.
+
+### 외부 Judge로서의 품질
+
+| Judge | Score range | Pairwise error | Inconsistency (valid) | First-pos win in inconsistent | Qwen32와의 exact pairwise agreement |
+|------|------------|---------------|-----------------------|------------------------------|------------------------------------|
+| **GPT-4o-mini** | **1.319pt** | **0.00%** | **33.99%** | **99.65%** | **0.580** (`n=1677`) |
+
+핵심 해석은 세 가지다.
+
+- **외부 judge인데도 rank pattern은 매우 잘 맞는다.** Qwen2.5-32B와의 Spearman `ρ=0.964`, Kendall `τ=0.905`로 seen-7 순위는 거의 동일하다.
+- **pairwise 품질도 Qwen32와 비슷한 수준**이다. inconsistency(valid 기준) `33.99%`는 Qwen32의 `32.92%`와 매우 가깝다.
+- **남아 있는 불일치는 거의 전부 순서 민감성**이다. first-position win in inconsistent가 `99.65%`라서, GPT-4o-mini도 residual disagreement 단계에서는 position bias가 매우 강하게 남는다.
+
+따라서 Phase 5는 **Phase 3 메인 결과를 대체하는 실험은 아니지만, “Qwen32가 완전히 이상한 judge는 아니다”라는 외부 기준점**을 제공한다. 다만 exact pairwise agreement는 `0.580`에 그쳐, judge 간 broad rank agreement와 question-level decision agreement는 분리해서 해석해야 한다.
+
+---
+
 ## Phase 3/4/5 — 통합 Judge 요약
 
 > **데이터:** `results_phase3_judge_{7B,14B,32B}.csv`, `results_phase4_judge_{internlm7b,internlm20b}.csv`, `results_phase5_gpt4omini.csv`, 각 phase의 `pairwise/` → `results_phase345_judge_summary.csv`, `results_phase345_judge_agreement.csv`
@@ -658,6 +740,7 @@ mt_bench_repro/
 │   ├── run_judge_phase3_a100.sh          # Phase 3: judge 3종 순차 실행
 │   ├── run_judge_claude_api.sh           # Phase 5: GPT-4o-mini judge 실행 (historical filename)
 │   ├── analyze_phase3.py                 # Judge 스케일링 + 문항 수 분석
+│   ├── analyze_phase45.py                # Phase 4/5 독립 요약 및 figure 생성
 │   ├── analyze_phase345.py               # Phase 3/4/5 통합 judge 요약
 │   ├── analyze_discriminability.py       # 변별도 기반 갭 분석
 │   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석
@@ -681,7 +764,9 @@ mt_bench_repro/
 │   ├── judgments_phase4/                     # Phase 4: InternLM2.5 cross-family check
 │   ├── judgments_phase5/                     # Phase 5: GPT-4o-mini external check
 │   ├── results_phase3_judge_{7B,14B,32B}.csv # Phase 3 judge별 집계
+│   ├── results_phase4_summary.csv            # Phase 4 독립 요약
 │   ├── results_phase4_judge_{internlm7b,internlm20b}.csv
+│   ├── results_phase5_summary.csv            # Phase 5 독립 요약
 │   ├── results_phase5_gpt4omini.csv
 │   ├── results_phase3_scaling.csv            # 스케일링 커브
 │   ├── results_phase3_qsize.csv              # 문항 수 민감도
@@ -785,6 +870,7 @@ bash scripts/run_judge_claude_api.sh
 # 분석 (로컬 실행 가능)
 export PYTHONPATH=src
 python3 scripts/analyze_phase3.py
+python3 scripts/analyze_phase45.py
 python3 scripts/analyze_phase345.py
 python3 scripts/analyze_discriminability.py
 python3 scripts/analyze_tiny_mt_bench.py
