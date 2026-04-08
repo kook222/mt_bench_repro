@@ -37,6 +37,7 @@
   - [Position Bias 정량화](#position-bias-정량화)
   - [앙상블 Judge](#앙상블-judge)
   - [Cross-Judge Spearman ρ Bootstrap CI](#cross-judge-spearman-ρ-bootstrap-ci)
+- [Phase 3/4/5 — 통합 Judge 요약](#phase-345--통합-judge-요약)
 - [원본 논문과 비교](#원본-논문과-비교)
 - [결론](#결론)
 - [저장소 구조](#저장소-구조)
@@ -54,8 +55,10 @@
 | **1** | 파이프라인 검증, self-judge 편향 확인 | Qwen2.5-7B | Qwen2.5-7B (self) | ⚠️ self-judge |
 | **2** | 예비 비교 실험 | 6개 오픈소스 모델 | Qwen2.5-14B (단일) | 🔶 단일 judge |
 | **3** | **주요 실험 — judge 크기 비교 검증** | 7개 모델 (6개 + Llama-3.1-8B) | Qwen2.5 7B / 14B / **32B** | ✅ 3-way 교차 검증 |
+| **4** | 보조 실험 — 교차 아키텍처 judge 점검 | 동일 7개 모델 | InternLM2.5 7B / 20B | ✅ cross-family check |
+| **5** | 보조 실험 — 외부 API judge 점검 | 동일 7개 모델 | GPT-4o-mini | ✅ external check |
 
-> **왜 Phase 3가 신뢰도 기준인가:** Phase 1은 self-judge 편향이 내재하고, Phase 2는 단일 14B judge로 position bias 측정 불가. Phase 3는 동일 패밀리(Qwen2.5) 내 3가지 크기의 judge를 독립 실행하고 cross-judge Spearman ρ로 서열 안정성을 교차 검증함. 이하 분석 결과는 별도 명시가 없으면 **Phase 3 데이터** 기반.
+> **왜 Phase 3가 신뢰도 기준인가:** Phase 1은 self-judge 편향이 내재하고, Phase 2는 단일 14B judge로 position bias 측정 불가. Phase 3는 동일 패밀리(Qwen2.5) 내 3가지 크기의 judge를 독립 실행해 **same-family empirical trend**를 측정한 메인 실험이다. Phase 4/5는 동일 7개 모델 집합에 대한 **cross-family / external judge sanity check**이며, main scaling claim을 대체하지 않는다.
 
 논문의 평가 프로토콜에 맞춰 **3가지 채점 방식**을 구현했다:
 
@@ -540,6 +543,35 @@ CI가 넓은 이유는 모델 수가 7개뿐이기 때문이다. 그러나 **모
 
 ---
 
+## Phase 3/4/5 — 통합 Judge 요약
+
+> **데이터:** `results_phase3_judge_{7B,14B,32B}.csv`, `results_phase4_judge_{internlm7b,internlm20b}.csv`, `results_phase5_gpt4omini.csv`, 각 phase의 `pairwise/` → `results_phase345_judge_summary.csv`, `results_phase345_judge_agreement.csv`
+
+Phase 3는 Qwen2.5 동일 패밀리의 judge 크기 효과를 보기 위한 **main scaling experiment**이고, Phase 4/5는 같은 seen-7 집합에 대해 InternLM2.5와 GPT-4o-mini를 추가 적용한 **cross-family / external judge check**다. 따라서 아래 비교는 "judge family가 바뀌어도 서열이 얼마나 유지되는가"를 보는 보조 검증으로 읽는 것이 맞다.
+
+<p align="center">
+  <img src="figures/fig16_phase345_judge_summary.png" width="96%" alt="Phase 3/4/5 judge summary">
+</p>
+
+| Judge | Top model | Score range | Error rate | Inconsistency (valid 기준) | First-pos win in inconsistent |
+|------|-----------|------------|-----------|----------------------------|-------------------------------|
+| Qwen2.5-7B | Phi-3.5-mini | 0.84pt | 0.0% | 78.8% | 84.2% (n=1323) |
+| Qwen2.5-14B | Llama-3.1-8B | 1.12pt | 0.0% | 46.9% | 93.5% (n=787) |
+| Qwen2.5-32B | gemma-2-9b-it | 1.48pt | 0.2% | 32.9% | 94.9% (n=552) |
+| InternLM2.5-7B | Yi-1.5-9B | 0.18pt | **72.6%** | 55.0% | 85.0% (n=253) |
+| InternLM2.5-20B | gemma-2-9b-it | 0.40pt | 8.2% | 47.4% | 95.4% (n=732) |
+| GPT-4o-mini | Phi-3.5-mini | 1.32pt | 0.0% | 34.0% | 99.7% (n=571) |
+
+핵심 해석은 세 가지다.
+
+- **메인 claim은 여전히 Phase 3**다. Qwen2.5 동일 패밀리에서는 judge 크기가 커질수록 inconsistency가 단조 감소한다.
+- **Cross-family rank pattern은 broadly 유지된다.** Qwen2.5-32B와의 Spearman ρ는 InternLM2.5-20B에서 `0.893`, GPT-4o-mini에서 `0.964`로 높다.
+- **InternLM2.5-7B pairwise는 불안정하다.** pairwise record의 `72.6%`가 `winner=error`라서, 이 judge는 single-grade rank sanity check 용도로만 해석하고 pairwise 신뢰도 비교의 주 판단 근거로 쓰지 않는다.
+
+exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보다 낮게 나온다. 이 값은 **common valid pairwise records(에러 제외)** 에서 question-level winner가 정확히 일치한 비율이다. 예를 들어 Qwen2.5-32B와 GPT-4o-mini의 exact pairwise agreement는 `0.580`이며, judge 간 broad ranking은 유사하지만 question-level decision은 여전히 상당한 차이를 보인다는 뜻이다.
+
+---
+
 ## 원본 논문과 비교
 
 | 지표 | 원본 (GPT-4 judge, 2023) | 이번 재현 (Phase 3 / 32B judge, 2026) |
@@ -576,6 +608,7 @@ CI가 넓은 이유는 모델 수가 7개뿐이기 때문이다. 그러나 **모
 | 앙상블 다수결이 단일 32B보다 나쁨 | ✅ 7B+14B+32B 앙상블 58.63% > 단일 32B 32.86%; 저품질 judge가 앙상블 오염 |
 | 앙상블 기권 방식은 단일 32B보다 낮음 | ✅ inconsistent 기권 처리 시 24.70%, decisive 75.30%; 604쌍(36%)이 winner로 전환 |
 | Cross-judge ρ 95% CI 하한 ≥ 0.6 | ✅ Bootstrap n=10,000; 7개 모델 한계로 CI 넓음 [0.607, 0.964] |
+| Cross-family judge check에서도 broad ranking 유지 | ✅ Qwen32 ↔ InternLM20B ρ=0.893, Qwen32 ↔ GPT-4o-mini ρ=0.964 |
 
 **Judge 선택 권고 (Phase 3 기반):**
 
@@ -609,7 +642,7 @@ mt_bench_repro/
 ├── src/mtbench_repro/
 │   ├── schemas.py          # 데이터 클래스 (MTBenchQuestion, ModelAnswer, …)
 │   ├── io_utils.py         # JSONL 스트리밍 I/O, resume 지원
-│   ├── client.py           # ChatClient (vLLM / OpenAI API / Claude API / mock)
+│   ├── client.py           # ChatClient (vLLM / OpenAI-compatible API / mock)
 │   ├── prompts.py          # Judge 프롬프트 (Figure 5–10) + 점수 파서
 │   ├── generate.py         # 2-turn 답변 생성
 │   ├── judge_single.py     # Single-answer grading
@@ -623,8 +656,9 @@ mt_bench_repro/
 │   ├── run_judge_multi_a100.sh           # Phase 2: judge + 집계
 │   ├── run_generate_phase3_a100.sh       # Phase 3: Llama-3.1-8B 추가 생성
 │   ├── run_judge_phase3_a100.sh          # Phase 3: judge 3종 순차 실행
-│   ├── run_judge_claude_api.sh           # Claude judge 실행 (Anthropic native SDK)
+│   ├── run_judge_claude_api.sh           # Phase 5: GPT-4o-mini judge 실행 (historical filename)
 │   ├── analyze_phase3.py                 # Judge 스케일링 + 문항 수 분석
+│   ├── analyze_phase345.py               # Phase 3/4/5 통합 judge 요약
 │   ├── analyze_discriminability.py       # 변별도 기반 갭 분석
 │   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석
 │   ├── analyze_tiny_mt_bench_generalization.py # unseen split 일반화 검증
@@ -644,9 +678,15 @@ mt_bench_repro/
 │   │   ├── judge_7B/  {single_grade, pairwise, single_grade_ref}
 │   │   ├── judge_14B/ …
 │   │   └── judge_32B/ …
+│   ├── judgments_phase4/                     # Phase 4: InternLM2.5 cross-family check
+│   ├── judgments_phase5/                     # Phase 5: GPT-4o-mini external check
 │   ├── results_phase3_judge_{7B,14B,32B}.csv # Phase 3 judge별 집계
+│   ├── results_phase4_judge_{internlm7b,internlm20b}.csv
+│   ├── results_phase5_gpt4omini.csv
 │   ├── results_phase3_scaling.csv            # 스케일링 커브
 │   ├── results_phase3_qsize.csv              # 문항 수 민감도
+│   ├── results_phase345_judge_summary.csv    # Phase 3/4/5 통합 요약
+│   ├── results_phase345_judge_agreement.csv  # rank / pairwise agreement
 │   ├── results_discriminability.csv          # 문항별 변별도 (Phase 3 기반)
 │   ├── results_tiny_mt_bench.csv             # tinyMT-Bench (Phase 3 기반)
 │   ├── results_tiny_mt_bench_generalization_summary.csv # unseen split 요약
@@ -738,13 +778,14 @@ bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B 순차 (~12
 # Phase 4 (교차 아키텍처 InternLM judge)
 bash scripts/run_judge_phase4_a100.sh
 
-# Phase 5 (Claude judge, Anthropic native SDK)
-export ANTHROPIC_API_KEY=sk-ant-...
+# Phase 5 (GPT-4o-mini judge, OpenAI API)
+export OPENAI_API_KEY=sk-...
 bash scripts/run_judge_claude_api.sh
 
 # 분석 (로컬 실행 가능)
 export PYTHONPATH=src
 python3 scripts/analyze_phase3.py
+python3 scripts/analyze_phase345.py
 python3 scripts/analyze_discriminability.py
 python3 scripts/analyze_tiny_mt_bench.py
 python3 scripts/analyze_tiny_mt_bench_generalization.py
@@ -759,7 +800,7 @@ python3 scripts/analyze_ensemble_judge.py
 # 1) unseen 4개 full-80 answer generation
 bash scripts/run_generate_unseen_a100.sh
 
-# 2) Qwen / InternLM / Claude judge
+# 2) Qwen / InternLM / GPT-4o-mini judge
 RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   JUDGE_MODEL_ID=Qwen2.5-32B-Instruct \
   QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=2048 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
@@ -770,8 +811,8 @@ RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=4096 \
   bash scripts/run_judge_unseen_vllm_a100.sh
 
-export ANTHROPIC_API_KEY=...
-ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/claude_sonnet OUTPUT_CSV=data/results_unseen_claude_sonnet.csv \
+export OPENAI_API_KEY=...
+ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/judge_gpt4omini OUTPUT_CSV=data/results_unseen_gpt4omini.csv OUTPUT_REF_CSV=data/results_unseen_gpt4omini_reference.csv \
   bash scripts/run_judge_claude_api.sh \
   EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
 
@@ -781,7 +822,7 @@ export PYTHONPATH=src
 python3 scripts/analyze_tiny_mt_bench_generalization.py \
   --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
   --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
-  --judge claude=data/judgments_phase5/judge_claude_sonnet/single_grade,data/judgments_unseen/claude_sonnet/single_grade \
+  --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \
   --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt \
   --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
   --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
@@ -807,7 +848,7 @@ QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdi
   bash scripts/run_judge_unseen_vllm_a100.sh
 
 QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
-  OUTPUT_DIR=data/judgments_unseen_topdisc40/claude_sonnet OUTPUT_CSV=data/results_unseen_topdisc40_claude_sonnet.csv \
+  OUTPUT_DIR=data/judgments_unseen_topdisc40/judge_gpt4omini OUTPUT_CSV=data/results_unseen_topdisc40_gpt4omini.csv OUTPUT_REF_CSV=data/results_unseen_topdisc40_gpt4omini_reference.csv \
   RUN_REFERENCE=false \
   bash scripts/run_judge_claude_api.sh \
   EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt

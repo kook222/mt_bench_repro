@@ -1,0 +1,8 @@
+model,writing,roleplay,extraction,reasoning,math,coding,stem,humanities,overall,n_questions,n_samples,coverage,expected_count
+Llama-3.1-8B-Instruct,NaN,NaN,NaN,8.7000,9.3333,9.8889,NaN,NaN,9.2857,29.0000,28.0000,1.0000,29.0000
+Mistral-7B-Instruct-v0.3,NaN,NaN,NaN,8.7000,8.0000,8.1111,NaN,NaN,8.2857,29.0000,28.0000,1.0000,29.0000
+Phi-3.5-mini-Instruct,NaN,NaN,NaN,8.5000,7.7000,9.0000,NaN,NaN,8.3571,29.0000,28.0000,1.0000,29.0000
+SOLAR-10.7B-Instruct,NaN,NaN,NaN,9.1000,7.2000,8.8750,NaN,NaN,8.3571,29.0000,28.0000,1.0000,29.0000
+Yi-1.5-9B-Chat,NaN,NaN,NaN,9.0000,9.3000,9.0000,NaN,NaN,9.1154,29.0000,26.0000,1.0000,29.0000
+Zephyr-7B-beta,NaN,NaN,NaN,8.5000,8.3333,9.2500,NaN,NaN,8.6800,29.0000,25.0000,1.0000,29.0000
+gemma-2-9b-it,NaN,NaN,NaN,9.3000,8.7000,9.3750,NaN,NaN,9.1071,29.0000,28.0000,1.0000,29.0000

@@ -7,9 +7,9 @@
 1. 서버 접속 및 repo 동기화
 2. 필요한 judge / unseen 모델 다운로드
 3. `seen 7`에 대해 `InternLM 7B/20B` 교차 검증
-4. `seen 7`에 대해 `Claude Sonnet` 교차 검증
+4. `seen 7`에 대해 `GPT-4o-mini` 교차 검증
 5. `unseen 4` 답변 생성
-6. `unseen 4`에 대해 `Qwen32 / InternLM20B / Claude Sonnet` 교차 검증
+6. `unseen 4`에 대해 `Qwen32 / InternLM20B / GPT-4o-mini` 교차 검증
 7. `seen 7 + unseen 4` hold-out generalization 분석
 8. `TopDisc-40` 질문 subset 생성
 9. `TopDisc-40 only` 재실행
@@ -20,7 +20,7 @@
 - command는 자연 종료되어야 함
 - `sleep`, `while true` 같은 keepalive 금지
 - pod 완료 후 `kubectl delete pod ...` 필수
-- `Claude` judge는 GPU가 필요 없으므로, A100 job과 별개 SSH 세션에서 병렬 실행 가능
+- `GPT-4o-mini` judge는 GPU가 필요 없으므로, A100 job과 별개 SSH 세션에서 병렬 실행 가능
 
 ## 1. 서버 접속
 

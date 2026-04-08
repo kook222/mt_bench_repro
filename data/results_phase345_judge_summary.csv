@@ -1,0 +1,7 @@
+judge_key,phase,family,judge_label,params_B,top_model,top_score,bottom_model,bottom_score,score_range,total_pairwise,valid_pairwise,error_n,error_rate,inconsistent_n,inconsistency_rate_total,inconsistency_rate_valid,decisive_n,decisive_rate_total,decisive_rate_valid,first_pos_wins,first_pos_rate
+qwen7b,phase3,Qwen2.5,Qwen2.5-7B,7,Phi-3.5-mini-Instruct,8.0437,Zephyr-7B-beta,7.2,0.8437,1680,1680,0,0.0,1323,0.7875,0.7875,357,0.2125,0.2125,1114,0.842
+qwen14b,phase3,Qwen2.5,Qwen2.5-14B,14,Llama-3.1-8B-Instruct,8.1687,Zephyr-7B-beta,7.0438,1.1249,1680,1680,0,0.0,787,0.4685,0.4685,893,0.5315,0.5315,736,0.9352
+qwen32b,phase3,Qwen2.5,Qwen2.5-32B,32,gemma-2-9b-it,8.0943,Zephyr-7B-beta,6.6188,1.4755,1680,1677,3,0.0018,552,0.3286,0.3292,1125,0.6696,0.6708,524,0.9493
+internlm7b,phase4,InternLM2.5,InternLM2.5-7B,7,Yi-1.5-9B-Chat,9.0892,Zephyr-7B-beta,8.9051,0.1841,1680,460,1220,0.7262,253,0.1506,0.55,207,0.1232,0.45,215,0.8498
+internlm20b,phase4,InternLM2.5,InternLM2.5-20B,20,gemma-2-9b-it,9.1157,Zephyr-7B-beta,8.7164,0.3993,1680,1543,137,0.0815,732,0.4357,0.4744,811,0.4827,0.5256,698,0.9536
+gpt4omini,phase5,OpenAI,GPT-4o-mini,api,Phi-3.5-mini-Instruct,7.975,Zephyr-7B-beta,6.6562,1.3188,1680,1680,0,0.0,571,0.3399,0.3399,1109,0.6601,0.6601,569,0.9965
