@@ -136,16 +136,22 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
     exit 1
   fi
 
-  # vLLM 서버 시작
-  vllm serve "$JUDGE_MODEL_DIR" \
-    --served-model-name "$JUDGE_MODEL_ID" \
-    --api-key EMPTY \
-    --port "$VLLM_PORT" \
-    --max-model-len 8192 \
-    --dtype auto \
-    --gpu-memory-utilization "$GPU_UTIL" \
-    --trust-remote-code \
-    > "$VLLM_LOG" 2>&1 &
+  # vLLM 서버 시작 (20B는 fp8 양자화로 VRAM 절약)
+  SERVE_ARGS=(
+    "$JUDGE_MODEL_DIR"
+    --served-model-name "$JUDGE_MODEL_ID"
+    --api-key EMPTY
+    --port "$VLLM_PORT"
+    --max-model-len 8192
+    --dtype auto
+    --gpu-memory-utilization "$GPU_UTIL"
+    --trust-remote-code
+  )
+  if [ "$JUDGE_LABEL" = "judge_internlm20b" ]; then
+    SERVE_ARGS+=(--quantization fp8)
+  fi
+  PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+  vllm serve "${SERVE_ARGS[@]}" > "$VLLM_LOG" 2>&1 &
   VLLM_PID=$!
 
   # 서버 준비 대기
