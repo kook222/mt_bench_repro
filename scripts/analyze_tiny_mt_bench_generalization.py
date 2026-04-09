@@ -328,6 +328,15 @@ def summarize_group(rows: list[dict], judge_label: str, n_questions: int) -> dic
         values = [float(r[key]) for r in rows if not math.isnan(float(r[key]))]
         return values
 
+    def safe_mean(values: list[float]) -> float:
+        return statistics.mean(values) if values else float("nan")
+
+    def safe_min(values: list[float]) -> float:
+        return min(values) if values else float("nan")
+
+    def safe_max(values: list[float]) -> float:
+        return max(values) if values else float("nan")
+
     topdisc_rhos = collect("topdisc_rho")
     random_mean_rhos = collect("random_mean_rho")
     topdisc_taus = collect("topdisc_tau")
@@ -343,19 +352,19 @@ def summarize_group(rows: list[dict], judge_label: str, n_questions: int) -> dic
         "n_splits": len(rows),
         "dev_size": int(rows[0]["dev_size"]),
         "test_size": int(rows[0]["test_size"]),
-        "topdisc_rho_mean": statistics.mean(topdisc_rhos),
-        "topdisc_rho_min": min(topdisc_rhos),
-        "topdisc_rho_max": max(topdisc_rhos),
-        "random_mean_rho_mean": statistics.mean(random_mean_rhos),
-        "random_mean_rho_min": min(random_mean_rhos),
-        "random_mean_rho_max": max(random_mean_rhos),
-        "topdisc_tau_mean": statistics.mean(topdisc_taus),
-        "random_mean_tau_mean": statistics.mean(random_mean_taus),
-        "topdisc_pairwise_acc_mean": statistics.mean(topdisc_pairs),
-        "random_mean_pairwise_acc_mean": statistics.mean(random_mean_pairs),
-        "topdisc_top1_match_rate": statistics.mean(topdisc_top1),
-        "random_mean_top1_match_rate": statistics.mean(random_mean_top1),
-        "topdisc_beats_random_rate": statistics.mean(
+        "topdisc_rho_mean": safe_mean(topdisc_rhos),
+        "topdisc_rho_min": safe_min(topdisc_rhos),
+        "topdisc_rho_max": safe_max(topdisc_rhos),
+        "random_mean_rho_mean": safe_mean(random_mean_rhos),
+        "random_mean_rho_min": safe_min(random_mean_rhos),
+        "random_mean_rho_max": safe_max(random_mean_rhos),
+        "topdisc_tau_mean": safe_mean(topdisc_taus),
+        "random_mean_tau_mean": safe_mean(random_mean_taus),
+        "topdisc_pairwise_acc_mean": safe_mean(topdisc_pairs),
+        "random_mean_pairwise_acc_mean": safe_mean(random_mean_pairs),
+        "topdisc_top1_match_rate": safe_mean(topdisc_top1),
+        "random_mean_top1_match_rate": safe_mean(random_mean_top1),
+        "topdisc_beats_random_rate": safe_mean(
             [1.0 if float(r["topdisc_rho"]) > float(r["random_mean_rho"]) else 0.0 for r in rows]
         ),
     }
