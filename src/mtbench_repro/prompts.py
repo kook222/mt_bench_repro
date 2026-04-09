@@ -464,8 +464,11 @@ def parse_single_score(text: str) -> float:
     # "[[숫자]]" 패턴: 정수 및 소수 모두 허용
     matches = re.findall(r"\[\[(\d+(?:\.\d+)?)\]\]", text)
     if not matches:
-        # fallback: "Rating: 9" 또는 "Rating: [[9]]" 없이 숫자만 있는 경우
+        # fallback 1: "Rating: 9" 또는 "Rating: [[9]]" 없이 숫자만 있는 경우
         matches = re.findall(r"[Rr]ating:\s*(\d+(?:\.\d+)?)", text)
+    if not matches:
+        # fallback 2: "Rating: **9**" (markdown bold)
+        matches = re.findall(r"[Rr]ating:\s*\*\*(\d+(?:\.\d+)?)\*\*", text)
     if not matches:
         return -1.0
 
