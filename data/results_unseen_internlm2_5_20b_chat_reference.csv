@@ -1,0 +1,5 @@
+model,writing,roleplay,extraction,reasoning,math,coding,stem,humanities,overall,n_questions,n_samples,coverage,expected_count
+EXAONE-3.5-7.8B-Instruct,NaN,NaN,NaN,9.1000,9.6667,9.5556,NaN,NaN,9.4286,29.0000,28.0000,1.0000,29.0000
+Falcon3-7B-Instruct,NaN,NaN,NaN,9.5000,9.1250,8.5556,NaN,NaN,9.0741,29.0000,27.0000,1.0000,29.0000
+OLMo-2-1124-7B-Instruct,NaN,NaN,NaN,8.7000,6.7778,9.0000,NaN,NaN,8.1786,29.0000,28.0000,1.0000,29.0000
+granite-3.1-8b-instruct,NaN,NaN,NaN,8.8000,8.6667,8.7778,NaN,NaN,8.7500,29.0000,28.0000,1.0000,29.0000
