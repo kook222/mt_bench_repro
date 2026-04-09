@@ -40,6 +40,7 @@
 - [Phase 4 — InternLM2.5 교차 아키텍처 Judge 검증](#phase-4--internlm25-교차-아키텍처-judge-검증)
 - [Phase 5 — GPT-4o-mini 외부 Judge 검증](#phase-5--gpt-4o-mini-외부-judge-검증)
 - [Phase 3/4/5 — 통합 Judge 요약](#phase-345--통합-judge-요약)
+- [Phase 6 — Unseen 모델 일반화 검증](#phase-6--unseen-모델-일반화-검증)
 - [원본 논문과 비교](#원본-논문과-비교)
 - [결론](#결론)
 - [저장소 구조](#저장소-구조)
@@ -59,6 +60,7 @@
 | **3** | **주요 실험 — judge 크기 비교 검증** | 7개 모델 (6개 + Llama-3.1-8B) | Qwen2.5 7B / 14B / **32B** | ✅ 3-way 교차 검증 |
 | **4** | 보조 실험 — 교차 아키텍처 judge 점검 | 동일 7개 모델 | InternLM2.5 7B / 20B | ✅ cross-family check |
 | **5** | 보조 실험 — 외부 API judge 점검 | 동일 7개 모델 | GPT-4o-mini | ✅ external check |
+| **6** | **일반화 검증 — Unseen 모델 hold-out 테스트** | 4개 unseen 모델 (학습에 사용 안 한 모델) | Qwen2.5-32B / InternLM2.5-20B / GPT-4o-mini | ✅ hold-out generalization |
 
 > **왜 Phase 3가 신뢰도 기준인가:** Phase 1은 self-judge 편향이 내재하고, Phase 2는 단일 14B judge로 position bias 측정 불가. Phase 3는 동일 패밀리(Qwen2.5) 내 3가지 크기의 judge를 독립 실행해 **same-family empirical trend**를 측정한 메인 실험이다. Phase 4/5는 동일 7개 모델 집합에 대한 **cross-family / external judge sanity check**이며, main scaling claim을 대체하지 않는다.
 
@@ -76,6 +78,8 @@
 
 ### 평가 대상 모델
 
+**Seen 모델 (Phase 1–5 judge 개발에 사용)**
+
 | Phase | 모델 | 파라미터 | 비고 |
 |-------|------|---------|------|
 | 1 전용 | Qwen2.5-7B-Instruct | 7B | Self-judge 기준선 전용 — 이후 judge 역할로 전환 |
@@ -86,6 +90,17 @@
 | 2, 3 | SOLAR-10.7B-Instruct | 10.7B | Upstage |
 | 2, 3 | Zephyr-7B-beta | 7B | HuggingFace H4 |
 | 3 전용 | **Llama-3.1-8B-Instruct** | 8B | Meta — Phase 3 신규 추가 |
+
+**Unseen 모델 (Phase 6 hold-out 일반화 검증 전용)**
+
+| 모델 | 파라미터 | 비고 |
+|------|---------|------|
+| **EXAONE-3.5-7.8B-Instruct** | 7.8B | LG AI Research — 한국어 강점 |
+| **granite-3.1-8b-instruct** | 8B | IBM — 코드/기업 용도 |
+| **Falcon3-7B-Instruct** | 7B | TII — 아랍어 멀티링구얼 |
+| **OLMo-2-1124-7B-Instruct** | 7B | Allen AI — 완전 오픈 학습 데이터 |
+
+> `bloomz-7b1-mt`는 초기 후보였으나 chat template 없음 → 빈 응답 80/80 → 제외.
 
 ### Judge 모델 (Phase 3)
 
@@ -559,15 +574,17 @@ CI가 넓은 이유는 모델 수가 7개뿐이기 때문이다. 그러나 **모
 
 | 순위 | 모델 | InternLM2.5-7B | **InternLM2.5-20B** |
 |------|------|---------------|--------------------|
-| 1 | gemma-2-9b-it | 9.089 | **9.116** |
-| 2 | Phi-3.5-mini-Instruct | 9.081 | **9.063** |
-| 3 | Yi-1.5-9B-Chat | 9.089 | **8.951** |
-| 4 | Llama-3.1-8B-Instruct | 9.013 | **8.934** |
-| 5 | Mistral-7B-Instruct-v0.3 | 8.982 | **8.969** |
-| 6 | SOLAR-10.7B-Instruct | 8.965 | **8.836** |
-| 7 | Zephyr-7B-beta | 8.905 | **8.716** |
+| 1 | gemma-2-9b-it | 9.089 | **9.126** |
+| 2 | Phi-3.5-mini-Instruct | 9.081 | **9.069** |
+| 3 | Mistral-7B-Instruct-v0.3 | 8.982 | **8.994** |
+| 4 | Yi-1.5-9B-Chat | 9.089 | **8.972** |
+| 5 | Llama-3.1-8B-Instruct | 9.013 | **8.906** |
+| 6 | SOLAR-10.7B-Instruct | 8.965 | **8.872** |
+| 7 | Zephyr-7B-beta | 8.905 | **8.759** |
 
-InternLM2.5-7B는 `Yi`와 `gemma`가 사실상 공동 1위권에 묶이고 전체 점수 범위도 `0.184pt`에 불과해, 모델 간 변별력이 거의 없다. 반면 20B는 점수 범위가 `0.399pt`까지 늘어나고 `gemma > Phi > Yi/Llama/Mistral > SOLAR > Zephyr` 흐름이 드러나, single-grade rank sanity check로는 읽을 만한 서열을 제공한다.
+InternLM2.5-7B는 `Yi`와 `gemma`가 사실상 공동 1위권에 묶이고 전체 점수 범위도 `0.184pt`에 불과해, 모델 간 변별력이 거의 없다. 반면 20B는 점수 범위가 `0.368pt`까지 늘어나고 `gemma > Phi > Mistral/Yi > Llama > SOLAR > Zephyr` 흐름이 드러나, single-grade rank sanity check로는 읽을 만한 서열을 제공한다.
+
+> **데이터 품질:** InternLM2.5-20B single_grade 파싱 실패율 **2/560 (0.36%)**로 사실상 완전한 데이터. 초기 수집 시 "Rating: N" 형식 파싱 누락(202개)을 저장된 판정 텍스트 재파싱으로 복구했다.
 
 ### Pairwise 품질과 해석
 
@@ -654,6 +671,66 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 
 ---
 
+## Phase 6 — Unseen 모델 일반화 검증
+
+> **데이터:** `data/answers_unseen/`, `data/judgments_unseen/{qwen2_5_32b_instruct,internlm2_5_20b_chat,judge_gpt4omini}/single_grade/` → `results_tiny_mt_bench_generalization_summary.csv`, `figures/fig15_tiny_mt_bench_generalization.png`
+
+> **연구 질문:** Phase 3–5의 judge score 패턴이 Phase 1–5에서 **한 번도 본 적 없는** 4개 unseen 모델에도 적용될 수 있는가? "Top discriminability" 문항 선택이 seen 셋 tuning 이상의 일반화 능력을 갖는가?
+
+### 설계
+
+- **Dev set (seen 7):** Phi-3.5-mini, gemma-2-9b-it, Yi-1.5-9B, Mistral-7B, SOLAR-10.7B, Zephyr-7B, Llama-3.1-8B
+- **Test set (unseen 4):** EXAONE-3.5-7.8B, granite-3.1-8b, Falcon3-7B, OLMo-2-1124-7B
+- **Judge 3종:** Qwen2.5-32B, InternLM2.5-20B, GPT-4o-mini
+- **비교 전략:** N문항 랜덤 평균 vs. 변별도 상위 N문항(Top-Disc) 선택
+
+### Unseen 모델 단독 순위 (80문항 full)
+
+각 judge가 unseen 4개 모델을 어떻게 평가했는가:
+
+| 순위 | 모델 | Qwen2.5-32B | InternLM2.5-20B | GPT-4o-mini |
+|------|------|------------|----------------|------------|
+| 1 | EXAONE-3.5-7.8B-Instruct | 8.06 | **9.15** | 7.91 |
+| 2 | granite-3.1-8b-instruct | 7.94 | **9.19** | 7.83 |
+| 3 | OLMo-2-1124-7B-Instruct | 7.63 | **9.08** | 7.75 |
+| 4 | Falcon3-7B-Instruct | 7.51 | **9.06** | 7.72 |
+
+> InternLM2.5-20B는 절대 점수가 9점대로 압축되어 변별도가 낮다. Qwen32와 GPT-4o-mini의 서열은 잘 수렴한다.
+
+### 일반화 성능 — Top-Disc vs Random
+
+<p align="center">
+  <img src="figures/fig15_tiny_mt_bench_generalization.png" width="94%" alt="Unseen 일반화 검증">
+</p>
+
+**핵심 수치 (80문항 기준, Spearman ρ on unseen 4 test set):**
+
+| Judge | Top-Disc ρ | Random 평균 ρ | Top-Disc > Random |
+|-------|-----------|--------------|-------------------|
+| Qwen2.5-32B | **1.000** | 1.000 (N=80) | ✅ (N<80 구간에서 우세) |
+| InternLM2.5-20B | **1.000** | 0.929 (N=60) | ✅ 30문항부터 ρ=1.0 달성 |
+| GPT-4o-mini | **1.000** | 1.000 (N=80) | ✅ (N<80 구간에서 우세) |
+
+**Top-Disc 문항 선택의 장점 (N=10 기준):**
+
+| Judge | Top-Disc ρ | Random 평균 ρ | 차이 |
+|-------|-----------|--------------|------|
+| Qwen2.5-32B | 1.000 | 0.832 | +0.168 |
+| InternLM2.5-20B | 0.800 | 0.396 | +0.404 |
+| GPT-4o-mini | 1.000 | 0.728 | +0.272 |
+
+### 해석
+
+1. **Top-Disc 문항 선택은 unseen 모델에도 일반화된다.** 단 10문항만으로 Qwen32와 GPT-4o-mini judge에서 ρ=1.0(완전 서열 일치)을 달성했다. Random 선택의 같은 조건 ρ는 0.728–0.832에 불과하다.
+
+2. **InternLM2.5-20B는 더 많은 문항이 필요하다.** 10문항에서 ρ=0.8에 그치고 30문항은 있어야 ρ=1.0에 도달한다. 이는 이 judge의 절대 점수 압축(9점대 밀집)에서 비롯된 낮은 변별도 때문이다.
+
+3. **30–40문항이면 실용적 상한선이다.** 세 judge 모두 40문항에서 ρ=1.0을 달성한다. 80문항 대비 50% 절감이면서 unseen 모델에도 같은 서열이 유지된다.
+
+4. **"seen 7 tuning" 이상의 일반화 증거.** 변별도 상위 문항이 seen 셋에서 경험적으로 뽑혔음에도 불구하고, unseen 4개 모델에서도 동일한 변별 효과가 나타난다. 이는 Top-Disc 문항이 특정 모델 집합에 over-fit하지 않고 **보편적으로 변별력 있는 문항**임을 시사한다.
+
+---
+
 ## 원본 논문과 비교
 
 | 지표 | 원본 (GPT-4 judge, 2023) | 이번 재현 (Phase 3 / 32B judge, 2026) |
@@ -691,6 +768,8 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 | 앙상블 기권 방식은 단일 32B보다 낮음 | ✅ inconsistent 기권 처리 시 24.70%, decisive 75.30%; 604쌍(36%)이 winner로 전환 |
 | Cross-judge ρ 95% CI 하한 ≥ 0.6 | ✅ Bootstrap n=10,000; 7개 모델 한계로 CI 넓음 [0.607, 0.964] |
 | Cross-family judge check에서도 broad ranking 유지 | ✅ Qwen32 ↔ InternLM20B ρ=0.893, Qwen32 ↔ GPT-4o-mini ρ=0.964 |
+| **Unseen 일반화: Top-Disc 10문항으로 ρ=1.0 (Qwen32, GPT-4o-mini)** | ✅ hold-out 4개 모델에서 Random(ρ=0.728–0.832) 대비 우세 |
+| **Unseen 일반화: 30–40문항이면 세 judge 모두 ρ=1.0** | ✅ 80문항 대비 50–63% 절감, seen-set overfit 아님 |
 
 **Judge 선택 권고 (Phase 3 기반):**
 
@@ -743,8 +822,10 @@ mt_bench_repro/
 │   ├── analyze_phase45.py                # Phase 4/5 독립 요약 및 figure 생성
 │   ├── analyze_phase345.py               # Phase 3/4/5 통합 judge 요약
 │   ├── analyze_discriminability.py       # 변별도 기반 갭 분석
-│   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석
-│   ├── analyze_tiny_mt_bench_generalization.py # unseen split 일반화 검증
+│   ├── run_generate_unseen_a100.sh           # Phase 6: unseen 4개 모델 답변 생성
+│   ├── run_judge_unseen_vllm_a100.sh         # Phase 6: unseen vLLM judge (환경변수 주입)
+│   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석 (seen-only)
+│   ├── analyze_tiny_mt_bench_generalization.py # Phase 6: unseen split 일반화 검증
 │   ├── analyze_turn_degradation.py       # Turn 1 vs Turn 2 저하 분석
 │   ├── analyze_position_bias.py          # Position Bias 정량화
 │   ├── analyze_ensemble_judge.py         # 앙상블 Judge 분석
@@ -761,8 +842,13 @@ mt_bench_repro/
 │   │   ├── judge_7B/  {single_grade, pairwise, single_grade_ref}
 │   │   ├── judge_14B/ …
 │   │   └── judge_32B/ …
+│   ├── answers_unseen/                        # Phase 6: unseen 4개 모델 답변
 │   ├── judgments_phase4/                     # Phase 4: InternLM2.5 cross-family check
 │   ├── judgments_phase5/                     # Phase 5: GPT-4o-mini external check
+│   ├── judgments_unseen/                     # Phase 6: unseen 모델 judge 결과
+│   │   ├── qwen2_5_32b_instruct/  {single_grade, pairwise, single_grade_ref}
+│   │   ├── internlm2_5_20b_chat/  {single_grade, pairwise}
+│   │   └── judge_gpt4omini/       {single_grade, pairwise, single_grade_ref}
 │   ├── results_phase3_judge_{7B,14B,32B}.csv # Phase 3 judge별 집계
 │   ├── results_phase4_summary.csv            # Phase 4 독립 요약
 │   ├── results_phase4_judge_{internlm7b,internlm20b}.csv
@@ -774,7 +860,9 @@ mt_bench_repro/
 │   ├── results_phase345_judge_agreement.csv  # rank / pairwise agreement
 │   ├── results_discriminability.csv          # 문항별 변별도 (Phase 3 기반)
 │   ├── results_tiny_mt_bench.csv             # tinyMT-Bench (Phase 3 기반)
+│   ├── results_unseen_{qwen2_5_32b_instruct,internlm2_5_20b_chat,gpt4omini}.csv # unseen 집계
 │   ├── results_tiny_mt_bench_generalization_summary.csv # unseen split 요약
+│   ├── results_tiny_mt_bench_generalization_splits.csv  # 문항 수별 상세 결과
 │   ├── results_turn_degradation.csv          # Turn 1/2 저하 (Phase 3 기반)
 │   ├── results_position_bias.csv             # Position Bias 정량화 (Phase 3 기반)
 │   └── results_ensemble_judge.csv            # 앙상블 Judge 비교 (Phase 3 기반)
@@ -867,6 +955,17 @@ bash scripts/run_judge_phase4_a100.sh
 export OPENAI_API_KEY=sk-...
 bash scripts/run_judge_claude_api.sh
 
+# Phase 6 (unseen 모델 생성 + judge, A100 순차)
+bash scripts/run_generate_unseen_a100.sh
+RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
+  JUDGE_MODEL_ID=Qwen2.5-32B-Instruct QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 \
+  MAX_MODEL_LEN=4096 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
+  bash scripts/run_judge_unseen_vllm_a100.sh
+RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
+  JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat \
+  QUANTIZATION=fp8 TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=8192 \
+  bash scripts/run_judge_unseen_vllm_a100.sh
+
 # 분석 (로컬 실행 가능)
 export PYTHONPATH=src
 python3 scripts/analyze_phase3.py
@@ -874,7 +973,13 @@ python3 scripts/analyze_phase45.py
 python3 scripts/analyze_phase345.py
 python3 scripts/analyze_discriminability.py
 python3 scripts/analyze_tiny_mt_bench.py
-python3 scripts/analyze_tiny_mt_bench_generalization.py
+python3 scripts/analyze_tiny_mt_bench_generalization.py \
+  --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
+  --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
+  --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \
+  --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct \
+  --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
+  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
 python3 scripts/analyze_turn_degradation.py
 python3 scripts/analyze_position_bias.py
 python3 scripts/analyze_ensemble_judge.py
@@ -886,58 +991,34 @@ python3 scripts/analyze_ensemble_judge.py
 # 1) unseen 4개 full-80 answer generation
 bash scripts/run_generate_unseen_a100.sh
 
-# 2) Qwen / InternLM / GPT-4o-mini judge
+# 2) Qwen2.5-32B judge (AWQ, MAX_MODEL_LEN=4096)
 RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   JUDGE_MODEL_ID=Qwen2.5-32B-Instruct \
-  QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=2048 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
+  QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=4096 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
   bash scripts/run_judge_unseen_vllm_a100.sh
 
+# 3) InternLM2.5-20B judge (fp8, MAX_MODEL_LEN=8192)
 RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat \
-  TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=4096 \
+  QUANTIZATION=fp8 TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=8192 \
   bash scripts/run_judge_unseen_vllm_a100.sh
 
-export OPENAI_API_KEY=...
-ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/judge_gpt4omini OUTPUT_CSV=data/results_unseen_gpt4omini.csv OUTPUT_REF_CSV=data/results_unseen_gpt4omini_reference.csv \
+# 4) GPT-4o-mini judge (OpenAI API, GPU 불필요)
+export OPENAI_API_KEY=sk-...
+ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/judge_gpt4omini \
+  OUTPUT_CSV=data/results_unseen_gpt4omini.csv OUTPUT_REF_CSV=data/results_unseen_gpt4omini_reference.csv \
   bash scripts/run_judge_claude_api.sh \
-  EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
+  EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
 
-# 3) hold-out generalization summary
-#    judge별로 seen 7 + unseen 4 single_grade 디렉토리를 함께 넘긴다.
+# 5) hold-out generalization summary
 export PYTHONPATH=src
 python3 scripts/analyze_tiny_mt_bench_generalization.py \
   --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
   --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
   --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \
-  --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt \
+  --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct \
   --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
-  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
-
-# 4) TopDisc-40 subset 생성
-python3 scripts/prepare_topdisc_subset.py --top-n 40
-
-# 5) TopDisc-40 only 재실행
-QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
-  bash scripts/run_generate_unseen_a100.sh
-
-QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
-  OUTPUT_DIR=data/judgments_unseen_topdisc40/qwen32 OUTPUT_CSV=data/results_unseen_topdisc40_qwen32.csv \
-  RUN_REFERENCE=false \
-  JUDGE_MODEL_ID=Qwen2.5-32B-Instruct QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=2048 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
-  bash scripts/run_judge_unseen_vllm_a100.sh
-
-QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
-  OUTPUT_DIR=data/judgments_unseen_topdisc40/internlm OUTPUT_CSV=data/results_unseen_topdisc40_internlm.csv \
-  RUN_REFERENCE=false \
-  JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat \
-  TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=4096 \
-  bash scripts/run_judge_unseen_vllm_a100.sh
-
-QUESTIONS=data/mt_bench_questions_topdisc40.jsonl ANSWERS_DIR=data/answers_topdisc40 \
-  OUTPUT_DIR=data/judgments_unseen_topdisc40/judge_gpt4omini OUTPUT_CSV=data/results_unseen_topdisc40_gpt4omini.csv OUTPUT_REF_CSV=data/results_unseen_topdisc40_gpt4omini_reference.csv \
-  RUN_REFERENCE=false \
-  bash scripts/run_judge_claude_api.sh \
-  EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct bloomz-7b1-mt
+  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
 ```
 
 ---
