@@ -45,16 +45,14 @@ MT-Bench와 LLM-as-a-Judge가 어떤 문제를 풀려고 했는지 설명한 다
 ## Slide 3. 베이스 논문의 문제의식과 핵심 자산
 - Section: Base Paper
 - Purpose: 원 논문이 왜 등장했고, 어떤 benchmark와 human evidence를 만들었는지 한 장에서 잡는다.
-- Layout: summary
+- Layout: bullets
 - Bullets:
   - 기존 객관식 벤치마크는 open-ended, multi-turn 선호를 충분히 반영하지 못함
   - 사람 선호를 직접 모으는 평가는 느리고 비싸서 반복 실험이 어려움
   - MT-Bench 80문항과 Chatbot Arena를 함께 만들어 controlled benchmark와 in-the-wild preference를 동시에 확보
-- Stat boxes:
-  - MT-Bench: 80문항
-  - Arena: 30K 대화
-  - expert: 약 3K 표
-  - 질문: human proxy?
+- Visuals:
+  - paper_chatbot_arena_ui.png: Original paper: Chatbot Arena UI screenshot (Figure 19)
+  - paper_mtbench_winrate_fig3.png: Original paper: MT-Bench average win-rate curves (Figure 3)
 
 ### Speaker Notes
 원 논문은 아주 명확한 문제의식에서 출발합니다.
@@ -79,17 +77,15 @@ controlled benchmark와 wild preference data를 동시에 만든 논문입니다
 ## Slide 4. 베이스 논문의 judge 프로토콜과 핵심 수치
 - Section: Base Paper
 - Purpose: 우리가 따라갈 프로토콜과 원 논문의 기준 수치를 한 장에 묶는다.
-- Layout: summary
+- Layout: bullets
 - Bullets:
   - GPT-4 judge는 position, verbosity, self-enhancement bias 가능성을 함께 분석
   - MT-Bench에서 GPT-4 judge와 인간 expert의 non-tie agreement는 85%, 인간-인간은 81%
   - Chatbot Arena에서도 GPT-4와 crowd human의 non-tie agreement는 87%, GPT-4 single은 85%
   - MT-Bench score는 LLaMA-13B 2.61, Vicuna-13B 6.39, GPT-3.5 7.94, GPT-4 8.99
-- Stat boxes:
-  - MT-Bench: 85%
-  - Human↔Human: 81%
-  - Arena: 87%
-  - GPT-4 score: 8.99
+- Visuals:
+  - paper_mtbench_agreement_table5.png: Original paper: MT-Bench judge-human agreement table (Table 5)
+  - paper_table8_scores.png: Original paper: MT-Bench score table for model variants (Table 8)
 
 ### Speaker Notes
 이 슬라이드는 원 논문에서 우리가 기억해야 할 프로토콜과 핵심 수치를 한 번에 정리하는 슬라이드입니다.

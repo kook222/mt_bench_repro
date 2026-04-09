@@ -14,6 +14,7 @@ from pptx.util import Inches, Pt
 
 ROOT = Path(__file__).resolve().parent.parent
 FIG = ROOT / "figures"
+BASE_FIG = FIG / "base_paper"
 OUT_DIR = ROOT / "presentation"
 OUT_DIR.mkdir(exist_ok=True)
 PPTX_PATH = OUT_DIR / "mt_bench_labmeeting_study_seminar_v2.pptx"
@@ -467,6 +468,8 @@ MT-Bench와 LLM-as-a-Judge가 어떤 문제를 풀려고 했는지 설명한 다
                 "MT-Bench 80문항과 Chatbot Arena를 함께 만들어 controlled benchmark와 in-the-wild preference를 동시에 확보",
             ],
             side_quote="Base paper question: “Can a strong LLM approximate human preference at scale?”",
+            images=[BASE_FIG / "paper_chatbot_arena_ui.png", BASE_FIG / "paper_mtbench_winrate_fig3.png"],
+            image_captions=["Original paper: Chatbot Arena UI screenshot (Figure 19)", "Original paper: MT-Bench average win-rate curves (Figure 3)"],
             notes="""원 논문은 아주 명확한 문제의식에서 출발합니다.
 기존 LLM 벤치마크, 예를 들어 MMLU나 HELM류는 모델의 핵심 능력을 보긴 하지만,
 사용자가 실제로 좋아하는 대화형 응답 품질과는 어긋나는 경우가 많다는 겁니다.
@@ -485,8 +488,6 @@ MT-Bench는 8개 카테고리의 80문항 multi-turn benchmark이고,
 Arena는 실제 사용자가 익명으로 두 모델 중 더 나은 답변에 투표하는 플랫폼입니다.
 즉 원 논문은 benchmark 하나를 제안한 게 아니라,
 controlled benchmark와 wild preference data를 동시에 만든 논문입니다.""",
-            layout="summary",
-            stat_boxes=[("MT-Bench", "80문항"), ("Arena", "30K 대화"), ("expert", "약 3K 표"), ("질문", "human proxy?")],
         ),
         SlideSpec(
             title="베이스 논문의 judge 프로토콜과 핵심 수치",
@@ -499,6 +500,8 @@ controlled benchmark와 wild preference data를 동시에 만든 논문입니다
                 "MT-Bench score는 LLaMA-13B 2.61, Vicuna-13B 6.39, GPT-3.5 7.94, GPT-4 8.99",
             ],
             side_quote="원 논문의 결론은 ‘GPT-4 judge가 완벽하다’가 아니라, ‘인간 선호를 실용적으로 근사할 수 있다’였습니다.",
+            images=[BASE_FIG / "paper_mtbench_agreement_table5.png", BASE_FIG / "paper_table8_scores.png"],
+            image_captions=["Original paper: MT-Bench judge-human agreement table (Table 5)", "Original paper: MT-Bench score table for model variants (Table 8)"],
             notes="""이 슬라이드는 원 논문에서 우리가 기억해야 할 프로토콜과 핵심 수치를 한 번에 정리하는 슬라이드입니다.
 발표에서 여기까지가 사실상 논문 스터디 파트의 핵심입니다.
 
@@ -513,8 +516,6 @@ controlled benchmark와 wild preference data를 동시에 만든 논문입니다
 
 이 발표에서 제 실험은 바로 이 usable surrogate라는 표현을 오픈소스 judge 맥락에서 다시 묻는 작업입니다.
 즉, GPT-4에서는 usable했는데 Qwen/InternLM/GPT-4o-mini의 조합에서는 어디까지 usable한가를 보는 겁니다.""",
-            layout="summary",
-            stat_boxes=[("MT-Bench", "85%"), ("Human↔Human", "81%"), ("Arena", "87%"), ("GPT-4 score", "8.99")],
         ),
         SlideSpec(
             title="무엇을 그대로 가져오고, 무엇을 바꾸며, 어떤 RQ를 세웠는가",
