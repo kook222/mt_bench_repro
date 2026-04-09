@@ -12,7 +12,7 @@
 
 ---
 
-> **목표:** NeurIPS 2023 MT-Bench 논문의 *모델 서열*과 *카테고리별 성능 추이*를 오픈소스 모델(2024–2025 세대), 로컬 vLLM judge, 그리고 보조 외부 API judge로 재현.
+> **목표:** NeurIPS 2023 MT-Bench 논문의 *모델 서열*과 *카테고리별 성능 추이*를 재현 가능한 프로토콜로 구현하고, 그 위에서 오픈소스 judge 신뢰도의 핵심 병목과 실용적 개선점을 분석한다.
 > 정확한 점수 일치는 목표가 아님.
 
 <p align="center">
@@ -51,7 +51,7 @@
 
 ## 개요
 
-이 저장소는 [Zheng et al. (NeurIPS 2023)](https://arxiv.org/abs/2306.05685)의 평가 파이프라인을 독립적인 Python 패키지(`mtbench_repro`)로 재구현하고, judge 신뢰도를 단계적으로 높인 실험 결과를 담는다.
+이 저장소는 [Zheng et al. (NeurIPS 2023)](https://arxiv.org/abs/2306.05685)의 평가 파이프라인을 독립적인 Python 패키지(`mtbench_repro`)로 재구현하고, 그 위에서 judge 신뢰도를 단계적으로 분석한 실험 결과를 담는다.
 
 | Phase | 목적 | 평가 모델 | Judge | 신뢰도 |
 |-------|------|----------|-------|--------|
@@ -63,6 +63,12 @@
 | **6** | **반복 일반화 검증 — 11개 모델 cross-split hold-out** | 11개 모델 풀에서 dev 7 / test 4 반복 분할 | Qwen2.5-32B / InternLM2.5-20B / GPT-4o-mini | ✅ repeated cross-split hold-out |
 
 > **왜 Phase 3가 신뢰도 기준인가:** Phase 1은 self-judge 편향이 내재하고, Phase 2는 단일 14B judge로 position bias 측정 불가. Phase 3는 동일 패밀리(Qwen2.5) 내 3가지 크기의 judge를 독립 실행해 **same-family empirical trend**를 측정한 메인 실험이다. Phase 4/5는 동일 7개 모델 집합에 대한 **cross-family / external judge sanity check**이며, main scaling claim을 대체하지 않는다.
+
+### 이 저장소의 핵심 메시지
+
+1. **Judge scaling의 메인 발견은 Phase 3다.** Qwen2.5 동일 패밀리의 3개 크기점에서는 7B→14B→32B로 갈수록 pairwise inconsistency가 `78.75% → 46.85% → 32.86%`로 단조 감소한다.
+2. **불일치가 줄어도 잔여 오류의 성격은 더 순서 민감하게 남을 수 있다.** judge가 커질수록 남아 있는 불일치가 order-sensitive case에 더 집중된다.
+3. **실용적 개선 여지도 있다.** majority ensemble은 실패하지만 abstain ensemble은 단일 32B보다 낮은 `24.70%` inconsistency를 달성했고, tinyMT-Bench는 same-set에서는 40문항이 강한 upper bound, repeated hold-out에서는 60문항이 더 안전한 운영점으로 나타난다.
 
 논문의 평가 프로토콜에 맞춰 **3가지 채점 방식**을 구현했다:
 
@@ -397,7 +403,7 @@ Overall 1위 Phi가 멀티턴에서도 유일하게 향상(+0.075)되는 반면,
 
 > **데이터:** `judgments_phase3/judge_{7B,14B,32B}/pairwise/` → `results_position_bias.csv`
 
-> **연구 질문:** Pairwise inconsistency에서 position bias의 상대적 기여도는 judge 크기에 따라 어떻게 달라지는가?
+> **연구 질문:** Pairwise inconsistency가 줄어든 뒤, 남아 있는 잔여 불일치는 어떤 성격을 띠는가?
 
 Pairwise judge는 동일 문항에 대해 AB / BA 두 순서로 실행한다.
 
@@ -431,20 +437,20 @@ BA 순서: B 답변 먼저, A 답변 나중
 
 **예상과 다른 발견 — 핵심 해석:**
 
-Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는 불일치에서 position bias 비율은 오히려 증가**한다.
+Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는 불일치에서 position bias 유래 사례의 상대적 비중은 더 커진다.**
 
 7B의 불일치는 두 종류가 섞여 있다:
 1. **진짜 노이즈** — 두 모델 실력이 비슷해서 판단 자체가 어려운 경우
 2. **Position bias** — 판단이 안 될 때 먼저 본 쪽을 고르는 경우
 
-32B는 판단력이 좋아서 실력 차이가 있는 쌍은 대부분 일관되게 맞힌다. 남은 불일치는 **"32B도 구분 못 하는 진짜 비슷한 쌍"** 뿐이고, 그 경우엔 순서에 의존할 수밖에 없다 → 94.9%가 first-position 승리.
+32B는 판단력이 좋아서 실력 차이가 있는 쌍은 대부분 일관되게 맞힌다. 그 결과 위치와 무관한 다른 유형의 오류가 먼저 줄어들고, 남은 불일치는 **"32B도 구분 못 하는 진짜 비슷한 쌍"**에 더 집중된다. 이 단계에서는 순서 민감성이 더 두드러져 94.9%가 first-position 승리로 나타난다.
 
 *절대 수치*로 보면 position bias는 감소한다:
 - 7B: 전체 1,680쌍의 66.3% (≈ 1,110쌍) 가 position bias 영향
 - 14B: 전체의 43.7%
 - 32B: 전체의 **31.2%** ← 여전히 크지만 감소
 
-즉 **전체 오류는 줄지만, 남은 오류에서는 체계적 position bias의 상대적 비중이 커진다.**
+즉 **전체 오류는 줄지만, 남은 오류에서는 체계적 position bias 유래 사례의 상대적 비중이 커진다.**
 
 **카테고리별 bias (32B judge):**
 
@@ -463,7 +469,7 @@ Judge 크기가 커질수록 inconsistency율은 감소하지만, **남아있는
 
 Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐도 B가 이긴다 → 불일치가 아닌 일관된 판정. 불일치가 나더라도 정오 기준이 second-position 승리를 만들어낼 수 있어 first-pos 승률이 상대적으로 낮다(80.7%).
 
-> **결론:** Judge 스케일링은 전체 inconsistency를 줄이지만, 남아 있는 불일치에서는 체계적 position bias의 상대적 기여도가 커진다. 객관적 정답이 있는 Math/Coding에서 second-position 승리가 상대적으로 많은 것은 이 해석을 뒷받침한다.
+> **결론:** Judge 스케일링은 전체 inconsistency를 줄이지만, 남아 있는 불일치에서는 체계적 position bias 유래 사례의 상대적 비중이 커진다. 객관적 정답이 있는 Math/Coding에서 second-position 승리가 상대적으로 많은 것은 이 해석을 뒷받침한다.
 
 ---
 
@@ -474,6 +480,7 @@ Math 예시: A는 x=3(오답), B는 x=2(정답)이면 AB/BA 어느 순서로 봐
 > **연구 질문:** 7B+14B+32B 다수결 투표 시 inconsistency율이 단일 32B보다 낮아지는가?
 
 각 judge의 winner(모델명 또는 "inconsistent")를 모아 2/3 이상 일치하면 winner를 선언하고, 모두 다르면 inconsistent로 처리한다.
+핵심 설계 포인트는 `inconsistent`를 일반 표처럼 집계할지, 아니면 저품질 judge의 불확실한 표로 보고 기권 처리할지에 있다.
 
 ```
 예시:
