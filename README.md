@@ -60,7 +60,7 @@
 | **3** | **주요 실험 — judge 크기 비교 검증** | 7개 모델 (6개 + Llama-3.1-8B) | Qwen2.5 7B / 14B / **32B** | ✅ 3-way 교차 검증 |
 | **4** | 보조 실험 — 교차 아키텍처 judge 점검 | 동일 7개 모델 | InternLM2.5 7B / 20B | ✅ cross-family check |
 | **5** | 보조 실험 — 외부 API judge 점검 | 동일 7개 모델 | GPT-4o-mini | ✅ external check |
-| **6** | **예비 일반화 검증 — Unseen 모델 hold-out 테스트** | 4개 unseen 모델 (학습에 사용 안 한 모델) | Qwen2.5-32B / InternLM2.5-20B / GPT-4o-mini | 🔶 single-split hold-out pilot |
+| **6** | **반복 일반화 검증 — 11개 모델 cross-split hold-out** | 11개 모델 풀에서 dev 7 / test 4 반복 분할 | Qwen2.5-32B / InternLM2.5-20B / GPT-4o-mini | ✅ repeated cross-split hold-out |
 
 > **왜 Phase 3가 신뢰도 기준인가:** Phase 1은 self-judge 편향이 내재하고, Phase 2는 단일 14B judge로 position bias 측정 불가. Phase 3는 동일 패밀리(Qwen2.5) 내 3가지 크기의 judge를 독립 실행해 **same-family empirical trend**를 측정한 메인 실험이다. Phase 4/5는 동일 7개 모델 집합에 대한 **cross-family / external judge sanity check**이며, main scaling claim을 대체하지 않는다.
 
@@ -334,7 +334,7 @@ for N in [5, 10, 15, 20, 25, 30, 40, 60, 80]:
 - 변별도 기반 선택은 작은 N에서 효과가 크고, N이 커질수록 Random과의 격차가 줄어든다.
 - 현재 tinyMT-Bench의 핵심 결과는 **동일 7개 모델 집합에서 뽑은 변별도 기준을 같은 집합에 다시 적용한 same-set post-hoc subsampling**이다. 따라서 same-set 결과는 여전히 메인 증거이고, 독립적인 40문항-only 재실행은 추가로 필요하다.
 - 여기서 일반화하려는 대상은 `7개 개발 모델의 답변 자체`가 아니라, 개발 집합에서 선택한 변별도 기반 문항 subset이 hold-out 모델에도 이전되는지 여부다.
-- 별도 unseen hold-out 검증(`results_tiny_mt_bench_generalization_summary.csv`, dev 7 / test 4, judges = Qwen-32B / InternLM20B / GPT-4o-mini)에서는 Top-Disc가 random 대비 유망한 이전 가능성을 보였다. 다만 현재 결과는 `n_splits=1`인 단일 split point estimate이므로, **일반화 완료**가 아니라 **single-split hold-out pilot**으로 해석하는 것이 맞다.
+- 별도 cross-split hold-out 검증(`results_tiny_mt_bench_generalization_summary.csv`, 11개 모델에서 dev 7 / test 4를 `330`개 분할, judges = Qwen-32B / InternLM20B / GPT-4o-mini)에서는 Top-Disc가 random 평균 대비 일관된 우위를 보였다. 다만 split들이 서로 독립은 아니고, random 95% 구간도 일부 N에서 1.0까지 도달하므로 `보편 법칙`이 아니라 **반복 hold-out에서 재현된 경향**으로 해석하는 것이 맞다.
 
 > **문항 수 민감도 참고:** tinyMT-Bench의 Random 평균 기준으로는 약 30문항에서 ρ ≥ 0.95에 도달한다. 다만 60문항에서도 random 최솟값은 0.893이라 worst-case 기준의 ρ ≥ 0.95를 보장하지는 못한다. 별도 Phase 2 qsize 분석(6모델 baseline)에서는 60문항부터 평균 ρ ≥ 0.95가 관찰된다. 변별도 기반 선택은 tinyMT-Bench 기준 이를 25문항으로 단축한다.
 
@@ -671,20 +671,23 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 
 ---
 
-## Phase 6 — Unseen 모델 일반화 검증
+## Phase 6 — 11개 모델 Cross-Split Hold-Out 검증
 
-> **데이터:** `data/answers_unseen/`, `data/judgments_unseen/{qwen2_5_32b_instruct,internlm2_5_20b_chat,judge_gpt4omini}/single_grade/` → `results_tiny_mt_bench_generalization_summary.csv`, `figures/fig15_tiny_mt_bench_generalization.png`
+> **데이터:** `data/judgments_phase{3,4,5}/.../single_grade/` + `data/judgments_unseen/.../single_grade/` → `results_tiny_mt_bench_generalization_summary.csv`, `figures/fig15_tiny_mt_bench_generalization.png`
 
-> **연구 질문:** Phase 3–5의 judge score 패턴이 Phase 1–5에서 **한 번도 본 적 없는** 4개 unseen 모델에도 적용될 수 있는가? "Top discriminability" 문항 선택이 seen 셋 tuning 이상의 일반화 능력을 갖는가?
+> **연구 질문:** 특정 `seen 7 → unseen 4` 한 번의 분할이 아니라, 11개 모델 풀에서 **어떤 7개 dev 모델로 문항을 고르더라도** 나머지 4개 hold-out 모델에 Top-Disc가 이전되는가?
 
 ### 설계
 
-- **Dev set (seen 7):** Phi-3.5-mini, gemma-2-9b-it, Yi-1.5-9B, Mistral-7B, SOLAR-10.7B, Zephyr-7B, Llama-3.1-8B
-- **Test set (unseen 4):** EXAONE-3.5-7.8B, granite-3.1-8b, Falcon3-7B, OLMo-2-1124-7B
+- **모델 풀 (11개):** 기존 7개 + EXAONE-3.5-7.8B + granite-3.1-8b + Falcon3-7B + OLMo-2-1124-7B
+- **적용 범위:** 주로 `7B–11B`급의 최근(2024–2025) open-weight instruction/chat 모델 집합
+- **분할 방식:** `11 choose 4 = 330`개 모든 hold-out split에 대해 `dev 7 / test 4` 반복
+- **문항 선택:** split마다 `dev 7`의 점수 표준편차로 Top-Disc-N 재계산
 - **Judge 3종:** Qwen2.5-32B, InternLM2.5-20B, GPT-4o-mini
-- **비교 전략:** N문항 랜덤 평균 vs. 변별도 상위 N문항(Top-Disc) 선택
+- **비교 전략:** 각 split과 N마다 Top-Disc-N vs. 200개 random subset 분포 비교
+- **주의:** 인접 split들은 서로 모델을 공유하므로 330개 결과는 완전 독립 표본은 아니다. 하지만 단일 split point estimate보다는 훨씬 강한 hold-out 근거다.
 
-### Unseen 모델 단독 순위 (80문항 full)
+### 고정된 Unseen-4 Reference Split (직관용)
 
 각 judge가 unseen 4개 모델을 어떻게 평가했는가:
 
@@ -695,7 +698,7 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 | 3 | OLMo-2-1124-7B-Instruct | 7.63 | **9.08** | 7.75 |
 | 4 | Falcon3-7B-Instruct | 7.51 | **9.06** | 7.72 |
 
-> InternLM2.5-20B는 절대 점수가 9점대로 압축되어 변별도가 낮다. Qwen32와 GPT-4o-mini의 서열은 잘 수렴한다.
+> 이 표는 원래 사용하던 `seen 7 → unseen 4` reference split 하나를 보여준다. 아래 일반화 분석의 핵심 근거는 이 단일 표가 아니라, 330개 반복 split 평균이다.
 
 ### 일반화 성능 — Top-Disc vs Random
 
@@ -703,31 +706,31 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
   <img src="figures/fig15_tiny_mt_bench_generalization.png" width="94%" alt="Unseen 일반화 검증">
 </p>
 
-**핵심 수치 (80문항 기준, Spearman ρ on unseen 4 test set):**
+**핵심 수치 (330 split 평균, Spearman ρ on hold-out test-4):**
 
-| Judge | Top-Disc ρ | Random 평균 ρ | Top-Disc > Random |
-|-------|-----------|--------------|-------------------|
-| Qwen2.5-32B | **1.000** | 1.000 (N=80) | ✅ (N<80 구간에서 우세) |
-| InternLM2.5-20B | **1.000** | 0.929 (N=60) | ✅ 30문항부터 ρ=1.0 달성 |
-| GPT-4o-mini | **1.000** | 1.000 (N=80) | ✅ (N<80 구간에서 우세) |
+| Judge | Top-Disc-40 평균 ρ | Random 평균 ρ | Top-Disc > Random(split 비율) |
+|-------|-------------------|--------------|-------------------------------|
+| Qwen2.5-32B | **0.968** | 0.941 | 80.6% |
+| InternLM2.5-20B | **0.922** | 0.847 | 78.5% |
+| GPT-4o-mini | **0.959** | 0.880 | 85.5% |
 
-**Top-Disc 문항 선택의 장점 (N=10 기준):**
+**더 안정적인 구간 (N=60 기준):**
 
-| Judge | Top-Disc ρ | Random 평균 ρ | 차이 |
-|-------|-----------|--------------|------|
-| Qwen2.5-32B | 1.000 | 0.832 | +0.168 |
-| InternLM2.5-20B | 0.800 | 0.396 | +0.404 |
-| GPT-4o-mini | 1.000 | 0.728 | +0.272 |
+| Judge | Top-Disc-60 평균 ρ | Random 평균 ρ | Top-Disc > Random(split 비율) |
+|-------|-------------------|--------------|-------------------------------|
+| Qwen2.5-32B | **0.998** | 0.971 | 75.8% |
+| InternLM2.5-20B | **0.995** | 0.928 | 95.8% |
+| GPT-4o-mini | **0.972** | 0.935 | 81.2% |
 
 ### 해석
 
-1. **Top-Disc는 unseen hold-out에서도 이전 가능성을 보인다.** 현재 single-split pilot에서는 10문항만으로 Qwen32와 GPT-4o-mini judge에서 ρ=1.0(완전 서열 일치)을 달성했다. 다만 이는 `n_splits=1`, `test=4모델` 결과이므로 일반화의 확정 증거가 아니라 초기 hold-out 신호로 해석해야 한다.
+1. **Top-Disc는 단일 split 착시가 아니라 반복 hold-out에서도 평균적으로 우세하다.** 330개 split 평균 기준으로 Top-Disc-40의 ρ는 Qwen32 `0.968`, InternLM20B `0.922`, GPT-4o-mini `0.959`이며, random 평균보다 각각 `80.6%`, `78.5%`, `85.5%`의 split에서 높다.
 
-2. **InternLM2.5-20B는 더 많은 문항이 필요하다.** 10문항에서 ρ=0.8에 그치고 30문항은 있어야 ρ=1.0에 도달한다. 이는 이 judge의 절대 점수 압축(9점대 밀집)에서 비롯된 낮은 변별도와 더 보수적인 순위 분리에서 비롯된다.
+2. **same-set에서 좋았던 `40문항`은 hold-out에서도 여전히 강하지만, `60문항`이 더 안전하다.** same-set에서는 Top-Disc-40이 완전 보존(`ρ=1.000`)이었고, repeated hold-out에서는 Top-Disc-40이 이미 강한 평균 ρ를 보인다. 다만 judge 공통으로 더 안정적인 건 Top-Disc-60이며, 특히 InternLM20B는 `40문항 ρ=0.922`에서 `60문항 ρ=0.995`로 크게 오른다.
 
-3. **30–40문항은 실용적 후보 구간이다.** 현재 단일 hold-out split에서는 세 judge 모두 40문항에서 ρ=1.0을 달성한다. 따라서 80문항 대비 50% 절감의 유망한 후보 구간으로 볼 수 있지만, 반복 split이나 bootstrap 없이 보장 구간으로 말할 수는 없다.
+3. **작은 N에서도 평균 이득은 있지만, 분산은 여전히 넓다.** 예를 들어 Qwen32의 Top-Disc-10 평균 ρ는 `0.860`으로 random 평균 `0.784`보다 높지만, split별 최소값은 `0.2`까지 떨어진다. 따라서 `10문항만으로 충분하다`가 아니라 `10–20문항은 공격적 후보, 40–60문항은 보수적 후보`로 읽는 것이 맞다.
 
-4. **independence는 judge별로 다르다.** Top-Disc selection 자체는 seen-7의 Qwen32 점수에서 계산되었으므로, Qwen32-on-unseen 결과는 부분적으로 순환적이다. 더 독립적인 외부 검증은 InternLM20B와 GPT-4o-mini on unseen이며, 이 둘이 각각 `N>=30`, `N>=10`에서 ρ=1.0을 보였다는 점이 핵심이다.
+4. **judge independence와 모델 범위는 여전히 구분해서 봐야 한다.** Top-Disc selection은 Qwen32 점수로 계산되므로, Qwen32 hold-out 결과는 `same-judge consistency check` 성격이 남아 있다. 더 독립적인 근거는 InternLM20B와 GPT-4o-mini의 hold-out 평균 우위이며, README와 논문에서는 이 둘을 핵심 external evidence로 본다. 또한 현재 hold-out 풀은 같은 세대의 `7B–11B` open-weight chat 모델에 집중되어 있으므로, 70B급이나 domain-specialist 모델까지 바로 일반화해서 읽으면 안 된다.
 
 ---
 
@@ -768,8 +771,8 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 | 앙상블 기권 방식은 단일 32B보다 낮음 | ✅ inconsistent 기권 처리 시 24.70%, decisive 75.30%; 604쌍(36%)이 winner로 전환 |
 | Cross-judge ρ 95% CI 하한 ≥ 0.6 | ✅ Bootstrap n=10,000; 7개 모델 한계로 CI 넓음 [0.607, 0.964] |
 | Cross-family judge check에서도 broad ranking 유지 | ✅ Qwen32 ↔ InternLM20B ρ=0.893, Qwen32 ↔ GPT-4o-mini ρ=0.964 |
-| **Unseen hold-out: Top-Disc 10문항에서 ρ=1.0 (Qwen32, GPT-4o-mini)** | 🔶 단일 split에서 Random(ρ=0.728–0.832) 대비 우세 |
-| **Unseen hold-out: 30–40문항은 유망 후보 구간** | 🔶 단일 split에서 세 judge 모두 ρ=1.0, 다만 반복 split 검증은 미완 |
+| **Repeated hold-out: Top-Disc-40은 평균적으로 random보다 강함** | ✅ 330 split에서 평균 ρ가 세 judge 모두 random 평균보다 높고, split win rate도 78–86% |
+| **Repeated hold-out: 60문항이 더 보수적인 안전 구간** | ✅ Top-Disc-60 평균 ρ가 0.972–0.998, judge별 split win rate도 76–96% |
 
 **Judge 선택 권고 (Phase 3 기반):**
 
@@ -1010,15 +1013,16 @@ ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/judge_gpt4omini
   bash scripts/run_judge_claude_api.sh \
   EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
 
-# 5) hold-out generalization summary
+# 5) repeated cross-split hold-out summary
 export PYTHONPATH=src
 python3 scripts/analyze_tiny_mt_bench_generalization.py \
   --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
   --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
   --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \
   --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct \
-  --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
-  --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
+  --test-size 4 \
+  --n-splits 10000 \
+  --random-trials 200
 ```
 
 ---

@@ -289,6 +289,28 @@ def evaluate_metrics(
     }
 
 
+def safe_std(values: list[float]) -> float:
+    clean = [v for v in values if not math.isnan(v)]
+    if len(clean) <= 1:
+        return 0.0 if clean else float("nan")
+    return statistics.pstdev(clean)
+
+
+def percentile(values: list[float], q: float) -> float:
+    clean = sorted(v for v in values if not math.isnan(v))
+    if not clean:
+        return float("nan")
+    if len(clean) == 1:
+        return clean[0]
+    pos = (len(clean) - 1) * q
+    lo = math.floor(pos)
+    hi = math.ceil(pos)
+    if lo == hi:
+        return clean[lo]
+    frac = pos - lo
+    return clean[lo] * (1 - frac) + clean[hi] * frac
+
+
 def build_splits(
     models: list[str],
     dev_models: list[str] | None,
@@ -345,6 +367,10 @@ def summarize_group(rows: list[dict], judge_label: str, n_questions: int) -> dic
     random_mean_pairs = collect("random_mean_pairwise_acc")
     topdisc_top1 = collect("topdisc_top1_match")
     random_mean_top1 = collect("random_mean_top1_match")
+    random_std_rhos = collect("random_std_rho")
+    random_p05_rhos = collect("random_p05_rho")
+    random_p95_rhos = collect("random_p95_rho")
+    topdisc_beats_random_trials = collect("topdisc_beats_random_trial_rate")
 
     return {
         "judge_label": judge_label,
@@ -358,6 +384,9 @@ def summarize_group(rows: list[dict], judge_label: str, n_questions: int) -> dic
         "random_mean_rho_mean": safe_mean(random_mean_rhos),
         "random_mean_rho_min": safe_min(random_mean_rhos),
         "random_mean_rho_max": safe_max(random_mean_rhos),
+        "random_std_rho_mean": safe_mean(random_std_rhos),
+        "random_p05_rho_mean": safe_mean(random_p05_rhos),
+        "random_p95_rho_mean": safe_mean(random_p95_rhos),
         "topdisc_tau_mean": safe_mean(topdisc_taus),
         "random_mean_tau_mean": safe_mean(random_mean_taus),
         "topdisc_pairwise_acc_mean": safe_mean(topdisc_pairs),
@@ -367,6 +396,7 @@ def summarize_group(rows: list[dict], judge_label: str, n_questions: int) -> dic
         "topdisc_beats_random_rate": safe_mean(
             [1.0 if float(r["topdisc_rho"]) > float(r["random_mean_rho"]) else 0.0 for r in rows]
         ),
+        "topdisc_beats_random_trial_rate_mean": safe_mean(topdisc_beats_random_trials),
     }
 
 
@@ -414,6 +444,13 @@ def make_figure(summary_rows: list[dict]) -> None:
             color=judge_colors[label],
             alpha=0.75,
             label=f"{label}: Random mean",
+        )
+        panel_a.fill_between(
+            ns,
+            [float(r["random_p05_rho_mean"]) for r in rows],
+            [float(r["random_p95_rho_mean"]) for r in rows],
+            color=judge_colors[label],
+            alpha=0.12,
         )
 
         panel_b.plot(
@@ -517,6 +554,11 @@ def main() -> None:
                         )
                     )
 
+                random_rhos = [m["rho"] for m in random_metric_rows]
+                random_taus = [m["tau"] for m in random_metric_rows]
+                random_pairs = [m["pairwise_acc"] for m in random_metric_rows]
+                random_top1 = [m["top1_match"] for m in random_metric_rows]
+
                 split_rows.append({
                     "judge_label": judge_label,
                     "split_id": split_idx,
@@ -529,12 +571,19 @@ def main() -> None:
                     "topdisc_tau": statistics.mean([top_metrics["tau"]]),
                     "topdisc_pairwise_acc": statistics.mean([top_metrics["pairwise_acc"]]),
                     "topdisc_top1_match": top_metrics["top1_match"],
-                    "random_mean_rho": statistics.mean([m["rho"] for m in random_metric_rows]),
-                    "random_min_rho": min(m["rho"] for m in random_metric_rows),
-                    "random_max_rho": max(m["rho"] for m in random_metric_rows),
-                    "random_mean_tau": statistics.mean([m["tau"] for m in random_metric_rows]),
-                    "random_mean_pairwise_acc": statistics.mean([m["pairwise_acc"] for m in random_metric_rows]),
-                    "random_mean_top1_match": statistics.mean([m["top1_match"] for m in random_metric_rows]),
+                    "random_trials": args.random_trials,
+                    "random_mean_rho": statistics.mean(random_rhos),
+                    "random_std_rho": safe_std(random_rhos),
+                    "random_min_rho": min(random_rhos),
+                    "random_max_rho": max(random_rhos),
+                    "random_p05_rho": percentile(random_rhos, 0.05),
+                    "random_p95_rho": percentile(random_rhos, 0.95),
+                    "random_mean_tau": statistics.mean(random_taus),
+                    "random_mean_pairwise_acc": statistics.mean(random_pairs),
+                    "random_mean_top1_match": statistics.mean(random_top1),
+                    "topdisc_beats_random_trial_rate": statistics.mean(
+                        [1.0 if top_metrics["rho"] > rho else 0.0 for rho in random_rhos]
+                    ),
                 })
 
         judge_rows = [row for row in split_rows if row["judge_label"] == judge_label]
