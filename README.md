@@ -60,7 +60,7 @@
 | **3** | **주요 실험 — judge 크기 비교 검증** | 7개 모델 (6개 + Llama-3.1-8B) | Qwen2.5 7B / 14B / **32B** | ✅ 3-way 교차 검증 |
 | **4** | 보조 실험 — 교차 아키텍처 judge 점검 | 동일 7개 모델 | InternLM2.5 7B / 20B | ✅ cross-family check |
 | **5** | 보조 실험 — 외부 API judge 점검 | 동일 7개 모델 | GPT-4o-mini | ✅ external check |
-| **6** | **일반화 검증 — Unseen 모델 hold-out 테스트** | 4개 unseen 모델 (학습에 사용 안 한 모델) | Qwen2.5-32B / InternLM2.5-20B / GPT-4o-mini | ✅ hold-out generalization |
+| **6** | **예비 일반화 검증 — Unseen 모델 hold-out 테스트** | 4개 unseen 모델 (학습에 사용 안 한 모델) | Qwen2.5-32B / InternLM2.5-20B / GPT-4o-mini | 🔶 single-split hold-out pilot |
 
 > **왜 Phase 3가 신뢰도 기준인가:** Phase 1은 self-judge 편향이 내재하고, Phase 2는 단일 14B judge로 position bias 측정 불가. Phase 3는 동일 패밀리(Qwen2.5) 내 3가지 크기의 judge를 독립 실행해 **same-family empirical trend**를 측정한 메인 실험이다. Phase 4/5는 동일 7개 모델 집합에 대한 **cross-family / external judge sanity check**이며, main scaling claim을 대체하지 않는다.
 
@@ -332,9 +332,9 @@ for N in [5, 10, 15, 20, 25, 30, 40, 60, 80]:
 - Top-Disc-40은 ρ=1.000을 달성한다 — 동일 7개 모델 집합 기준으로 80문항 baseline과 같은 서열을 절반의 문항으로 재현한다.
 - Random N=5에서 최악 ρ=−0.143 — writing 문항만 뽑히면 서열이 뒤집힌다. Top-Disc는 이런 분산이 없다.
 - 변별도 기반 선택은 작은 N에서 효과가 크고, N이 커질수록 Random과의 격차가 줄어든다.
-- 현재 tinyMT-Bench는 **동일 7개 모델 집합에서 뽑은 변별도 기준을 같은 집합에 다시 적용한 same-set post-hoc subsampling** 결과다. 따라서 독립적인 40문항-only 재실행과 외부 모델 검증이 추가로 필요하다.
+- 현재 tinyMT-Bench의 핵심 결과는 **동일 7개 모델 집합에서 뽑은 변별도 기준을 같은 집합에 다시 적용한 same-set post-hoc subsampling**이다. 따라서 same-set 결과는 여전히 메인 증거이고, 독립적인 40문항-only 재실행은 추가로 필요하다.
 - 여기서 일반화하려는 대상은 `7개 개발 모델의 답변 자체`가 아니라, 개발 집합에서 선택한 변별도 기반 문항 subset이 hold-out 모델에도 이전되는지 여부다.
-- 별도 unseen split 일반화 검증(`results_tiny_mt_bench_generalization_summary.csv`, Qwen-32B judge, 20 splits, dev 4 / test 3)에서는 Top-Disc가 same-set처럼 항상 random을 압도하지는 않았다. 예를 들어 N=40에서 Top-Disc 평균 ρ는 0.900, Random 평균 ρ는 0.913으로 유사 수준이었고, N=60에서는 Top-Disc 0.975, Random 0.938로 다시 우세했다. 즉 Top-Disc는 **same-set에서는 매우 강하지만, unseen 모델 일반화는 더 보수적으로 해석해야 한다.**
+- 별도 unseen hold-out 검증(`results_tiny_mt_bench_generalization_summary.csv`, dev 7 / test 4, judges = Qwen-32B / InternLM20B / GPT-4o-mini)에서는 Top-Disc가 random 대비 유망한 이전 가능성을 보였다. 다만 현재 결과는 `n_splits=1`인 단일 split point estimate이므로, **일반화 완료**가 아니라 **single-split hold-out pilot**으로 해석하는 것이 맞다.
 
 > **문항 수 민감도 참고:** tinyMT-Bench의 Random 평균 기준으로는 약 30문항에서 ρ ≥ 0.95에 도달한다. 다만 60문항에서도 random 최솟값은 0.893이라 worst-case 기준의 ρ ≥ 0.95를 보장하지는 못한다. 별도 Phase 2 qsize 분석(6모델 baseline)에서는 60문항부터 평균 ρ ≥ 0.95가 관찰된다. 변별도 기반 선택은 tinyMT-Bench 기준 이를 25문항으로 단축한다.
 
@@ -721,13 +721,13 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 
 ### 해석
 
-1. **Top-Disc 문항 선택은 unseen 모델에도 일반화된다.** 단 10문항만으로 Qwen32와 GPT-4o-mini judge에서 ρ=1.0(완전 서열 일치)을 달성했다. Random 선택의 같은 조건 ρ는 0.728–0.832에 불과하다.
+1. **Top-Disc는 unseen hold-out에서도 이전 가능성을 보인다.** 현재 single-split pilot에서는 10문항만으로 Qwen32와 GPT-4o-mini judge에서 ρ=1.0(완전 서열 일치)을 달성했다. 다만 이는 `n_splits=1`, `test=4모델` 결과이므로 일반화의 확정 증거가 아니라 초기 hold-out 신호로 해석해야 한다.
 
-2. **InternLM2.5-20B는 더 많은 문항이 필요하다.** 10문항에서 ρ=0.8에 그치고 30문항은 있어야 ρ=1.0에 도달한다. 이는 이 judge의 절대 점수 압축(9점대 밀집)에서 비롯된 낮은 변별도 때문이다.
+2. **InternLM2.5-20B는 더 많은 문항이 필요하다.** 10문항에서 ρ=0.8에 그치고 30문항은 있어야 ρ=1.0에 도달한다. 이는 이 judge의 절대 점수 압축(9점대 밀집)에서 비롯된 낮은 변별도와 더 보수적인 순위 분리에서 비롯된다.
 
-3. **30–40문항이면 실용적 상한선이다.** 세 judge 모두 40문항에서 ρ=1.0을 달성한다. 80문항 대비 50% 절감이면서 unseen 모델에도 같은 서열이 유지된다.
+3. **30–40문항은 실용적 후보 구간이다.** 현재 단일 hold-out split에서는 세 judge 모두 40문항에서 ρ=1.0을 달성한다. 따라서 80문항 대비 50% 절감의 유망한 후보 구간으로 볼 수 있지만, 반복 split이나 bootstrap 없이 보장 구간으로 말할 수는 없다.
 
-4. **"seen 7 tuning" 이상의 일반화 증거.** 변별도 상위 문항이 seen 셋에서 경험적으로 뽑혔음에도 불구하고, unseen 4개 모델에서도 동일한 변별 효과가 나타난다. 이는 Top-Disc 문항이 특정 모델 집합에 over-fit하지 않고 **보편적으로 변별력 있는 문항**임을 시사한다.
+4. **independence는 judge별로 다르다.** Top-Disc selection 자체는 seen-7의 Qwen32 점수에서 계산되었으므로, Qwen32-on-unseen 결과는 부분적으로 순환적이다. 더 독립적인 외부 검증은 InternLM20B와 GPT-4o-mini on unseen이며, 이 둘이 각각 `N>=30`, `N>=10`에서 ρ=1.0을 보였다는 점이 핵심이다.
 
 ---
 
@@ -768,8 +768,8 @@ exact pairwise winner agreement는 더 엄격한 지표라서, rank agreement보
 | 앙상블 기권 방식은 단일 32B보다 낮음 | ✅ inconsistent 기권 처리 시 24.70%, decisive 75.30%; 604쌍(36%)이 winner로 전환 |
 | Cross-judge ρ 95% CI 하한 ≥ 0.6 | ✅ Bootstrap n=10,000; 7개 모델 한계로 CI 넓음 [0.607, 0.964] |
 | Cross-family judge check에서도 broad ranking 유지 | ✅ Qwen32 ↔ InternLM20B ρ=0.893, Qwen32 ↔ GPT-4o-mini ρ=0.964 |
-| **Unseen 일반화: Top-Disc 10문항으로 ρ=1.0 (Qwen32, GPT-4o-mini)** | ✅ hold-out 4개 모델에서 Random(ρ=0.728–0.832) 대비 우세 |
-| **Unseen 일반화: 30–40문항이면 세 judge 모두 ρ=1.0** | ✅ 80문항 대비 50–63% 절감, seen-set overfit 아님 |
+| **Unseen hold-out: Top-Disc 10문항에서 ρ=1.0 (Qwen32, GPT-4o-mini)** | 🔶 단일 split에서 Random(ρ=0.728–0.832) 대비 우세 |
+| **Unseen hold-out: 30–40문항은 유망 후보 구간** | 🔶 단일 split에서 세 judge 모두 ρ=1.0, 다만 반복 split 검증은 미완 |
 
 **Judge 선택 권고 (Phase 3 기반):**
 
