@@ -40,7 +40,8 @@ first-position 승률은 84.2\%→93.5\%→94.9\%로 증가하여, 다른 원인
 불일치율을 24.70\%로 낮추면서 decisive rate도 75.3\%까지 높였다. 아울러
 변별도 기반 40문항(tinyMT-Bench)은 동일 7개 모델 집합 내
 \textbf{same-set upper bound}로서 전체 순위를 보존하면서 평가 비용을
-50\% 절감하였다. 보조적으로 InternLM2.5-20B와 GPT-4o-mini에서도
+50\% 절감하였다. 그러나 반복 hold-out에서는 judge 공통으로 60문항이 더
+보수적인 운영점으로 나타났다. 보조적으로 InternLM2.5-20B와 GPT-4o-mini에서도
 Qwen2.5-32B 기준 모델 서열의 \textbf{broad rank pattern}이 Spearman
 $\rho=0.893$, $0.964$ 수준으로 유지되어 main result의 cross-family /
 external 타당성을 보강하였다. 추가로 11개 모델
@@ -114,10 +115,22 @@ vLLM 서버 기반으로 실행하였다.
 
 \subsection{평가 방식 및 지표}
 
-\textbf{Single-grade}: 1--10점 채점, Turn 1·2 평균을 모델 점수로 사용.
+전체 파이프라인은 (1) 80문항 2턴 답변 생성(temperature 0.7), (2) judge 추론
+(temperature 0.0), (3) 파싱 및 집계의 세 단계로 구성된다. 생성 단계에서만
+샘플링을 허용하고 judge 단계는 greedy decoding으로 고정하여, 평가 noise를
+모델 답변 생성 noise와 분리하였다.
 
-\textbf{Pairwise (conservative verdict)~\cite{zheng2023}}: AB·BA 양방향 비교.
-두 판정이 일치할 때만 winner 선언, 불일치 시 ``inconsistent'' 처리.
+\textbf{Single-grade}: Turn 1은 단일 질의-응답 프롬프트, Turn 2는
+$(q_1,a_1,q_2,a_2)$의 multi-turn 컨텍스트 프롬프트를 사용한다. 각 turn에서
+1--10점을 파싱하고, 파싱 실패는 $-1.0$으로 기록한 뒤 집계에서 제외한다.
+문항별 점수는 $\hat{s}_q=(s_{q,1}+s_{q,2})/2$이고, 모델 점수는 80문항 평균이다.
+
+\textbf{Pairwise (conservative verdict)~\cite{zheng2023}}: 동일 문항에 대해
+AB 순서와 BA 순서로 judge를 두 번 호출한다. 각 호출에서
+$\{A, B, tie, error\}$를 파싱하고, BA 판정은 원래 모델 순서로 정규화한다.
+정규화된 두 판정이 일치할 때만 winner를 선언하며, 불일치는
+``inconsistent''로 기록한다. 즉 pairwise의 핵심은 단일 winner 예측이 아니라
+\textbf{order swap 이후에도 유지되는 winner만 채택하는 보수적 판정 규칙}이다.
 
 주요 지표:
 (1) \textbf{불일치율}: AB/BA 판정이 다른 쌍의 비율 ($\binom{7}{2}\times 80=1{,}680$쌍),
@@ -126,13 +139,18 @@ vLLM 서버 기반으로 실행하였다.
 
 \subsection{앙상블 설계 2종}
 
-\textbf{다수결}: inconsistent를 하나의 표로 취급, 2/3 이상 일치 시 winner.
+\textbf{다수결}: 3개 judge의 출력을 $\{model_a, model_b, tie, inconsistent\}$ 중
+하나의 표로 두고, 2/3 이상 일치 시 winner를 선언한다.
 
-\textbf{기권}: inconsistent를 기권으로 처리.
-결정적 표(A 또는 B)가 존재하고 충돌하지 않을 때만 winner 선언.
-저품질 judge의 불확실한 verdict를 일반 투표와 동일하게 집계하면 노이즈가
-다수결을 오염시킬 수 있다. 본 연구의 기권 방식은 이러한 low-quality vote를
-보수적으로 제외해, 판정 수는 유지하면서 decision quality를 보존하려는 설계다.
+\textbf{기권}: ``inconsistent''를 vote가 아니라 \textbf{low-confidence abstention}으로
+해석한다. 즉 결정적 표(model\_a/model\_b/tie)만 남기고, 남은 표들이 서로 충돌하지
+않을 때만 winner를 선언한다. 예를 들어
+$(inconsistent, inconsistent, A)$는 다수결에서는 inconsistent이지만,
+기권 방식에서는 $A$로 복구된다. 반대로 $(A, B, inconsistent)$는 결정적 표가
+충돌하므로 여전히 inconsistent으로 둔다. 저품질 judge의 불확실한 verdict를
+일반 투표와 동일하게 집계하면 노이즈가 다수결을 오염시킬 수 있다. 본 연구의
+기권 방식은 이러한 low-quality vote를 보수적으로 제외해, 판정 수는 유지하면서
+decision quality를 보존하려는 설계다.
 
 % ─────────────────────────────────────────────────────
 \section{실험 결과}
