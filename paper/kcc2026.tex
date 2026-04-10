@@ -13,10 +13,10 @@
 %  제목·저자 (kcc.cls 방식)
 % ─────────────────────────────────────────────────────
 \title{오픈소스 LLM-as-a-Judge의 신뢰도 분석:\\
-동일 패밀리 판사 스케일링, 잔여 위치 편향, 그리고 비용 효율적 평가}
+평가자 크기 스케일링, 잔여 위치 편향, 그리고 비용 효율적 평가}
 
 \engtitle{Reliability Analysis of Open-Source LLM-as-a-Judge:\\
-Within-Family Judge Scaling, Residual Position Bias, and Cost-Efficient Evaluation}
+Judge Scaling, Residual Position Bias, and Cost-Efficient Evaluation}
 
 % 심사용 제출: 저자 정보 삭제 후 제출
 % 최종 제출: 아래 저자 정보 복원
@@ -113,6 +113,16 @@ InternLM2.5-7B/20B와 GPT-4o-mini 평가자도 추가 실행하였다.
 vLLM 서버 기반으로 실행하였다.
 답변 생성 temperature=0.7, 평가 temperature=0.0(greedy).
 
+\subsection{실험 단계}
+
+전체 실험은 6개 단계로 진행하였다. Phase 1은 self-judge 기준선으로
+자기평가 편향을 확인하고, Phase 2는 외부 14B judge를 이용한 초기 sanity
+check다. Phase 3은 Qwen2.5-7B/14B/32B를 이용한 \textbf{메인 judge scaling 실험},
+Phase 4는 InternLM2.5-7B/20B를 이용한 cross-family 점검, Phase 5는
+GPT-4o-mini를 이용한 external judge 점검이다. 마지막 Phase 6은 11개 모델
+풀에서 dev 7 / test 4의 330개 hold-out split을 반복하여 tinyMT-Bench subset의
+운영 가능 범위를 다시 검증하는 단계다.
+
 \subsection{평가 방식 및 지표}
 
 전체 파이프라인은 (1) 80문항 2턴 답변 생성(temperature 0.7), (2) judge 추론
@@ -139,18 +149,21 @@ $\{A, B, tie, error\}$를 파싱하고, BA 판정은 원래 모델 순서로 정
 
 \subsection{앙상블 설계 2종}
 
-\textbf{다수결}: 3개 judge의 출력을 $\{model_a, model_b, tie, inconsistent\}$ 중
-하나의 표로 두고, 2/3 이상 일치 시 winner를 선언한다.
+\begin{itemize}
+\item[\textbf{다수결}] 3개 judge의 출력을
+$\{model_a, model_b, tie, inconsistent\}$ 중 하나의 표로 두고, 2/3 이상
+일치 시 winner를 선언한다.
+\item[\textbf{기권}] ``inconsistent''를 vote가 아니라
+\textbf{low-confidence abstention}으로 해석한다. 즉 결정적 표
+(model\_a/model\_b/tie)만 남기고, 남은 표들이 서로 충돌하지 않을 때만
+winner를 선언한다. 예를 들어 $(inconsistent, inconsistent, A)$는 다수결에서는
+inconsistent이지만, 기권 방식에서는 $A$로 복구된다. 반대로
+$(A, B, inconsistent)$는 결정적 표가 충돌하므로 여전히 inconsistent으로 둔다.
+\end{itemize}
 
-\textbf{기권}: ``inconsistent''를 vote가 아니라 \textbf{low-confidence abstention}으로
-해석한다. 즉 결정적 표(model\_a/model\_b/tie)만 남기고, 남은 표들이 서로 충돌하지
-않을 때만 winner를 선언한다. 예를 들어
-$(inconsistent, inconsistent, A)$는 다수결에서는 inconsistent이지만,
-기권 방식에서는 $A$로 복구된다. 반대로 $(A, B, inconsistent)$는 결정적 표가
-충돌하므로 여전히 inconsistent으로 둔다. 저품질 judge의 불확실한 verdict를
-일반 투표와 동일하게 집계하면 노이즈가 다수결을 오염시킬 수 있다. 본 연구의
-기권 방식은 이러한 low-quality vote를 보수적으로 제외해, 판정 수는 유지하면서
-decision quality를 보존하려는 설계다.
+저품질 judge의 불확실한 verdict를 일반 투표와 동일하게 집계하면 노이즈가
+다수결을 오염시킬 수 있다. 본 연구의 기권 방식은 이러한 low-quality vote를
+보수적으로 제외해, 판정 수는 유지하면서 decision quality를 보존하려는 설계다.
 
 % ─────────────────────────────────────────────────────
 \section{실험 결과}
