@@ -9,7 +9,7 @@ from PIL import Image
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
-from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.util import Inches, Pt
 
 
@@ -113,6 +113,7 @@ def add_textbox(
     line=None,
     margin=0.07,
     valign=MSO_ANCHOR.TOP,
+    auto_fit=True,
 ):
     box = slide.shapes.add_textbox(left, top, width, height)
     tf = box.text_frame
@@ -123,6 +124,8 @@ def add_textbox(
     tf.margin_top = Inches(margin)
     tf.margin_bottom = Inches(margin)
     tf.vertical_anchor = valign
+    if auto_fit:
+        tf.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
     p = tf.paragraphs[0]
     p.alignment = align
     run = p.add_run()
@@ -141,6 +144,15 @@ def add_textbox(
     else:
         box.line.fill.background()
     return box
+
+
+def header_title_size(text: str) -> int:
+    n = len(text)
+    if n >= 34:
+        return 21
+    if n >= 26:
+        return 22
+    return 24
 
 
 def add_bullets(box, bullets: Iterable[str], *, font_size=BODY_SIZE, color=TEXT):
@@ -259,7 +271,7 @@ def add_header(slide, title: str, section: str, idx: int, total: int):
         Inches(9.4),
         Inches(0.58),
         title,
-        font_size=24,
+        font_size=header_title_size(title),
         bold=True,
         color=DEEP,
         margin=0.0,
@@ -363,11 +375,11 @@ def build_title_slide(prs: Presentation, spec: SlideSpec, total: int):
     add_textbox(
         slide,
         Inches(0.78),
-        Inches(0.86),
-        Inches(5.8),
-        Inches(1.48),
-        "MT-Bench / Chatbot Arena\n논문 리뷰와 내 연구",
-        font_size=30,
+        Inches(0.82),
+        Inches(5.88),
+        Inches(1.7),
+        "Judging LLM-as-a-Judge\nwith MT-Bench\nand Chatbot Arena",
+        font_size=27,
         bold=True,
         color=DEEP,
         margin=0.0,
@@ -375,10 +387,10 @@ def build_title_slide(prs: Presentation, spec: SlideSpec, total: int):
     add_textbox(
         slide,
         Inches(0.8),
-        Inches(2.62),
-        Inches(5.4),
-        Inches(0.3),
-        "1부 논문 리뷰, 2부 내 연구",
+        Inches(2.78),
+        Inches(5.3),
+        Inches(0.28),
+        "논문 스터디",
         font_size=14,
         color=PAPER_RAIL,
         bold=True,
@@ -387,11 +399,11 @@ def build_title_slide(prs: Presentation, spec: SlideSpec, total: int):
     add_textbox(
         slide,
         Inches(0.8),
-        Inches(3.14),
-        Inches(5.5),
-        Inches(1.35),
-        "앞 절반은 Zheng et al.의 베이스 논문을 읽는 시간입니다.\n뒤 절반은 그 프로토콜을 제 저장소와 실험으로 어떻게 옮겼는지 설명합니다.",
-        font_size=18,
+        Inches(3.2),
+        Inches(5.55),
+        Inches(1.05),
+        "앞 절반은 원 논문의 설계와 메시지를 읽고,\n뒤 절반은 그 프로토콜을 내 오픈소스 judge 실험으로 어떻게 옮겼는지 설명합니다.",
+        font_size=16,
         color=TEXT,
     )
     add_textbox(slide, Inches(7.42), Inches(0.9), Inches(4.9), Inches(0.26), "Base paper figures that anchor the talk", font_size=14, bold=True, color=RESEARCH_RAIL, margin=0.0)
@@ -406,8 +418,8 @@ def build_title_slide(prs: Presentation, spec: SlideSpec, total: int):
         Inches(6.46),
         Inches(11.4),
         Inches(0.26),
-        "핵심 질문: strong judge LLM의 논문 메시지가 오픈소스 judge 실험으로 어디까지 이어지는가?",
-        font_size=16,
+        "핵심 질문: 이 논문의 strong-judge 메시지가 내 오픈소스 judge 재현 실험에서도 어디까지 유지되는가?",
+        font_size=15,
         bold=True,
         color=WHITE,
         margin=0.0,
@@ -418,7 +430,7 @@ def build_title_slide(prs: Presentation, spec: SlideSpec, total: int):
         Inches(6.82),
         Inches(6.4),
         Inches(0.18),
-        "박승현 | CLINK Lab | 논문 리뷰 + 내 연구",
+        "박승현 | CLINK Lab | paper study + my reproduction",
         font_size=10,
         color=PALE2,
         margin=0.0,
@@ -474,7 +486,7 @@ def build_divider_slide(prs: Presentation, spec: SlideSpec, idx: int, total: int
         Inches(7.6),
         Inches(0.95),
         spec.title,
-        font_size=30,
+        font_size=28,
         bold=True,
         color=DEEP,
         margin=0.0,
@@ -653,6 +665,7 @@ def build_content_slide(prs: Presentation, spec: SlideSpec, idx: int, total: int
     theme = section_theme(spec.section)
     add_header(slide, spec.title, spec.section, idx, total)
     add_purpose_box(slide, spec.purpose, spec.section)
+    total_chars = sum(len(b) for b in spec.bullets)
 
     if len(spec.images) == 2:
         panel_top = Inches(1.38)
@@ -665,7 +678,7 @@ def build_content_slide(prs: Presentation, spec: SlideSpec, idx: int, total: int
             add_textbox(slide, left_x, Inches(4.68), Inches(GRID_HALF), Inches(0.22), spec.image_captions[0], font_size=10, color=MUTED, align=PP_ALIGN.CENTER)
             add_textbox(slide, right_x, Inches(4.68), Inches(GRID_HALF), Inches(0.22), spec.image_captions[1], font_size=10, color=MUTED, align=PP_ALIGN.CENTER)
         body = add_textbox(slide, Inches(GRID_LEFT), Inches(4.96), Inches(GRID_WIDTH), Inches(1.48), "", fill=WHITE, line=LINE, margin=0.13)
-        add_bullets(body, spec.bullets, font_size=16)
+        add_bullets(body, spec.bullets, font_size=15 if total_chars > 260 else 16)
         if spec.stat_boxes:
             for i, (label, value) in enumerate(spec.stat_boxes):
                 accent = [NAVY, TEAL, GOLD, GREEN][i % 4]
@@ -694,7 +707,7 @@ def build_content_slide(prs: Presentation, spec: SlideSpec, idx: int, total: int
         if spec.image_captions:
             add_textbox(slide, Inches(0.62), Inches(5.88), Inches(7.48), Inches(0.22), spec.image_captions[0], font_size=10, color=MUTED, align=PP_ALIGN.CENTER)
         body = add_textbox(slide, Inches(8.38), Inches(1.38), Inches(4.35), Inches(4.35), "", fill=WHITE, line=LINE, margin=0.13)
-        add_bullets(body, spec.bullets, font_size=16)
+        add_bullets(body, spec.bullets, font_size=15 if total_chars > 240 else 16)
         if spec.stat_boxes:
             for i, (label, value) in enumerate(spec.stat_boxes):
                 accent = [NAVY, TEAL, GOLD, GREEN][i % 4]
@@ -718,7 +731,7 @@ def build_content_slide(prs: Presentation, spec: SlideSpec, idx: int, total: int
             )
     else:
         body = add_textbox(slide, Inches(0.55), Inches(1.42), Inches(7.65), Inches(4.95), "", fill=WHITE, line=LINE, margin=0.14)
-        add_bullets(body, spec.bullets, font_size=18)
+        add_bullets(body, spec.bullets, font_size=15 if total_chars > 320 else 16)
         add_textbox(slide, Inches(8.45), Inches(1.42), Inches(4.3), Inches(0.32), "핵심 해석", font_size=18, bold=True, color=DEEP)
         right = add_textbox(slide, Inches(8.45), Inches(1.8), Inches(4.3), Inches(4.57), "", fill=theme["tint"], line=theme["tint"], margin=0.14)
         if spec.takeaway:
@@ -1053,7 +1066,7 @@ judge를 Qwen, InternLM, GPT-4o-mini로 나눠서 다시 본 겁니다.
             purpose="앞의 논문 리뷰에서 뒤의 랩미팅 파트로 시선이 전환되는 순간을 명확히 만든다.",
             bullets=[],
             layout="divider",
-            takeaway="이제부터는 paper claim을 다시 읽는 것이 아니라, 그 claim을 내 judge 실험으로 어디까지 옮길 수 있었는지 보여드립니다.",
+            takeaway="이제부터는 내 연구입니다. 원 논문의 프로토콜을 오픈소스 judge 실험으로 어떻게 재현하고 어디까지 확장했는지 보여드립니다.",
             notes="""이 슬라이드는 의도적으로 호흡을 한번 끊는 역할을 합니다.
 앞 절반은 원 논문 리뷰였고, 여기부터는 제 연구 발표입니다.
 그래서 청중이 화면만 봐도 세션이 전환됐다는 걸 느끼게 하고 싶었습니다.

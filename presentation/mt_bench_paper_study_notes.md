@@ -237,7 +237,7 @@ judge를 Qwen, InternLM, GPT-4o-mini로 나눠서 다시 본 겁니다.
 - Section: Reproduction
 - Purpose: 앞의 논문 리뷰에서 뒤의 랩미팅 파트로 시선이 전환되는 순간을 명확히 만든다.
 - Layout: divider
-- Takeaway: 이제부터는 paper claim을 다시 읽는 것이 아니라, 그 claim을 내 judge 실험으로 어디까지 옮길 수 있었는지 보여드립니다.
+- Takeaway: 이제부터는 내 연구입니다. 원 논문의 프로토콜을 오픈소스 judge 실험으로 어떻게 재현하고 어디까지 확장했는지 보여드립니다.
 
 ### Speaker Notes
 이 슬라이드는 의도적으로 호흡을 한번 끊는 역할을 합니다.
