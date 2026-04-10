@@ -35,6 +35,7 @@ models/
 *.swp
 *.swo
 .DS_Store
+.claude/
 
 # ── 환경변수 / API 키 (절대 커밋 금지) ──────────────────────
 .env
@@ -56,13 +57,26 @@ data/mock/
 paper/*.aux
 paper/*.log
 paper/*.out
+scripts/__pycache__/
+src/**/__pycache__/
+
+# ── 재생성 가능한 raw 산출물 ─────────────────────────────────
+data/answers/
+data/answers_unseen/
+data/archive/
+data/judgments_phase1/
+data/judgments_phase2/
+data/judgments_phase3/
+data/judgments_phase4/
+data/judgments_phase5/
+data/judgments_unseen/
 
 # ============================================================
-# 아래 데이터 파일은 git으로 관리 (실험 결과 추적 목적)
+# 아래 요약 산출물만 git으로 관리 (실험 결과 추적 목적)
 # ============================================================
-# data/answers/     → 각 모델의 답변 JSONL (모델명.jsonl)
-# data/judgments/   → judge 채점 결과 JSONL
 # data/results*.csv → 집계 결과 (점수표, 랭킹)
+# figures/*.png     → 논문/README용 최종 figure
+# paper/*.pdf       → 제출용 산출물
 # ============================================================
 
 # 샘플 파일과 다운로드 스크립트는 항상 포함

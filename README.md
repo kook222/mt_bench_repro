@@ -15,6 +15,23 @@
 > **목표:** NeurIPS 2023 MT-Bench 논문의 *모델 서열*과 *카테고리별 성능 추이*를 재현 가능한 프로토콜로 구현하고, 그 위에서 오픈소스 judge 신뢰도의 핵심 병목과 실용적 개선점을 분석한다.
 > 정확한 점수 일치는 목표가 아님.
 
+## 코드만 볼 때 여기부터
+
+저장소를 가볍게 유지하기 위해 raw `answers/`와 `judgments/` JSONL은 git에서
+제외했고, 현재는 `src/`의 핵심 로직과 `data/results*.csv` 요약 산출물만 남긴
+상태다.
+
+| 먼저 볼 파일 | 역할 |
+|------|------|
+| [src/mtbench_repro/prompts.py](src/mtbench_repro/prompts.py) | MT-Bench judge 프롬프트 정의 |
+| [src/mtbench_repro/judge_single.py](src/mtbench_repro/judge_single.py) | single-grade 채점 |
+| [src/mtbench_repro/judge_pairwise.py](src/mtbench_repro/judge_pairwise.py) | AB/BA pairwise 채점 |
+| [src/mtbench_repro/judge_reference.py](src/mtbench_repro/judge_reference.py) | reference-guided 채점 |
+| [src/mtbench_repro/aggregate.py](src/mtbench_repro/aggregate.py) | 점수 집계와 랭킹 산출 |
+| [scripts/analyze_phase3.py](scripts/analyze_phase3.py) | 메인 Phase 3 분석 |
+| [scripts/analyze_phase45.py](scripts/analyze_phase45.py) | InternLM / GPT-4o-mini 비교 |
+| [scripts/analyze_tiny_mt_bench_generalization.py](scripts/analyze_tiny_mt_bench_generalization.py) | hold-out 일반화 분석 |
+
 <p align="center">
   <img src="figures/mt_bench_summary.png" width="96%" alt="MT-Bench 재현 요약">
 </p>
@@ -842,23 +859,7 @@ mt_bench_repro/
 │   └── generate_figures.py              # README figure 전체 재생성
 ├── data/
 │   ├── mt_bench_questions.jsonl              # MT-Bench 80문항 (2턴)
-│   ├── answers/                              # 모델별 답변 JSONL
-│   ├── judgments_phase1/                     # Phase 1: self-judge / gpt-4 judge 데이터
-│   ├── judgments_phase2/                     # Phase 2: Qwen2.5-14B judge (6모델)
-│   │   ├── single_grade/
-│   │   ├── single_grade_ref/
-│   │   └── pairwise/
-│   ├── judgments_phase3/                     # Phase 3: 3-way judge 교차 실험
-│   │   ├── judge_7B/  {single_grade, pairwise, single_grade_ref}
-│   │   ├── judge_14B/ …
-│   │   └── judge_32B/ …
-│   ├── answers_unseen/                        # Phase 6: unseen 4개 모델 답변
-│   ├── judgments_phase4/                     # Phase 4: InternLM2.5 cross-family check
-│   ├── judgments_phase5/                     # Phase 5: GPT-4o-mini external check
-│   ├── judgments_unseen/                     # Phase 6: unseen 모델 judge 결과
-│   │   ├── qwen2_5_32b_instruct/  {single_grade, pairwise, single_grade_ref}
-│   │   ├── internlm2_5_20b_chat/  {single_grade, pairwise}
-│   │   └── judge_gpt4omini/       {single_grade, pairwise, single_grade_ref}
+│   ├── README.md                             # raw answer/judgment 재생성 안내
 │   ├── results_phase3_judge_{7B,14B,32B}.csv # Phase 3 judge별 집계
 │   ├── results_phase4_summary.csv            # Phase 4 독립 요약
 │   ├── results_phase4_judge_{internlm7b,internlm20b}.csv
@@ -878,6 +879,10 @@ mt_bench_repro/
 │   └── results_ensemble_judge.csv            # 앙상블 Judge 비교 (Phase 3 기반)
 └── figures/                                  # 논문 수준 figure 전체
 ```
+
+> `data/answers*`, `data/judgments*` 같은 raw JSONL 산출물은 재생성 가능하므로 git에서
+> 제외했다. 현재 저장소에는 논문/발표에 직접 쓰는 요약 CSV와 최종 figure만 남겨
+> 두었다.
 
 ---
 
@@ -947,7 +952,7 @@ python3 scripts/generate_figures.py
 
 ### A100 전체 파이프라인
 
-실전 제출 순서와 `k8s_create_job.py` 예시는 [A100_CROSS_JUDGE_RUNBOOK.md](/Users/parkseunghyun/Desktop/프로젝트/mt_bench_재현/mt_bench_repro/A100_CROSS_JUDGE_RUNBOOK.md)에 정리했다.
+실전 제출은 `scripts/run_*_a100.sh` 계열을 기준으로 진행하면 된다.
 
 ```bash
 # Phase 2 (예비 실험)

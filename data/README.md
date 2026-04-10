@@ -1,6 +1,7 @@
 # data/ 디렉토리 구조
 
-MT-Bench 파이프라인의 모든 입출력 데이터가 여기에 저장됩니다.
+현재 git에는 논문/발표에 직접 쓰는 **요약 CSV만 남겨 두었고**, raw
+`answers/`, `judgments/` JSONL은 재생성 가능하므로 제외했다.
 
 ---
 
@@ -8,37 +9,8 @@ MT-Bench 파이프라인의 모든 입출력 데이터가 여기에 저장됩니
 
 ```
 data/
-├── mt_bench_questions.jsonl          # 전체 80문항 (git 제외, 별도 다운로드)
+├── mt_bench_questions.jsonl          # 전체 80문항
 ├── mt_bench_questions_sample.jsonl   # 샘플 3문항 (로컬 mock 테스트용)
-│
-├── answers/                          # 각 모델의 답변 (Phase 1~3)
-│   ├── Qwen2.5-7B-Instruct.jsonl     # Phase 1
-│   ├── SOLAR-10.7B-Instruct.jsonl    # Phase 2
-│   ├── Llama-3.1-8B-Instruct.jsonl   # Phase 3
-│   └── ...
-│
-├── archive/                          # legacy 결과 보관
-│   └── results_qwen7b_legacy.csv
-│
-├── mock/                             # 로컬 mock 검증 산출물 (실제 결과와 분리)
-│   ├── answers/
-│   ├── judgments/
-│   ├── results.csv
-│   └── results_reference.csv
-│
-├── judgments_phase1/                 # Phase 1: self-judge
-│   ├── single_grade/
-│   └── single_grade_ref/
-│
-├── judgments_phase2/                 # Phase 2: Qwen2.5-14B judge
-│   ├── single_grade/
-│   ├── single_grade_ref/
-│   └── pairwise/
-│
-├── judgments_phase3/                 # Phase 3: judge size scaling
-│   ├── judge_7B/  {single_grade, single_grade_ref, pairwise}
-│   ├── judge_14B/ {single_grade, single_grade_ref, pairwise}
-│   └── judge_32B/ {single_grade, single_grade_ref, pairwise}
 │
 ├── results.csv                       # Phase 1 단일 모델 집계 결과
 ├── results_reference.csv             # Phase 1 reference-guided 요약
@@ -54,11 +26,13 @@ data/
 - 모델이 MT-Bench 80문항에 답한 결과
 - 1줄 = 1문항 (question_id, turn1 답변, turn2 답변 포함)
 - `run_generate_multi_a100.sh` 실행 시 생성
+- 현재는 git에서 제외됨
 
 ### judgments_phase*/single_grade/{모델명}.jsonl
 - judge 모델이 각 답변에 매긴 점수 (1~10점)
 - 1줄 = 1문항 × 1턴
 - `judge-single` 서브커맨드 실행 시 생성
+- 현재는 git에서 제외됨
 
 ### judgments_phase*/single_grade_ref/{모델명}.jsonl
 - 정답(reference)을 참고한 채점 결과
@@ -80,9 +54,9 @@ data/
 - math / reasoning / coding 카테고리만 포함
 - main MT-Bench 점수와 다른 척도이므로 별도 보고
 
-### archive/results_qwen7b_legacy.csv
-- coverage/expected_count 컬럼 추가 전의 legacy Phase 1 요약표
-- 현재 기준선은 `results.csv`와 `results_reference.csv`를 참조
+### raw 산출물 재생성
+- `answers/`, `judgments_phase*/`, `answers_unseen/`, `judgments_unseen/`는 로컬에서 재생성
+- git에는 `results*.csv`와 최종 figure만 유지
 
 ---
 
