@@ -28,9 +28,9 @@
 | [src/mtbench_repro/judge_pairwise.py](src/mtbench_repro/judge_pairwise.py) | AB/BA pairwise 채점 |
 | [src/mtbench_repro/judge_reference.py](src/mtbench_repro/judge_reference.py) | reference-guided 채점 |
 | [src/mtbench_repro/aggregate.py](src/mtbench_repro/aggregate.py) | 점수 집계와 랭킹 산출 |
-| [scripts/analyze_phase3.py](scripts/analyze_phase3.py) | 메인 Phase 3 분석 |
-| [scripts/analyze_phase45.py](scripts/analyze_phase45.py) | InternLM / GPT-4o-mini 비교 |
-| [scripts/analyze_tiny_mt_bench_generalization.py](scripts/analyze_tiny_mt_bench_generalization.py) | hold-out 일반화 분석 |
+| [scripts/analysis/analyze_phase3.py](scripts/analysis/analyze_phase3.py) | 메인 Phase 3 분석 |
+| [scripts/analysis/analyze_phase45.py](scripts/analysis/analyze_phase45.py) | InternLM / GPT-4o-mini 비교 |
+| [scripts/analysis/analyze_tiny_mt_bench_generalization.py](scripts/analysis/analyze_tiny_mt_bench_generalization.py) | hold-out 일반화 분석 |
 
 <p align="center">
   <img src="figures/mt_bench_summary.png" width="96%" alt="MT-Bench 재현 요약">
@@ -839,24 +839,13 @@ mt_bench_repro/
 │   ├── aggregate.py        # 집계, 모델 랭킹, pairwise 행렬
 │   └── cli.py              # 통합 CLI (5개 서브커맨드)
 ├── scripts/
-│   ├── run_mock_full.sh                  # GPU 없이 전체 흐름 검증
-│   ├── run_generate_multi_a100.sh        # Phase 2: 6개 모델 답변 생성
-│   ├── run_judge_multi_a100.sh           # Phase 2: judge + 집계
-│   ├── run_generate_phase3_a100.sh       # Phase 3: Llama-3.1-8B 추가 생성
-│   ├── run_judge_phase3_a100.sh          # Phase 3: judge 3종 순차 실행
-│   ├── run_judge_claude_api.sh           # Phase 5: GPT-4o-mini judge 실행 (historical filename)
-│   ├── analyze_phase3.py                 # Judge 스케일링 + 문항 수 분석
-│   ├── analyze_phase45.py                # Phase 4/5 독립 요약 및 figure 생성
-│   ├── analyze_phase345.py               # Phase 3/4/5 통합 judge 요약
-│   ├── analyze_discriminability.py       # 변별도 기반 갭 분석
-│   ├── run_generate_unseen_a100.sh           # Phase 6: unseen 4개 모델 답변 생성
-│   ├── run_judge_unseen_vllm_a100.sh         # Phase 6: unseen vLLM judge (환경변수 주입)
-│   ├── analyze_tiny_mt_bench.py          # tinyMT-Bench 분석 (seen-only)
-│   ├── analyze_tiny_mt_bench_generalization.py # Phase 6: unseen split 일반화 검증
-│   ├── analyze_turn_degradation.py       # Turn 1 vs Turn 2 저하 분석
-│   ├── analyze_position_bias.py          # Position Bias 정량화
-│   ├── analyze_ensemble_judge.py         # 앙상블 Judge 분석
-│   └── generate_figures.py              # README figure 전체 재생성
+│   ├── README.md
+│   ├── analysis/                        # 결과 분석 및 figure 생성
+│   ├── run/a100/                        # A100 / vLLM 실행 스크립트
+│   ├── run/local/                       # 로컬 mock / CLI 검증
+│   ├── run/api/                         # 외부 API judge 실행
+│   ├── tools/                           # 보조 유틸리티
+│   └── presentation/                    # 발표 자료 생성
 ├── data/
 │   ├── mt_bench_questions.jsonl              # MT-Bench 80문항 (2턴)
 │   ├── README.md                             # raw answer/judgment 재생성 안내
@@ -900,7 +889,7 @@ export PYTHONPATH=src
 ### Mock 파이프라인 (GPU 불필요)
 
 ```bash
-bash scripts/run_mock_full.sh
+bash scripts/run/local/run_mock_full.sh
 ```
 
 - mock 산출물은 `data/mock/` 아래에만 저장된다.
@@ -939,7 +928,7 @@ python -m mtbench_repro.cli aggregate \
   --output-csv data/results_multi.csv
 
 # 5. Figure 전체 재생성
-python3 scripts/generate_figures.py
+python3 scripts/tools/generate_figures.py
 ```
 
 > 항상 `PYTHONPATH=src python -m mtbench_repro.cli …` 형태로 실행.
@@ -952,82 +941,82 @@ python3 scripts/generate_figures.py
 
 ### A100 전체 파이프라인
 
-실전 제출은 `scripts/run_*_a100.sh` 계열을 기준으로 진행하면 된다.
+실전 제출은 `scripts/run/a100/` 계열을 기준으로 진행하면 된다.
 
 ```bash
 # Phase 2 (예비 실험)
-bash scripts/run_generate_multi_a100.sh   # 6개 모델 답변 생성
-bash scripts/run_judge_multi_a100.sh      # judge + 집계
+bash scripts/run/a100/run_generate_multi_a100.sh   # 6개 모델 답변 생성
+bash scripts/run/a100/run_judge_multi_a100.sh      # judge + 집계
 
 # Phase 3 (주요 실험)
-bash scripts/run_generate_phase3_a100.sh  # Llama-3.1-8B 추가 생성 (나머지 재사용)
-bash scripts/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B 순차 (~12–20시간)
+bash scripts/run/a100/run_generate_phase3_a100.sh  # Llama-3.1-8B 추가 생성 (나머지 재사용)
+bash scripts/run/a100/run_judge_phase3_a100.sh     # judge 7B → 14B → 32B 순차 (~12–20시간)
 
 # Phase 4 (교차 아키텍처 InternLM judge)
-bash scripts/run_judge_phase4_a100.sh
+bash scripts/run/a100/run_judge_phase4_a100.sh
 
 # Phase 5 (GPT-4o-mini judge, OpenAI API)
 export OPENAI_API_KEY=sk-...
-bash scripts/run_judge_claude_api.sh
+bash scripts/run/api/run_judge_claude_api.sh
 
 # Phase 6 (unseen 모델 생성 + judge, A100 순차)
-bash scripts/run_generate_unseen_a100.sh
+bash scripts/run/a100/run_generate_unseen_a100.sh
 RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   JUDGE_MODEL_ID=Qwen2.5-32B-Instruct QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 \
   MAX_MODEL_LEN=4096 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
-  bash scripts/run_judge_unseen_vllm_a100.sh
+  bash scripts/run/a100/run_judge_unseen_vllm_a100.sh
 RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat \
   QUANTIZATION=fp8 TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=8192 \
-  bash scripts/run_judge_unseen_vllm_a100.sh
+  bash scripts/run/a100/run_judge_unseen_vllm_a100.sh
 
 # 분석 (로컬 실행 가능)
 export PYTHONPATH=src
-python3 scripts/analyze_phase3.py
-python3 scripts/analyze_phase45.py
-python3 scripts/analyze_phase345.py
-python3 scripts/analyze_discriminability.py
-python3 scripts/analyze_tiny_mt_bench.py
-python3 scripts/analyze_tiny_mt_bench_generalization.py \
+python3 scripts/analysis/analyze_phase3.py
+python3 scripts/analysis/analyze_phase45.py
+python3 scripts/analysis/analyze_phase345.py
+python3 scripts/analysis/analyze_discriminability.py
+python3 scripts/analysis/analyze_tiny_mt_bench.py
+python3 scripts/analysis/analyze_tiny_mt_bench_generalization.py \
   --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
   --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
   --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \
   --models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct \
   --dev-models Phi-3.5-mini-Instruct gemma-2-9b-it Yi-1.5-9B-Chat Mistral-7B-Instruct-v0.3 SOLAR-10.7B-Instruct Zephyr-7B-beta Llama-3.1-8B-Instruct \
   --test-models EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
-python3 scripts/analyze_turn_degradation.py
-python3 scripts/analyze_position_bias.py
-python3 scripts/analyze_ensemble_judge.py
+python3 scripts/analysis/analyze_turn_degradation.py
+python3 scripts/analysis/analyze_position_bias.py
+python3 scripts/analysis/analyze_ensemble_judge.py
 ```
 
 ### unseen 일반화 검증 실행 순서
 
 ```bash
 # 1) unseen 4개 full-80 answer generation
-bash scripts/run_generate_unseen_a100.sh
+bash scripts/run/a100/run_generate_unseen_a100.sh
 
 # 2) Qwen2.5-32B judge (AWQ, MAX_MODEL_LEN=4096)
 RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   JUDGE_MODEL_ID=Qwen2.5-32B-Instruct \
   QUANTIZATION=awq GPU_MEMORY_UTILIZATION=0.95 MAX_MODEL_LEN=4096 ENFORCE_EAGER=true MAX_NUM_SEQS=1 \
-  bash scripts/run_judge_unseen_vllm_a100.sh
+  bash scripts/run/a100/run_judge_unseen_vllm_a100.sh
 
 # 3) InternLM2.5-20B judge (fp8, MAX_MODEL_LEN=8192)
 RUN_SINGLE=true RUN_PAIRWISE=true RUN_REFERENCE=true RUN_AGGREGATE=true \
   JUDGE_MODEL_ID=internlm2_5-20b-chat JUDGE_LABEL=internlm2_5_20b_chat \
   QUANTIZATION=fp8 TRUST_REMOTE_CODE=true GPU_MEMORY_UTILIZATION=0.92 MAX_MODEL_LEN=8192 \
-  bash scripts/run_judge_unseen_vllm_a100.sh
+  bash scripts/run/a100/run_judge_unseen_vllm_a100.sh
 
 # 4) GPT-4o-mini judge (OpenAI API, GPU 불필요)
 export OPENAI_API_KEY=sk-...
 ANSWERS_DIR=data/answers_unseen OUTPUT_DIR=data/judgments_unseen/judge_gpt4omini \
   OUTPUT_CSV=data/results_unseen_gpt4omini.csv OUTPUT_REF_CSV=data/results_unseen_gpt4omini_reference.csv \
-  bash scripts/run_judge_claude_api.sh \
+  bash scripts/run/api/run_judge_claude_api.sh \
   EXAONE-3.5-7.8B-Instruct granite-3.1-8b-instruct Falcon3-7B-Instruct OLMo-2-1124-7B-Instruct
 
 # 5) repeated cross-split hold-out summary
 export PYTHONPATH=src
-python3 scripts/analyze_tiny_mt_bench_generalization.py \
+python3 scripts/analysis/analyze_tiny_mt_bench_generalization.py \
   --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
   --judge internlm20b=data/judgments_phase4/judge_internlm20b/single_grade,data/judgments_unseen/internlm2_5_20b_chat/single_grade \
   --judge gpt4omini=data/judgments_phase5/judge_gpt4omini/single_grade,data/judgments_unseen/judge_gpt4omini/single_grade \

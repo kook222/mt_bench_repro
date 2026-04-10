@@ -25,7 +25,7 @@ data/
 ### answers/{모델명}.jsonl
 - 모델이 MT-Bench 80문항에 답한 결과
 - 1줄 = 1문항 (question_id, turn1 답변, turn2 답변 포함)
-- `run_generate_multi_a100.sh` 실행 시 생성
+- `scripts/run/a100/run_generate_multi_a100.sh` 실행 시 생성
 - 현재는 git에서 제외됨
 
 ### judgments_phase*/single_grade/{모델명}.jsonl

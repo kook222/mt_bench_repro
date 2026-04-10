@@ -43,7 +43,7 @@ models/
 secrets.yaml
 
 # ── 전체 80문항 질문 파일 (FastChat에서 별도 다운로드) ───────
-# 다운로드 방법: scripts/download_dataset.sh 참고
+# 다운로드 방법: scripts/tools/download_dataset.sh 참고
 data/mt_bench_questions.jsonl
 
 # ── 로그 ─────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ data/mock/
 paper/*.aux
 paper/*.log
 paper/*.out
-scripts/__pycache__/
+scripts/**/__pycache__/
 src/**/__pycache__/
 
 # ── 재생성 가능한 raw 산출물 ─────────────────────────────────
@@ -81,4 +81,4 @@ data/judgments_unseen/
 
 # 샘플 파일과 다운로드 스크립트는 항상 포함
 !data/mt_bench_questions_sample.jsonl
-!scripts/download_dataset.sh
+!scripts/tools/download_dataset.sh
