@@ -14,8 +14,6 @@
   - 외부 API judge 실행 스크립트
 - `tools/`
   - 데이터 준비, figure 재생성, 보조 유틸리티
-- `presentation/`
-  - 발표 자료 생성 스크립트
 
 ## 가장 먼저 볼 파일
 

@@ -844,8 +844,7 @@ mt_bench_repro/
 │   ├── run/a100/                        # A100 / vLLM 실행 스크립트
 │   ├── run/local/                       # 로컬 mock / CLI 검증
 │   ├── run/api/                         # 외부 API judge 실행
-│   ├── tools/                           # 보조 유틸리티
-│   └── presentation/                    # 발표 자료 생성
+│   └── tools/                           # 보조 유틸리티
 ├── data/
 │   ├── mt_bench_questions.jsonl              # MT-Bench 80문항 (2턴)
 │   ├── README.md                             # raw answer/judgment 재생성 안내
