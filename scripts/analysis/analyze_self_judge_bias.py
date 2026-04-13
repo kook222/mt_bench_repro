@@ -131,8 +131,18 @@ JUDGE_CONFIGS = [
 ]
 
 # eval 모델 family 분류 (self-judge bias 측정용)
+# Self-judge bias 증명 구조:
+#   - LLaMA judge → LLaMA eval 모델 순위 상승 (vs GPT-mini 기준)
+#   - Qwen  judge → Qwen  eval 모델 순위 상승 (vs GPT-mini 기준)
+#   → 두 방향 모두 관찰 시 "bias는 구조적 문제"
 EVAL_MODEL_FAMILY = {
+    # LLaMA family (self-judge 핵심 검증 대상)
+    "Llama-2-7b-chat":          "LLaMA",
     "Llama-3.1-8B-Instruct":    "LLaMA",
+    # Qwen family (self-judge 핵심 검증 대상)
+    "Qwen2.5-7B-Instruct":      "Qwen",
+    "Qwen2.5-14B-Instruct":     "Qwen",
+    # 중립 모델 (bias 없는 baseline)
     "SOLAR-10.7B-Instruct":     "other",
     "gemma-2-9b-it":            "other",
     "Yi-1.5-9B-Chat":           "other",

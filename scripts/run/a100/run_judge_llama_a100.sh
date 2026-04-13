@@ -66,22 +66,32 @@ pip install openai tabulate tqdm --target /tmp/site-extra -q
 export PYTHONPATH="/tmp/site-extra:$PROJECT_DIR/src"
 echo "[Init] 완료."
 
-# ── eval 모델 목록 ───────────────────────────────────────────────────────────
+# ── eval 모델 목록 (LLaMA + Qwen + 중립 모델 포함) ───────────────────────────
+# Self-judge bias 증명을 위해 LLaMA family + Qwen family가 둘 다 필요:
+#   - LLaMA judge가 LLaMA eval 모델을 유리하게 채점하는지
+#   - Qwen  judge가 Qwen  eval 모델을 유리하게 채점하는지
+#   두 방향 모두 확인해야 "구조적 편향" 주장 성립
 EVAL_MODELS=(
+  # LLaMA family
+  "Llama-2-7b-chat"
   "Llama-3.1-8B-Instruct"
-  "SOLAR-10.7B-Instruct"
-  "gemma-2-9b-it"
-  "Yi-1.5-9B-Chat"
-  "Zephyr-7B-beta"
+  # Qwen family
+  "Qwen2.5-7B-Instruct"
+  "Qwen2.5-14B-Instruct"
+  # 중립 모델
   "Mistral-7B-Instruct-v0.3"
+  "gemma-2-9b-it"
   "Phi-3.5-mini-Instruct"
+  "SOLAR-10.7B-Instruct"
+  "Zephyr-7B-beta"
 )
 
-# ── judge 라인업 ─────────────────────────────────────────────────────────────
-# 형식: "judge_label:model_dir_name:quantization:gpu_util"
+# ── judge 라인업: LLaMA 2 family (7B → 13B) ──────────────────────────────────
+# Qwen처럼 동일 세대 내 크기별 비교 (7B / 13B)
+# 70B는 A100 40GB에서 AWQ도 OOM → 제외
 JUDGE_LIST=(
-  "judge_8B:Llama-3.1-8B-Instruct:none:0.90"
-  "judge_70B:Llama-3.3-70B-Instruct:awq:0.95"
+  "judge_7B:Llama-2-7b-chat:none:0.88"
+  "judge_13B:Llama-2-13b-chat:none:0.92"
 )
 
 echo "=============================="
