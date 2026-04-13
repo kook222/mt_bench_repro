@@ -1,22 +1,20 @@
 #!/bin/bash
 # scripts/run/a100/run_judge_llama_a100.sh
 #
-# Self-Judge Bias 실험 — LLaMA family judge 실행.
+# LLaMA family judge 실행 — 기존 Phase 3 eval 답변 재사용.
 #
-# 실험 목적:
-#   LLaMA judge가 LLaMA eval 모델을 유리하게 채점하는 self-judge bias가
-#   존재하는지 확인한다.
-#   Phase 3의 Qwen judge 결과, Phase 5의 GPT-4o-mini 결과와 함께
-#   analyze_self_judge_bias.py에서 Kendall τ distance로 비교한다.
+# 전체 분석 구조:
+#   [그래프 1] Judge family 간 Kendall τ distance 히트맵
+#     - Qwen 3개(7B/14B/32B) + LLaMA 2개(7B/13B) + GPT-mini 1개
+#     - 같은 family judge끼리 τ distance가 낮으면 → family-level clustering
 #
-# 설계 원칙:
-#   - eval 모델 집합은 Phase 3와 동일 7개를 사용 (answers/ 재사용 가능)
-#   - LLaMA judge 2종: 8B(소형) + 70B(대형)
-#   - 출력 경로: data/judgments_llama_judge/judge_8B/, judge_70B/
-#   - 70B AWQ는 A100 40GB 한계상 enforce-eager + max-num-seqs 1 적용
+#   [그래프 2] Self-judge bias 분석
+#     - 각 judge로 채점한 랭킹 vs GPT-mini(중립) 랭킹의 차이
+#     - Llama-3.1-8B eval 모델이 LLaMA judge에서 몇 위 올라가는지 측정
+#     - "self일 때 어떻게 달라지는가" → bias score per model
 #
-# eval 모델 7개 (Phase 3와 동일):
-#   Llama-3.1-8B-Instruct   ← LLaMA family (self-judge bias 핵심 검증 대상)
+# eval 모델: Phase 3 기존 7개 답변 그대로 재사용 (새 생성 불필요)
+#   Llama-3.1-8B-Instruct   ← LLaMA family eval (self-judge bias 핵심 대상)
 #   SOLAR-10.7B-Instruct
 #   gemma-2-9b-it
 #   Yi-1.5-9B-Chat
@@ -24,9 +22,9 @@
 #   Mistral-7B-Instruct-v0.3
 #   Phi-3.5-mini-Instruct
 #
-# HuggingFace 모델 ID:
-#   Llama-3.1-8B-Instruct  : meta-llama/Llama-3.1-8B-Instruct
-#   Llama-3.3-70B-Instruct : meta-llama/Llama-3.3-70B-Instruct-AWQ  (AWQ 4-bit)
+# LLaMA judge 2종 (신규):
+#   Llama-2-7b-chat  : meta-llama/Llama-2-7b-chat-hf
+#   Llama-2-13b-chat : meta-llama/Llama-2-13b-chat-hf
 
 set -euo pipefail
 

@@ -5,36 +5,34 @@ scripts/analysis/analyze_self_judge_bias.py
 Self-Judge Bias 분석 — 핵심 분석 스크립트
 ==========================================
 
-핵심 주장:
-  Judge 모델이 자신과 같은 family의 eval 모델을 유리하게 채점한다.
-  이 편향은 judge 선택에 따른 랭킹 불일치(Kendall τ distance)로 정량화된다.
+eval 모델: Phase 3 기존 7개 답변 재사용
+  Llama-3.1-8B-Instruct  ← LLaMA family (self-judge 핵심 대상)
+  SOLAR-10.7B-Instruct, gemma-2-9b-it, Yi-1.5-9B-Chat,
+  Zephyr-7B-beta, Mistral-7B-Instruct-v0.3, Phi-3.5-mini-Instruct
 
-분석 구조:
-  1. Judge별 모델 랭킹 비교
-     - LLaMA judge (8B / 70B)
-     - Qwen judge  (7B / 14B / 32B, Phase 3 기존 데이터)
-     - GPT-4o-mini judge (Phase 5 기존 데이터)
+judge 모델 6개:
+  Qwen  : Qwen2.5-7B / 14B / 32B  (Phase 3 기존)
+  LLaMA : Llama-2-7b-chat / 13b-chat  (신규)
+  GPT   : GPT-4o-mini  (Phase 5 기존, 중립 reference)
 
-  2. Kendall τ distance (= (1 − τ) / 2)
-     모든 judge 쌍의 Kendall τ distance 계산 → 히트맵으로 시각화
-     τ distance가 낮을수록 두 judge의 랭킹이 유사하다.
-     동일 family judge끼리 τ distance가 낮으면 family-level clustering 존재.
+-----------------------------------------------------------------------
+[그래프 1] Judge Family Kendall τ Distance 히트맵
+  - 6×6 judge 쌍 간 Kendall τ distance 행렬
+  - 같은 family judge끼리 distance 낮음 → family-level clustering
+  - Bootstrap 95% CI로 통계적 유의성 확보
 
-  3. Self-judge bias 정량화
-     같은 family eval 모델의 순위를:
-       - own-family judge 사용 시 순위
-       - cross-family judge(GPT-4o-mini) 사용 시 순위
-     의 차이를 bias score로 정의.
-     bias score > 0  → 자기 judge에서 유리
-     Bootstrap 95% CI로 통계적 유의성 검증.
-
-  4. Bootstrap CI (n=10,000)
-     문항 단위 리샘플링 → Kendall τ 분포 추정 → 95% CI
+[그래프 2] Self-Judge Bias 분석
+  - GPT-mini(중립) 기준 랭킹 vs 각 judge 랭킹의 차이
+  - Llama-3.1-8B가 LLaMA judge일 때 몇 위 올라가는가?
+  - "self일 때 어떻게 달라지는가" → model별 bias score bar chart
+  - 두 그래프의 차이: family clustering(구조) vs 개별 모델 bias(크기)
+-----------------------------------------------------------------------
 
 출력:
-  data/results_self_judge_bias.csv       — judge별 랭킹 + bias score 테이블
-  data/results_kendall_tau_matrix.csv    — judge 쌍별 τ distance 행렬
-  figures/fig_self_judge_bias.png        — 4-panel 메인 figure
+  data/results_self_judge_bias.csv       — judge별 랭킹 + bias score
+  data/results_kendall_tau_matrix.csv    — 6×6 τ distance 행렬
+  figures/fig_kendall_tau_heatmap.png    — 그래프 1: τ distance 히트맵
+  figures/fig_self_judge_bias.png        — 그래프 2: self-judge bias score
 
 Usage:
     export PYTHONPATH=src
@@ -89,18 +87,18 @@ DATA_DIR = _PROJECT_DIR / "data"
 # single_dir : single_grade/ 결과 디렉토리
 
 JUDGE_CONFIGS = [
-    # LLaMA family (신규)
+    # LLaMA 2 family (신규)
     {
-        "key": "llama_8b",
-        "label": "LLaMA-3.1-8B",
+        "key": "llama_7b",
+        "label": "LLaMA2-7B",
         "family": "LLaMA",
-        "single_dir": DATA_DIR / "judgments_llama_judge" / "judge_8B" / "single_grade",
+        "single_dir": DATA_DIR / "judgments_llama_judge" / "judge_7B" / "single_grade",
     },
     {
-        "key": "llama_70b",
-        "label": "LLaMA-3.3-70B",
+        "key": "llama_13b",
+        "label": "LLaMA2-13B",
         "family": "LLaMA",
-        "single_dir": DATA_DIR / "judgments_llama_judge" / "judge_70B" / "single_grade",
+        "single_dir": DATA_DIR / "judgments_llama_judge" / "judge_13B" / "single_grade",
     },
     # Qwen family (Phase 3 기존 데이터)
     {
@@ -320,52 +318,30 @@ FAMILY_COLORS = {
 }
 
 
-def plot_self_judge_bias(
+def plot_kendall_tau_heatmap(
     judge_configs: List[dict],
-    judge_grades: Dict[str, Dict],
     judge_ranks: Dict[str, Dict[str, int]],
     tau_matrix: Dict[Tuple[str, str], float],
-    bias_scores: Dict[str, Dict[str, float]],
     tau_ci: Dict[Tuple[str, str], Tuple[float, float, float]],
     output_path: Path,
 ) -> None:
-    """4-panel 메인 figure 생성."""
+    """
+    [그래프 1] Judge Family Kendall τ Distance 히트맵.
 
+    6×6 judge 쌍 간 τ distance 행렬.
+    같은 family끼리 낮고, 다른 family끼리 높으면 → family-level clustering 존재.
+    Bootstrap 95% CI를 우측 패널에 함께 표시.
+    """
     available_keys = [c["key"] for c in judge_configs if c["key"] in judge_ranks]
     available_labels = [c["label"] for c in judge_configs if c["key"] in judge_ranks]
-    n_judges = len(available_keys)
-
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle("Self-Judge Bias Analysis: LLaMA vs Qwen vs GPT-4o-mini",
-                 fontsize=14, fontweight="bold", y=1.01)
-
-    # ── Panel A: 모델 랭킹 비교 (judge별 bar) ────────────────────────────────
-    ax = axes[0, 0]
-    all_models = sorted(
-        set(m for ranks in judge_ranks.values() for m in ranks),
-        key=lambda m: judge_ranks.get("gpt4omini", judge_ranks[available_keys[0]]).get(m, 99)
-    )
-    x = np.arange(len(all_models))
-    width = 0.8 / max(n_judges, 1)
-    for i, jkey in enumerate(available_keys):
-        cfg = next(c for c in judge_configs if c["key"] == jkey)
-        color = FAMILY_COLORS.get(cfg["family"], "#999999")
-        ranks_here = judge_ranks[jkey]
-        vals = [ranks_here.get(m, len(all_models) + 1) for m in all_models]
-        offset = (i - n_judges / 2 + 0.5) * width
-        ax.bar(x + offset, vals, width * 0.9, label=cfg["label"],
-               color=color, alpha=0.8)
-    ax.set_xticks(x)
-    ax.set_xticklabels([m.replace("-Instruct", "").replace("-v0.3", "") for m in all_models],
-                       rotation=35, ha="right", fontsize=7)
-    ax.set_ylabel("랭킹 (낮을수록 좋음)")
-    ax.set_title("A. Judge별 모델 랭킹")
-    ax.invert_yaxis()
-    ax.legend(fontsize=7, ncol=2)
-
-    # ── Panel B: Kendall τ distance 히트맵 ───────────────────────────────────
-    ax = axes[0, 1]
     n = len(available_keys)
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle("Graph 1: Judge Family Clustering — Kendall τ Distance",
+                 fontsize=13, fontweight="bold")
+
+    # ── 히트맵 ────────────────────────────────────────────────────────────────
+    ax = axes[0]
     mat = np.full((n, n), np.nan)
     for i, ki in enumerate(available_keys):
         for j, kj in enumerate(available_keys):
@@ -379,57 +355,27 @@ def plot_self_judge_bias(
     im = ax.imshow(mat, cmap="YlOrRd", vmin=0, vmax=0.5, aspect="auto")
     ax.set_xticks(range(n))
     ax.set_yticks(range(n))
-    ax.set_xticklabels(available_labels, rotation=40, ha="right", fontsize=8)
-    ax.set_yticklabels(available_labels, fontsize=8)
+    ax.set_xticklabels(available_labels, rotation=40, ha="right", fontsize=9)
+    ax.set_yticklabels(available_labels, fontsize=9)
+
+    # family 경계선
+    families = [next(c["family"] for c in judge_configs if c["key"] == k) for k in available_keys]
+    for idx in range(1, n):
+        if families[idx] != families[idx - 1]:
+            ax.axhline(idx - 0.5, color="white", linewidth=2)
+            ax.axvline(idx - 0.5, color="white", linewidth=2)
+
     for i in range(n):
         for j in range(n):
             if not np.isnan(mat[i, j]):
                 ax.text(j, i, f"{mat[i, j]:.2f}", ha="center", va="center",
-                        fontsize=8, color="black" if mat[i, j] < 0.3 else "white")
-    plt.colorbar(im, ax=ax, label="τ distance")
-    ax.set_title("B. Kendall τ Distance 히트맵\n(낮을수록 랭킹 일치)")
+                        fontsize=9, color="black" if mat[i, j] < 0.3 else "white",
+                        fontweight="bold")
+    plt.colorbar(im, ax=ax, label="Kendall τ distance (낮을수록 랭킹 일치)")
+    ax.set_title("Kendall τ Distance\n(같은 family끼리 낮아야 bias 존재)")
 
-    # ── Panel C: Self-Judge Bias Score (LLaMA vs Qwen) ───────────────────────
-    ax = axes[1, 0]
-    # LLaMA judge에서 LLaMA eval 모델의 순위 변화 vs GPT-4o-mini 기준
-    llama_judge_key = "llama_70b" if "llama_70b" in bias_scores else "llama_8b"
-    qwen_judge_key  = "qwen_32b" if "qwen_32b" in bias_scores else "qwen_14b"
-
-    plot_keys = [k for k in [llama_judge_key, qwen_judge_key] if k in bias_scores]
-    if plot_keys and all_models:
-        x2 = np.arange(len(all_models))
-        width2 = 0.35
-        for i, jkey in enumerate(plot_keys):
-            cfg = next((c for c in judge_configs if c["key"] == jkey), None)
-            if not cfg:
-                continue
-            color = FAMILY_COLORS.get(cfg["family"], "#999999")
-            vals = [bias_scores[jkey].get(m, 0.0) for m in all_models]
-            # eval 모델이 same-family인 경우 테두리 강조
-            edge_colors = [
-                "red" if EVAL_MODEL_FAMILY.get(m) == cfg["family"] else "none"
-                for m in all_models
-            ]
-            bars = ax.bar(
-                x2 + (i - 0.5) * width2, vals, width2 * 0.9,
-                label=cfg["label"], color=color, alpha=0.8,
-                edgecolor=edge_colors, linewidth=1.5,
-            )
-        ax.axhline(0, color="black", linewidth=0.8, linestyle="--")
-        ax.set_xticks(x2)
-        ax.set_xticklabels([m.replace("-Instruct", "").replace("-v0.3", "") for m in all_models],
-                           rotation=35, ha="right", fontsize=7)
-        ax.set_ylabel("Bias Score\n(ref_rank − own_rank, 양수=자기 judge에서 유리)")
-        ax.set_title("C. Self-Judge Bias Score\n(GPT-4o-mini 대비, 빨간 테두리=동일 family)")
-        ax.legend(fontsize=8)
-    else:
-        ax.text(0.5, 0.5, "LLaMA judge 데이터 없음\nrun_judge_llama_a100.sh 먼저 실행",
-                ha="center", va="center", transform=ax.transAxes, fontsize=10,
-                color="gray", style="italic")
-        ax.set_title("C. Self-Judge Bias Score")
-
-    # ── Panel D: Bootstrap 95% CI (Kendall τ) ────────────────────────────────
-    ax = axes[1, 1]
+    # ── Bootstrap 95% CI (우측) ───────────────────────────────────────────────
+    ax = axes[1]
     ci_pairs = []
     for (ki, kj), (pt, lo, hi) in tau_ci.items():
         if not (math.isnan(pt) or math.isnan(lo) or math.isnan(hi)):
@@ -437,33 +383,117 @@ def plot_self_judge_bias(
             cfg_j = next((c for c in judge_configs if c["key"] == kj), None)
             if cfg_i and cfg_j:
                 same = cfg_i["family"] == cfg_j["family"]
-                ci_pairs.append((f"{cfg_i['label']} vs\n{cfg_j['label']}", pt, lo, hi, same))
+                ci_pairs.append((f"{cfg_i['label']} ↔ {cfg_j['label']}", pt, lo, hi, same))
 
     if ci_pairs:
         ci_pairs.sort(key=lambda x: x[1], reverse=True)
-        labels_ci = [p[0] for p in ci_pairs]
+        y_pos = np.arange(len(ci_pairs))
         pts = [p[1] for p in ci_pairs]
-        los = [p[1] - p[2] for p in ci_pairs]
-        his = [p[3] - p[1] for p in ci_pairs]
-        colors_ci = [FAMILY_COLORS["LLaMA"] if p[4] else FAMILY_COLORS["other"] for p in ci_pairs]
-        y_ci = np.arange(len(ci_pairs))
-        ax.barh(y_ci, pts, xerr=[los, his], color=colors_ci, alpha=0.8,
-                error_kw={"capsize": 4, "linewidth": 1.5})
-        ax.set_yticks(y_ci)
-        ax.set_yticklabels(labels_ci, fontsize=7)
+        errs_lo = [p[1] - p[2] for p in ci_pairs]
+        errs_hi = [p[3] - p[1] for p in ci_pairs]
+        colors_ci = [
+            FAMILY_COLORS.get(next((c["family"] for c in judge_configs
+                                    if p[0].startswith(c["label"])), "other"), "#999")
+            if p[4] else "#AAAAAA"
+            for p in ci_pairs
+        ]
+        ax.barh(y_pos, pts, xerr=[errs_lo, errs_hi],
+                color=colors_ci, alpha=0.85,
+                error_kw={"capsize": 4, "linewidth": 1.5, "ecolor": "black"})
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels([p[0] for p in ci_pairs], fontsize=8)
         ax.set_xlabel("Kendall τ (높을수록 랭킹 일치)")
         ax.axvline(0, color="black", linewidth=0.8, linestyle="--")
-        ax.set_title("D. Cross-Judge Kendall τ + 95% Bootstrap CI\n(동일 family 쌍 = 파란색)")
+        ax.set_title("Bootstrap 95% CI\n(색상=same-family 쌍, 회색=cross-family)")
     else:
-        ax.text(0.5, 0.5, "Bootstrap CI 계산 불가\n(데이터 부족)",
+        ax.text(0.5, 0.5, "LLaMA judge 데이터 없음\nrun_judge_llama_a100.sh 먼저 실행",
                 ha="center", va="center", transform=ax.transAxes,
                 fontsize=10, color="gray", style="italic")
-        ax.set_title("D. Bootstrap 95% CI")
 
     plt.tight_layout()
     fig.savefig(output_path)
     plt.close()
-    print(f"[OK] figure 저장: {output_path}")
+    print(f"[OK] 그래프 1 저장: {output_path}")
+
+
+def plot_self_judge_bias_score(
+    judge_configs: List[dict],
+    judge_ranks: Dict[str, Dict[str, int]],
+    bias_scores: Dict[str, Dict[str, float]],
+    output_path: Path,
+) -> None:
+    """
+    [그래프 2] Self-Judge Bias Score.
+
+    GPT-4o-mini(중립) 기준 랭킹 vs 각 judge 랭킹의 차이.
+    bias_score = ref_rank − own_rank
+      양수 → 자기 judge에서 순위 상승 (유리한 채점)
+      음수 → 자기 judge에서 순위 하락
+
+    LLaMA eval 모델이 LLaMA judge에서 올라가고,
+    Qwen eval 모델이 Qwen judge에서 올라가면 → self-judge bias 증명.
+    """
+    available_keys = [c["key"] for c in judge_configs if c["key"] in judge_ranks]
+    all_models = sorted(
+        set(m for r in judge_ranks.values() for m in r),
+        key=lambda m: judge_ranks.get("gpt4omini", judge_ranks[available_keys[0]]).get(m, 99)
+    )
+
+    # 비교할 judge: LLaMA 대표(13B) vs Qwen 대표(32B)
+    llama_key = "llama_13b" if "llama_13b" in bias_scores else \
+                "llama_7b"  if "llama_7b"  in bias_scores else None
+    qwen_key  = "qwen_32b"  if "qwen_32b"  in bias_scores else \
+                "qwen_14b"  if "qwen_14b"  in bias_scores else None
+    plot_keys = [k for k in [llama_key, qwen_key] if k]
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig.suptitle("Graph 2: Self-Judge Bias — GPT-4o-mini 기준 랭킹 변화",
+                 fontsize=13, fontweight="bold")
+
+    short_names = [m.replace("-Instruct", "").replace("-v0.3", "").replace("-chat", "")
+                   for m in all_models]
+
+    for ax_idx, jkey in enumerate(plot_keys[:2]):
+        ax = axes[ax_idx]
+        cfg = next((c for c in judge_configs if c["key"] == jkey), None)
+        if not cfg:
+            continue
+
+        vals = [bias_scores[jkey].get(m, 0.0) for m in all_models]
+        families = [EVAL_MODEL_FAMILY.get(m, "other") for m in all_models]
+        bar_colors = [
+            FAMILY_COLORS.get(cfg["family"], "#4C72B0") if f == cfg["family"]
+            else "#CCCCCC"
+            for f in families
+        ]
+        edge_colors = ["red" if f == cfg["family"] else "none" for f in families]
+
+        x = np.arange(len(all_models))
+        bars = ax.bar(x, vals, color=bar_colors, edgecolor=edge_colors,
+                      linewidth=2.0, alpha=0.9)
+        ax.axhline(0, color="black", linewidth=1.0, linestyle="--")
+        ax.set_xticks(x)
+        ax.set_xticklabels(short_names, rotation=35, ha="right", fontsize=8)
+        ax.set_ylabel("Bias Score (ref_rank − own_rank)\n양수 = 자기 judge에서 순위 상승")
+        ax.set_title(f"{cfg['label']} judge\n(빨간 테두리 = {cfg['family']} family eval 모델)")
+
+        # 수치 레이블
+        for bar, val in zip(bars, vals):
+            if abs(val) > 0.05:
+                ax.text(bar.get_x() + bar.get_width() / 2,
+                        val + (0.05 if val >= 0 else -0.1),
+                        f"{val:+.1f}", ha="center", va="bottom", fontsize=8)
+
+    if not plot_keys:
+        for ax in axes:
+            ax.text(0.5, 0.5, "LLaMA judge 데이터 없음\nrun_judge_llama_a100.sh 먼저 실행",
+                    ha="center", va="center", transform=ax.transAxes,
+                    fontsize=10, color="gray", style="italic")
+
+    plt.tight_layout()
+    fig.savefig(output_path)
+    plt.close()
+    print(f"[OK] 그래프 2 저장: {output_path}")
 
 
 # ============================================================================
@@ -559,11 +589,16 @@ def main() -> None:
                              f"{hi:.4f}" if not math.isnan(hi) else ""])
     print(f"[OK] Kendall τ matrix CSV: {tau_csv}")
 
-    # 6. Figure
-    out_fig = FIGURES_DIR / "fig_self_judge_bias.png"
-    plot_self_judge_bias(
-        JUDGE_CONFIGS, judge_grades, judge_ranks,
-        tau_matrix, bias_scores, tau_ci, out_fig,
+    # 6. Figure 2개 별도 생성
+    # 그래프 1: Judge family 간 Kendall τ distance 히트맵
+    plot_kendall_tau_heatmap(
+        JUDGE_CONFIGS, judge_ranks, tau_matrix, tau_ci,
+        FIGURES_DIR / "fig_kendall_tau_heatmap.png",
+    )
+    # 그래프 2: Self-judge bias score (GPT-mini 기준 랭킹 변화)
+    plot_self_judge_bias_score(
+        JUDGE_CONFIGS, judge_ranks, bias_scores,
+        FIGURES_DIR / "fig_self_judge_bias.png",
     )
 
     # 7. 콘솔 요약
