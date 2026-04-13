@@ -2,22 +2,34 @@
 """
 scripts/analysis/analyze_tiny_mt_bench.py
 
-tinyMT-Bench: 최소 변별 문항 세트 발굴
-=========================================
-연구 질문:
-  변별도 상위 N개 문항만으로 80문항 전체와 동일한 모델 순위를 얻을 수 있는가?
-  "변별도 기반 선택" vs "랜덤 선택" 중 어느 쪽이 더 빠르게 순위에 수렴하는가?
+tinyMT-Bench: Self-Judge Bias가 집중되는 문항 세트 발굴
+=========================================================
+
+핵심 주장 (self-judge bias 분석과 연결):
+  변별도 상위 N개 문항은 전체 80개와 동일한 모델 랭킹을 유지한다.
+  이 최소 문항 세트 안에서 self-judge bias가 어느 카테고리에 집중되는지 확인한다.
+
+분석 구조:
+  1. 최소 문항 세트 발굴 (기존)
+     - 변별도(std) 상위 N개 vs 랜덤 N개 → Spearman ρ 비교
+     - 목표: 동일 ρ ≥ 0.9를 달성하는 최소 N 찾기
+
+  2. Self-judge bias 위치 분석 (신규 연결)
+     - 상위 변별 문항들의 카테고리 분포 확인
+     - LLaMA judge와 Qwen judge에서 해당 문항들의 점수 차이 측정
+     → "bias는 [카테고리 X]에서 집중된다"는 주장 가능
 
 방법:
   - 80문항 기준 모델 순위를 baseline으로 설정
   - for N in [5, 10, 15, 20, 25, 30, 40, 60]:
-      방법 A (Random):  랜덤 N개 문항 → 30회 반복 → Spearman ρ 평균/min/max
+      방법 A (Random):  랜덤 N개 문항 → 200회 반복 → Spearman ρ 평균/min/max
       방법 B (Top-Disc): 변별도(std) 상위 N개 문항 → 고정 → Spearman ρ
   - 두 방법 비교: 동일 ρ를 달성하는 데 필요한 최소 N 차이
+  - 상위 변별 문항들의 카테고리별 bias score 측정
 
 출력:
-  data/results_tiny_mt_bench.csv   — N별 Random/TopDisc ρ 비교 테이블
-  figures/fig9_tiny_mt_bench.png   — 비교 figure (3-panel)
+  data/results_tiny_mt_bench.csv        — N별 Random/TopDisc ρ 비교 테이블
+  figures/fig9_tiny_mt_bench.png        — 비교 figure (3-panel + bias 위치 panel)
 
 Usage:
     export PYTHONPATH=src
@@ -63,10 +75,18 @@ plt.rcParams.update({
 
 # ── 상수 ──────────────────────────────────────────────────────────────────────
 DISC_CSV   = _PROJECT_DIR / "data" / "results_discriminability.csv"
-GRADE_DIR  = _PROJECT_DIR / "data" / "judgments_phase3" / "judge_32B" / "single_grade"
+
+# 기준 judge: Qwen-32B (가장 안정적인 Qwen judge)
+GRADE_DIR_QWEN  = _PROJECT_DIR / "data" / "judgments_phase3" / "judge_32B" / "single_grade"
+# 비교 judge: LLaMA-70B (신규, self-judge bias 측정)
+GRADE_DIR_LLAMA = _PROJECT_DIR / "data" / "judgments_llama_judge" / "judge_70B" / "single_grade"
+
 OUTPUT_CSV = _PROJECT_DIR / "data" / "results_tiny_mt_bench.csv"
 
-# Phase 3 subject 모델 7개 (Qwen 계열 제외 — judge 역할)
+# Primary grade dir (없으면 Qwen fallback)
+GRADE_DIR = GRADE_DIR_QWEN
+
+# eval 모델 7개
 MODELS = [
     "Phi-3.5-mini-Instruct",
     "gemma-2-9b-it",
@@ -74,8 +94,11 @@ MODELS = [
     "Mistral-7B-Instruct-v0.3",
     "SOLAR-10.7B-Instruct",
     "Zephyr-7B-beta",
-    "Llama-3.1-8B-Instruct",
+    "Llama-3.1-8B-Instruct",   # LLaMA family — self-judge bias 핵심 검증 대상
 ]
+
+# LLaMA eval 모델 (bias 위치 분석에서 강조)
+LLAMA_EVAL_MODELS = {"Llama-3.1-8B-Instruct"}
 N_SIZES  = [5, 10, 15, 20, 25, 30, 40, 60, 80]
 N_TRIALS = 200   # 랜덤 서브샘플 반복 횟수 (많을수록 분산 추정 정확)
 SEED     = 42

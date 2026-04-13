@@ -1,9 +1,22 @@
 """
-Turn 1 vs Turn 2 성능 저하 분석
+Turn 2 구조적 난이도 분석
+==========================
 
-연구 질문:
-  멀티턴에서 모델별·카테고리별 Turn 2 품질 저하 패턴은 어떻게 다른가?
-  Judge 크기(Phase 3)별로 Turn 2 채점 패턴이 달라지는가?
+핵심 주장:
+  MT-Bench의 Turn 2는 Turn 1보다 구조적으로 어렵다.
+  이 난이도 차이는 카테고리별로 패턴이 다르며,
+  self-judge bias가 Turn 2에서 더 크게 나타날 수 있다.
+
+분석 내용:
+  1. Turn 1 → Turn 2 점수 변화(δ)를 카테고리별로 측정
+     - 전체 모델 평균 δ가 음수 → Turn 2가 구조적으로 어렵다는 증거
+     - 카테고리별로 저하 크기가 다르다 (reasoning/math > writing/humanities)
+  2. Judge family별 Turn 2 채점 패턴 차이
+     - Qwen judge vs LLaMA judge에서 Turn 2 δ 분포가 다를 경우
+       → judge가 Turn 2 난이도를 다르게 인식 (self-judge bias와 연결)
+  3. Self-judge bias 연결:
+     - LLaMA eval 모델의 Turn 2 δ가 LLaMA judge에서 덜 하락하는가?
+     → 이 패턴이 확인되면 self-judge bias가 Turn 2에서 더 강하게 작동한다는 근거
 
 출력:
   data/results_turn_degradation.csv   — 모델×카테고리별 δ(T2-T1) 테이블
@@ -29,15 +42,24 @@ DATA_DIR = ROOT / "data"
 FIG_DIR = ROOT / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 
-# Phase 3 데이터만 사용 (self-judge / 동일 패밀리 편향 제거)
-# Phase 2 데이터(data/judgments_phase2/)는 Qwen2.5-14B judge → 분석에서 제외
+# Qwen judge (Phase 3) — 기존 데이터
 PHASE3_JUDGE_DIRS = {
-    "7B":  DATA_DIR / "judgments_phase3" / "judge_7B"  / "single_grade",
-    "14B": DATA_DIR / "judgments_phase3" / "judge_14B" / "single_grade",
-    "32B": DATA_DIR / "judgments_phase3" / "judge_32B" / "single_grade",
+    "Qwen-7B":  DATA_DIR / "judgments_phase3" / "judge_7B"  / "single_grade",
+    "Qwen-14B": DATA_DIR / "judgments_phase3" / "judge_14B" / "single_grade",
+    "Qwen-32B": DATA_DIR / "judgments_phase3" / "judge_32B" / "single_grade",
 }
-# 주 분석에 사용할 judge (불일치율 가장 낮음)
-PRIMARY_JUDGE_DIR = PHASE3_JUDGE_DIRS["32B"]
+
+# LLaMA judge (신규) — self-judge bias와 비교하기 위해 추가
+LLAMA_JUDGE_DIRS = {
+    "LLaMA-8B":  DATA_DIR / "judgments_llama_judge" / "judge_8B"  / "single_grade",
+    "LLaMA-70B": DATA_DIR / "judgments_llama_judge" / "judge_70B" / "single_grade",
+}
+
+# 주 분석 judge: Qwen-32B (Qwen side baseline)
+PRIMARY_JUDGE_DIR = PHASE3_JUDGE_DIRS["Qwen-32B"]
+
+# LLaMA eval 모델 — Turn 2 δ를 LLaMA judge vs Qwen judge로 비교할 때 강조
+LLAMA_EVAL_MODELS = {"Llama-3.1-8B-Instruct"}
 
 CATEGORIES = ["writing", "roleplay", "extraction", "reasoning",
               "math", "coding", "stem", "humanities"]
