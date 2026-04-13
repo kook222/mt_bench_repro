@@ -69,19 +69,18 @@ echo "[Init] 완료."
 #   - LLaMA judge가 LLaMA eval 모델을 유리하게 채점하는지
 #   - Qwen  judge가 Qwen  eval 모델을 유리하게 채점하는지
 #   두 방향 모두 확인해야 "구조적 편향" 주장 성립
+# eval 모델 7개 확정 (self-judge bias 증명 구조):
+#   LLaMA family 2개: Llama-2-7b-chat (judge와 동일 모델!), Llama-3.1-8B
+#   Qwen  family 1개: Qwen2.5-7B (Qwen judge의 same-family)
+#   neutral      4개: gemma, Mistral, Phi, Zephyr
 EVAL_MODELS=(
-  # LLaMA family
-  "Llama-2-7b-chat"
-  "Llama-3.1-8B-Instruct"
-  # Qwen family
-  "Qwen2.5-7B-Instruct"
-  "Qwen2.5-14B-Instruct"
-  # 중립 모델
-  "Mistral-7B-Instruct-v0.3"
-  "gemma-2-9b-it"
-  "Phi-3.5-mini-Instruct"
-  "SOLAR-10.7B-Instruct"
-  "Zephyr-7B-beta"
+  "Llama-2-7b-chat"           # LLaMA family — judge와 동일 모델, 가장 강한 self-judge 케이스
+  "Llama-3.1-8B-Instruct"     # LLaMA family
+  "Qwen2.5-7B-Instruct"       # Qwen family — Qwen judge self-judge 케이스
+  "gemma-2-9b-it"             # neutral
+  "Mistral-7B-Instruct-v0.3"  # neutral
+  "Phi-3.5-mini-Instruct"     # neutral
+  "Zephyr-7B-beta"            # neutral
 )
 
 # ── judge 라인업: LLaMA 2 family (7B → 13B) ──────────────────────────────────
