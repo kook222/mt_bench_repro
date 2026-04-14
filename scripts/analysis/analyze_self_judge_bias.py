@@ -134,14 +134,15 @@ JUDGE_CONFIGS = [
 #   - Qwen  judge → Qwen  eval 모델 순위 상승 (vs GPT-mini 기준)
 #   → 두 방향 모두 관찰 시 "bias는 구조적 문제"
 # eval 모델 7개 — LLaMA/Qwen/neutral 포함해야 양방향 self-judge bias 증명 가능
+# Phase 3 기존 7개 eval 모델
 EVAL_MODEL_FAMILY = {
-    "Llama-3.1-8B-Instruct":    "LLaMA",  # LLaMA family eval
-    "Qwen2.5-7B-Instruct":      "Qwen",   # Qwen family eval → Qwen self-judge 케이스
+    "Llama-3.1-8B-Instruct":    "LLaMA",  # LLaMA family — self-judge bias 측정 대상
+    "SOLAR-10.7B-Instruct":     "other",
     "gemma-2-9b-it":            "other",
+    "Yi-1.5-9B-Chat":           "other",
+    "Zephyr-7B-beta":           "other",
     "Mistral-7B-Instruct-v0.3": "other",
     "Phi-3.5-mini-Instruct":    "other",
-    "Zephyr-7B-beta":           "other",
-    "SOLAR-10.7B-Instruct":     "other",
 }
 
 N_BOOTSTRAP = 10_000

@@ -65,13 +65,13 @@ echo "[Init] 완료."
 
 # ── eval 모델 목록 (self-judge bias 실험과 동일 7개) ─────────────────────────
 EVAL_MODELS=(
-  "Llama-3.1-8B-Instruct"     # LLaMA family
-  "Qwen2.5-7B-Instruct"       # Qwen family — Qwen self-judge 케이스
-  "gemma-2-9b-it"             # neutral
-  "Mistral-7B-Instruct-v0.3"  # neutral
-  "Phi-3.5-mini-Instruct"     # neutral
-  "Zephyr-7B-beta"            # neutral
-  "SOLAR-10.7B-Instruct"      # neutral
+  "Llama-3.1-8B-Instruct"
+  "SOLAR-10.7B-Instruct"
+  "gemma-2-9b-it"
+  "Yi-1.5-9B-Chat"
+  "Zephyr-7B-beta"
+  "Mistral-7B-Instruct-v0.3"
+  "Phi-3.5-mini-Instruct"
 )
 
 # ── judge 라인업 ────────────────────────────────────────────────────────────
