@@ -53,8 +53,9 @@ pip install openai tabulate tqdm --target /tmp/site-extra -q
 export PYTHONPATH="/tmp/site-extra:$PROJECT_DIR/src"
 
 # 신규 생성 모델: "model_id:hf_id:max_len:gpu_util"
+# Llama-3.1-8B-Instruct 답변은 Phase 3에 이미 존재 → 생성 불필요
+# Qwen2.5-7B-Instruct 1개만 신규 생성
 NEW_MODELS=(
-  "Llama-2-7b-chat:meta-llama/Llama-2-7b-chat-hf:4096:0.88"
   "Qwen2.5-7B-Instruct:Qwen/Qwen2.5-7B-Instruct:8192:0.88"
 )
 

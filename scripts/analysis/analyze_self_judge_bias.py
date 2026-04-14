@@ -135,13 +135,13 @@ JUDGE_CONFIGS = [
 #   → 두 방향 모두 관찰 시 "bias는 구조적 문제"
 # eval 모델 7개 — LLaMA/Qwen/neutral 포함해야 양방향 self-judge bias 증명 가능
 EVAL_MODEL_FAMILY = {
-    "Llama-2-7b-chat":          "LLaMA",  # LLaMA judge와 동일 모델 → 완전한 self-judge
-    "Llama-3.1-8B-Instruct":    "LLaMA",
-    "Qwen2.5-7B-Instruct":      "Qwen",   # Qwen judge family → Qwen self-judge
+    "Llama-3.1-8B-Instruct":    "LLaMA",  # LLaMA family eval
+    "Qwen2.5-7B-Instruct":      "Qwen",   # Qwen family eval → Qwen self-judge 케이스
     "gemma-2-9b-it":            "other",
     "Mistral-7B-Instruct-v0.3": "other",
     "Phi-3.5-mini-Instruct":    "other",
     "Zephyr-7B-beta":           "other",
+    "SOLAR-10.7B-Instruct":     "other",
 }
 
 N_BOOTSTRAP = 10_000
