@@ -63,6 +63,15 @@ pip install openai tabulate tqdm --target /tmp/site-extra -q
 export PYTHONPATH="/tmp/site-extra:$PROJECT_DIR/src"
 echo "[Init] 완료."
 
+# ── 질문 파일 다운로드 (없을 경우) ──────────────────────────────────────────
+if [ ! -f "$QUESTIONS" ]; then
+  echo "[Init] mt_bench_questions.jsonl 다운로드..."
+  curl -L --retry 3 --retry-delay 2 \
+    "https://raw.githubusercontent.com/lm-sys/FastChat/main/fastchat/llm_judge/data/mt_bench/question.jsonl" \
+    -o "$QUESTIONS"
+  echo "[Init] 다운로드 완료 ($(wc -l < "$QUESTIONS")문항)"
+fi
+
 # ── eval 모델 목록 (self-judge bias 실험과 동일 7개) ─────────────────────────
 EVAL_MODELS=(
   "Llama-3.1-8B-Instruct"

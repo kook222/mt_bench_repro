@@ -64,6 +64,15 @@ pip install openai tabulate tqdm --target /tmp/site-extra -q
 export PYTHONPATH="/tmp/site-extra:$PROJECT_DIR/src"
 echo "[Init] 완료."
 
+# ── 질문 파일 다운로드 (없을 경우) ──────────────────────────────────────────
+if [ ! -f "$QUESTIONS" ]; then
+  echo "[Init] mt_bench_questions.jsonl 다운로드..."
+  curl -L --retry 3 --retry-delay 2 \
+    "https://raw.githubusercontent.com/lm-sys/FastChat/main/fastchat/llm_judge/data/mt_bench/question.jsonl" \
+    -o "$QUESTIONS"
+  echo "[Init] 다운로드 완료 ($(wc -l < "$QUESTIONS")문항)"
+fi
+
 # ── eval 모델 목록 (LLaMA + Qwen + 중립 모델 포함) ───────────────────────────
 # Self-judge bias 증명을 위해 LLaMA family + Qwen family가 둘 다 필요:
 #   - LLaMA judge가 LLaMA eval 모델을 유리하게 채점하는지
