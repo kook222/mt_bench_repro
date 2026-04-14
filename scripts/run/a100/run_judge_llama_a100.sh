@@ -207,25 +207,9 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
       --sleep 0.3
   done
 
-  # ── Step 2: Pairwise comparison ──────────────────────────────────────────
-  echo "[Step 2/$JUDGE_LABEL] Pairwise comparison (AB/BA swap)..."
-  for ((i=0; i<${#EVAL_MODELS[@]}; i++)); do
-    for ((j=i+1; j<${#EVAL_MODELS[@]}; j++)); do
-      MODEL_A="${EVAL_MODELS[$i]}"
-      MODEL_B="${EVAL_MODELS[$j]}"
-      echo "  비교: $MODEL_A vs $MODEL_B"
-      python3 -m mtbench_repro.cli judge-pairwise \
-        --questions "$QUESTIONS" \
-        --answers-dir "$ANSWERS_DIR" \
-        --output-dir "$JUDGMENTS_DIR" \
-        --model-a "$MODEL_A" \
-        --model-b "$MODEL_B" \
-        --judge-model "$JUDGE_MODEL_ID" \
-        --openai-base-url "$BASE_URL" \
-        --openai-api-key "$API_KEY" \
-        --sleep 0.5
-    done
-  done
+  # ── Step 2: Pairwise comparison — Llama-2 native context 4096 제약으로 제외 ──
+  # multi-turn pairwise 프롬프트(시스템+질문+답변A×2+답변B×2)가 4096 초과.
+  # core 분석(Kendall τ)은 single_grade만 사용하므로 skip.
 
   # ── Step 3: Reference-guided grading ─────────────────────────────────────
   echo "[Step 3/$JUDGE_LABEL] Reference-guided grading (math/reasoning/coding)..."
