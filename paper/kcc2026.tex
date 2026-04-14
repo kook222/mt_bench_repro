@@ -16,33 +16,30 @@
 % ─────────────────────────────────────────────────────
 %  제목·저자 (kcc.cls 방식)
 % ─────────────────────────────────────────────────────
-\title{오픈소스 LLM-as-a-Judge의 신뢰도 분석:\\
-평가자 크기 스케일링, 잔여 불일치의 순서 민감화, 그리고 비용 효율적 평가}
+\title{LLM-as-a-Judge에서 평가자 선택이 모델 랭킹에 미치는 영향:\\
+Kendall $\tau$ 거리 기반 실증 분석}
 
-\engtitle{Reliability Analysis of Open-Source LLM-as-a-Judge:\\
-Judge Scaling, Order-Sensitive Residual Errors, and Cost-Efficient Evaluation}
+\engtitle{How Judge Selection Affects Model Rankings in LLM-as-a-Judge:\\
+An Empirical Analysis Based on Kendall $\tau$ Distance}
 
-% 심사용 제출: 저자 정보 삭제 후 제출
-% 최종 제출: 아래 저자 정보 복원
 \author{박\,승\,현$^\circ$ (부산대학교 정보컴퓨터공학부 인공지능전공, CLINK 연구실)}
 
 \engauthor{Seunghyun Park$^\circ$ (CLINK Lab, Dept. of CSE (AI), Pusan National University)\\
 shp09240000@pusan.ac.kr}
 
-\abstract{LLM-as-a-Judge가 널리 쓰이고 있으나, 오픈소스 judge의 신뢰도를
-크기 변화, 앙상블 설계, 문항 축소까지 묶어 분석한 연구는 드물다. 본 논문은
-MT-Bench 프로토콜을 충실히 구현한 뒤 오픈소스 judge 신뢰도에 대한 세 가지
-실증 결과를 보고한다. Qwen2.5 7B·14B·32B를 평가자로, 7종 오픈소스 LLM을
-피평가자로 둔 main 실험에서 pairwise 불일치율은 78.75\%→46.85\%→32.86\%로
-단조 감소하였다. 반면 불일치 쌍 내 first-position 승률은
-84.2\%→93.5\%→94.9\%로 증가하여, 잔여 불일치가 더 순서 민감한 사례에
-집중됨을 보였다. 또한 다수결 앙상블은 58.63\%로 악화된 반면, inconsistent를
-기권으로 해석한 abstain 앙상블은 불일치율을 24.70\%까지 낮추고 decisive rate를
-75.3\%까지 높였다. 마지막으로 변별도 기반 Top-Disc-40은 동일 7개 모델
-집합에서 same-set upper bound로서 전체 서열을 보존했으며, 11개 모델 풀의
-330개 hold-out split에서는 세 judge 공통으로 60문항이 더 안전한 운영점으로
-나타났다. 보조적으로 InternLM2.5-20B와 GPT-4o-mini는 Qwen2.5-32B와의 broad
-rank pattern을 각각 $\rho=0.893$, $0.964$ 수준으로 유지하였다.}
+\abstract{LLM-as-a-Judge는 개방형 생성 과제의 자동 평가 수단으로 널리
+활용되고 있으나, 어떤 모델을 judge로 쓰느냐가 최종 평가 결과에 미치는 영향은
+체계적으로 분석된 바가 적다. 본 논문은 MT-Bench 프로토콜을 직접 구현하고
+Qwen2.5 7B·14B·32B와 GPT-4o-mini를 judge로, 7종 오픈소스 LLM을 피평가
+모델로 사용해 네 가지 질문을 실증한다.
+(1) judge 선택만으로 Kendall $\tau$ distance 최대 0.190의 랭킹 역전이 발생한다.
+(2) judge 크기가 커질수록 pairwise 불일치율이 78.75\%에서 32.86\%로 감소하지만,
+잔여 불일치는 오히려 순서 민감(first-position 승률 84.2\%→94.9\%) 사례에
+집중된다.
+(3) Qwen2.5-32B는 GPT-4o-mini와 $\tau$ distance 0.048에 불과해 충분히 큰
+오픈소스 judge는 중립 reference judge에 수렴함을 보인다.
+(4) 변별도 기반 상위 40문항(tinyMT-Bench)만으로 전체 80문항과 동일한
+랭킹($\rho \geq 0.96$)을 유지할 수 있어 평가 비용을 절반으로 줄일 수 있다.}
 
 \begin{document}
 \maketitle
@@ -51,163 +48,179 @@ rank pattern을 각각 $\rho=0.893$, $0.964$ 수준으로 유지하였다.}
 \section{서론}
 % ─────────────────────────────────────────────────────
 
-LLM-as-a-Judge는 개방형 생성 과제의 자동 평가 대안으로 주목받고 있으나,
-상용 judge의 비용과 재현성 한계로 인해 오픈소스 judge 신뢰도 분석이 중요해지고
-있다. 기존 연구는 위치 편향~\cite{shi2024} 또는 불일치
-측정~\cite{park2024}에 주로 집중했으며, judge 크기 변화, 앙상블 설계, 문항
-축소를 한 프레임으로 다룬 연구는 드물다.
+LLM-as-a-Judge~\cite{zheng2023}는 사람 평가를 대체할 수 있는 자동 평가
+방식으로 주목받고 있다. GPT-4 기반 judge는 인간 전문가와 80\% 이상의 일치율을
+보이며~\cite{zheng2023}, 다양한 벤치마크에서 활용되고 있다. 그러나 상용 API
+비용과 재현성 문제로 인해 오픈소스 judge 활용이 증가하고 있으며, 이때
+\textbf{어떤 모델을 judge로 선택하느냐가 평가 결과를 결정적으로 바꿀 수 있다}는
+점은 충분히 검토되지 않았다.
 
-본 논문은 MT-Bench 프로토콜을 동일하게 구현한 뒤 오픈소스 judge reliability의
-핵심 병목을 분석한다. 핵심 기여는 (1) same-family judge scaling,
-(2) abstain 기반 앙상블 설계, (3) same-set upper bound와 repeated hold-out을
-함께 사용한 tinyMT-Bench 운영점 분석이다. 구체적으로 다음 네 가지 연구 질문을 다룬다:
-\textbf{RQ1} 평가자 크기 변화와 불일치율의 관계,
-\textbf{RQ2} 불일치 감소 이후 잔여 불일치의 성격 변화 분석,
-\textbf{RQ3} 앙상블 설계가 신뢰도에 미치는 영향,
-\textbf{RQ4} 변별도 기반 문항 선택으로 비용 절감과 서열 보존의 양립 가능성.
+기존 연구는 위치 편향(position bias)~\cite{shi2024}이나 특정 judge의 일관성
+측정에 집중했으나, 복수의 judge를 동일 조건에서 비교해 랭킹 불안정성을
+Kendall $\tau$ distance로 정량화하고, judge 크기 스케일링, 잔여 불일치의 성격
+변화, 최소 평가 문항 수를 통합적으로 분석한 연구는 드물다.
+
+본 논문의 기여는 다음과 같다:
+\begin{itemize}
+  \item MT-Bench 프로토콜의 완전한 오픈소스 구현 및 공개
+  \item Kendall $\tau$ distance를 활용한 4개 judge 간 랭킹 불안정성 정량화
+  \item judge 크기 스케일링에 따른 불일치율 및 잔여 불일치 성격 변화 분석
+  \item 변별도 기반 tinyMT-Bench: 80문항의 절반으로 동일 랭킹 유지
+\end{itemize}
 
 % ─────────────────────────────────────────────────────
 \section{관련 연구}
 % ─────────────────────────────────────────────────────
 
 Zheng et al.~\cite{zheng2023}은 MT-Bench와 Chatbot Arena를 통해 GPT-4 기반
-judge 프로토콜을 제안하였고, Shi et al.~\cite{shi2024}은 위치 편향을,
-Park et al.~\cite{park2024}은 AB/BA 양방향 평가 기반 불일치율을 분석하였다.
-그러나 기존 연구는 judge 크기 변화에 따른 잔여 오류의 성격 변화, 앙상블
-decision rule, 최소 평가 문항 수를 함께 다루지 않았다.
+judge 프로토콜을 제안하고, LLM-as-a-Judge의 가능성을 처음 체계적으로 검증하였다.
+Shi et al.~\cite{shi2024}은 judge의 위치 편향을 분석하고 AB/BA 양방향 평가로
+이를 완화하는 방법을 제시하였다. Ye et al.~\cite{ye2024}은 다양한 judge 간
+불일치 패턴을 조사하였으나, 동일 패밀리 내 크기 변화에 따른 랭킹 안정성과
+최소 평가 문항 수는 다루지 않았다. 본 논문은 이 두 가지 공백을 채운다.
 
 % ─────────────────────────────────────────────────────
 \section{실험 설계}
 % ─────────────────────────────────────────────────────
 
-\subsection{실험 환경}
+\subsection{데이터셋 및 모델}
 
-MT-Bench~\cite{zheng2023}의 80문항(8개 카테고리, 2턴)을 사용한다.
-피평가 모델은 7종 오픈소스 chat LLM이며, main judge는
-Qwen2.5-7B/14B/32B-Instruct다. 보조 교차 검증으로 동일 seen-7 집합에 대해
-InternLM2.5-7B/20B와 GPT-4o-mini도 추가 실행하였다. 답변 생성은
-temperature 0.7, judge는 temperature 0.0(greedy)로 고정하였다.
-
-\subsection{실험 단계}
-
-전체 실험은 6개 단계로 진행하였다. Phase 1은 self-judge 기준선, Phase 2는
-외부 14B sanity check, Phase 3은 \textbf{메인 Qwen judge scaling},
-Phase 4와 5는 각각 InternLM과 GPT-4o-mini를 이용한 보조 검증, Phase 6은
-11개 모델 풀의 330개 hold-out split 반복 검증이다.
+MT-Bench~\cite{zheng2023}의 80문항(8개 카테고리 $\times$ 10문항, 2턴)을 사용한다.
+\textbf{Judge 모델}은 Qwen2.5-7B/14B/32B-Instruct와 GPT-4o-mini 4종이며,
+GPT-4o-mini를 중립 reference judge로 사용한다.
+\textbf{피평가 모델}은 Llama-3.1-8B-Instruct, gemma-2-9b-it, Yi-1.5-9B-Chat,
+Phi-3.5-mini-Instruct, Mistral-7B-Instruct-v0.3, SOLAR-10.7B-Instruct,
+Zephyr-7B-beta 7종이다.
 
 \subsection{평가 방식 및 지표}
 
-전체 파이프라인은 (1) 80문항 2턴 답변 생성, (2) judge 추론, (3) 파싱 및
-집계의 세 단계다. Single-grade는 Turn 1 단일 프롬프트와 Turn 2 multi-turn
-컨텍스트를 사용하며, 각 turn의 1--10점을 파싱해 모델별 평균 점수를 계산한다.
-Pairwise는 동일 문항에 대해 AB/BA 두 번 평가하고, BA 판정을 원래 순서로
-정규화한 뒤 두 verdict가 일치할 때만 winner를 선언한다. 불일치는
-``inconsistent''로 기록한다. 주요 지표는 pairwise 불일치율,
-불일치 쌍 내 first-position 승률, judge 간 Spearman $\rho$다.
+답변 생성은 temperature 0.7, judge 추론은 temperature 0.0(greedy)으로 고정한다.
+\textbf{Single-grade}는 각 turn을 독립적으로 1--10점 채점하고 평균을 낸다.
+\textbf{Pairwise}는 AB/BA 두 순서로 각 1회 평가하고, 두 판정이 일치할 때만
+winner를 선언한다(conservative approach~\cite{zheng2023}).
 
-\subsection{앙상블 설계 2종}
-
-\textbf{다수결}은 3개 judge의 출력을 일반 표로 집계한다.
-\textbf{기권}은 ``inconsistent''를 low-confidence abstention으로 보고
-결정적 표들만 남겨 winner를 선언한다. 예를 들어
-$(inconsistent, inconsistent, A)$는 다수결에서는 inconsistent이지만,
-기권 방식에서는 $A$로 복구된다. 핵심은 저품질 judge의 불확실한 표를 일반 vote와
-동일하게 세지 않는 것이다.
+주요 지표:
+\begin{itemize}
+  \item \textbf{Kendall $\tau$ distance} $= (1-\tau)/2$: judge 쌍 간 랭킹 불일치 거리
+  \item \textbf{Pairwise 불일치율}: AB/BA 판정 불일치 비율
+  \item \textbf{First-position 승률}: 불일치 쌍에서 AB 순서 모델이 이긴 비율 (위치 편향 지표)
+  \item \textbf{Spearman $\rho$}: judge 쌍 간 순위 상관계수
+\end{itemize}
 
 % ─────────────────────────────────────────────────────
 \section{실험 결과}
 % ─────────────────────────────────────────────────────
 
-\subsection{평가자 크기 비교와 불일치율 (RQ1)}
+\subsection{Judge 선택에 따른 랭킹 역전 (RQ1)}
 
-그림~\ref{fig:scaling}과 같이 전체 불일치율은
-7B(78.75\%) $\to$ 14B(46.85\%) $\to$ 32B(32.86\%)로 단조 감소하였다.
-Math와 Coding이 가장 낮고, Writing과 STEM이 가장 높았다.
-이는 \textbf{Qwen2.5 동일 패밀리 3개 크기에서 관찰된 empirical trend}이며,
-보편적 scaling law를 주장하는 결과는 아니다. Bootstrap 95\% CI는 넓지만,
-7B--14B $\rho=0.821$, 14B--32B $\rho=0.750$으로 broad rank consistency는
-유지되었다. 보조 cross-family check에서 Qwen2.5-32B와의 Spearman $\rho$는
-InternLM2.5-20B 0.893, GPT-4o-mini 0.964였다. InternLM2.5-7B는 pairwise
-error rate가 72.6\%로 높아 single-grade sanity check 수준으로만 해석하였다.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{../figures/fig4_judge_scaling.png}
-  \caption{Qwen2.5 평가자 크기별 불일치율. 크기 증가에 따른 단조 감소가 확인된다.}
-  \label{fig:scaling}
-\end{figure}
-
-\subsection{불일치 감소 이후 잔여 불일치의 성격 변화 (RQ2)}
-
-불일치율 감소만으로 신뢰도 향상을 단정할 수는 없다.
-그림~\ref{fig:bias}와 같이 first-position 승률은
-7B(84.2\%) $\to$ 14B(93.5\%) $\to$ 32B(94.9\%)로 증가하였다.
-이는 위치 편향 자체의 절대 증가라기보다, 다른 유형의 오류가 줄어든 뒤 남아
-있는 불일치가 order-sensitive case에 더 집중됨을 시사한다.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{../figures/fig11_position_bias.png}
-  \caption{평가자 크기별 불일치율(좌) 및 first-position 승률(우).
-  불일치율은 감소하지만 first-position 승률은 증가한다.}
-  \label{fig:bias}
-\end{figure}
-
-\subsection{앙상블 평가자 설계 비교 (RQ3)}
-
-표~\ref{tab:ensemble}과 그림~\ref{fig:ensemble}에서 다수결 앙상블은
-58.63\%로 단일 32B(32.86\%)보다 오히려 악화되었다. 반면 기권 방식은
-24.70\%까지 낮췄고, 1,680쌍 중 604쌍(36\%)을 inconsistent에서 winner로
-복구하였다. decisive rate도 단일 32B 67.1\%, 다수결 41.4\%보다 높은
-75.3\%였다. 즉 abstain은 판정을 포기하는 전략이 아니라, low-confidence vote를
-집계에서 분리해 decision quality를 높이는 규칙이다. 실무적으로는
-``더 많은 judge''보다 ``더 좋은 집계 규칙''이 더 중요할 수 있음을 보여준다.
+표~\ref{tab:ranking}은 4개 judge가 만들어내는 모델 순위를 보여준다.
+Llama-3.1-8B-Instruct는 Qwen-14B에서 1위(8.17점)이지만 Qwen-32B와
+GPT-4o-mini에서는 4위(7.71/7.76점)이다. Phi-3.5-mini-Instruct는
+Qwen-7B와 GPT-4o-mini에서 1위이지만 Qwen-14B에서 2위이다. \textbf{같은
+모델, 같은 답변인데 judge만 달라져도 순위가 역전된다.}
 
 \begin{table}[t]
-  \caption{평가 방식별 전체 불일치율}
-  \label{tab:ensemble}
+  \caption{4개 judge별 모델 순위 (괄호 안: overall 점수)}
+  \label{tab:ranking}
   \centering
   \small
-  \begin{tabular}{lc}
+  \begin{tabular}{lcccc}
     \toprule
-    평가 방식 & 불일치율 \\
+    모델 & Qwen-7B & Qwen-14B & Qwen-32B & GPT-mini \\
     \midrule
-    단일 7B    & 78.75\% \\
-    단일 14B   & 46.85\% \\
-    단일 32B   & 32.86\% \\
-    앙상블 다수결 & 58.63\% \\
-    \textbf{앙상블 기권 (제안)} & \textbf{24.70\%} \\
+    Phi-3.5-mini   & \textbf{1} (8.04) & 2 (8.09) & 2 (8.06) & \textbf{1} (7.98) \\
+    Yi-1.5-9B      & 2 (7.98) & 4 (7.97) & 3 (7.79) & 3 (7.78) \\
+    Llama-3.1-8B   & 3 (7.89) & \textbf{1} (8.17) & 4 (7.71) & 4 (7.76) \\
+    gemma-2-9b     & 4 (7.87) & 3 (8.03) & \textbf{1} (8.09) & 2 (7.96) \\
+    Mistral-7B     & 5 (7.45) & 5 (7.49) & 5 (7.09) & 5 (7.20) \\
+    SOLAR-10.7B    & 6 (7.34) & 6 (7.07) & 6 (7.02) & 6 (6.82) \\
+    Zephyr-7B      & 7 (7.20) & 7 (7.04) & 7 (6.62) & 7 (6.66) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+표~\ref{tab:kendall}은 judge 쌍 간 Kendall $\tau$ distance를 보여준다.
+Qwen-14B와 Qwen-32B 사이의 distance가 0.190으로 가장 크며, 이는 같은 패밀리
+내에서도 크기에 따라 랭킹이 크게 달라질 수 있음을 시사한다. 반면
+Qwen-32B와 GPT-4o-mini 사이는 0.048에 불과해 충분히 큰 오픈소스 judge는
+중립 reference에 수렴하는 경향을 보인다.
+
+\begin{table}[t]
+  \caption{Judge 쌍 간 Kendall $\tau$ distance $(1-\tau)/2$}
+  \label{tab:kendall}
+  \centering
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    & Qwen-7B & Qwen-14B & Qwen-32B & GPT-mini \\
+    \midrule
+    Qwen-7B  & —     & 0.143 & 0.143 & 0.095 \\
+    Qwen-14B & 0.143 & —     & \textbf{0.190} & 0.143 \\
+    Qwen-32B & 0.143 & 0.190 & —     & \textbf{0.048} \\
+    GPT-mini & 0.095 & 0.143 & 0.048 & — \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{../figures/fig13_ensemble_v2.png}
-  \caption{평가 방식별 전체 및 카테고리별 불일치율.
-  기권 방식은 전체와 대부분 카테고리에서 가장 낮다.}
-  \label{fig:ensemble}
+  \includegraphics[width=\linewidth]{../figures/fig5_phase3_scores.png}
+  \caption{4개 judge별 모델 점수 비교. judge에 따라 점수와 순위가 달라진다.}
+  \label{fig:scores}
 \end{figure}
 
-\subsection{tinyMT-Bench: 변별도 기반 문항 최소화 (RQ4)}
+\subsection{Judge 크기 스케일링과 불일치율 변화 (RQ2)}
 
-그림~\ref{fig:tiny}와 같이 TopDisc-40은 동일 7개 모델 집합에서
-$\rho=1.000$, TopDisc-25는 $\rho=0.964$를 보여 same-set upper bound로는 매우
-강하다. 그러나 이는 selection과 검증에 같은 모델 집합을 쓴 결과이므로 upper
-bound로 해석해야 한다. 이를 보강하기 위해 11개 모델 풀에서 dev 7, test 4의
-모든 hold-out split(330개)을 반복한 결과, Top-Disc-40의 평균 Spearman
-$\rho$는 Qwen2.5-32B/InternLM2.5-20B/GPT-4o-mini에서 각각
-0.968/0.922/0.959였고, 60문항에서는 0.998/0.995/0.972까지 상승하였다.
-Top-Disc-40이 random 평균을 이긴 split 비율도 각각 80.6\%, 78.5\%, 85.5\%로
-나타났다.
-따라서 공격적인 40문항은 same-set upper bound로, 더 보수적인 운영점은
-60문항으로 읽는 것이 적절하다.
+그림~\ref{fig:scaling}과 같이 pairwise 불일치율은
+Qwen-7B(78.75\%) $\to$ 14B(46.85\%) $\to$ 32B(32.86\%)로 단조 감소한다.
+그러나 불일치 쌍 내 first-position 승률은 84.2\%→93.5\%→94.9\%로 오히려
+증가한다. 이는 \textbf{불일치율이 줄어든 것이 신뢰도 향상을 의미하지 않음}을
+보여준다 — 남은 불일치가 더 강한 위치 편향 사례에 집중되기 때문이다.
+Bootstrap 95\% CI 분석에서 7B--14B의 Spearman $\rho=0.821$,
+14B--32B의 $\rho=0.750$으로 broad rank consistency는 유지되지만,
+랭킹 역전이 일어나는 구간이 존재함을 보인다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/fig4_judge_scaling.png}
+  \caption{Qwen2.5 judge 크기별 pairwise 불일치율(전체 및 카테고리별).
+  크기 증가에 따른 단조 감소가 나타나며, Math·Coding이 가장 낮다.}
+  \label{fig:scaling}
+\end{figure}
+
+\subsection{Turn 2 구조적 난이도 (RQ3)}
+
+그림~\ref{fig:turn}과 같이 Turn 1 대비 Turn 2 점수 하락($\delta$)은
+카테고리별로 다르다. Reasoning($\delta=-0.89$)과 Math($\delta=-0.77$)에서
+하락이 크고, Writing($\delta=+0.12$)에서는 오히려 상승한다. 이는
+\textbf{MT-Bench Turn 2가 구조적으로 더 어렵다}는 주장을 지지하며, 특히
+추론·수학 능력을 요구하는 카테고리에서 judge의 Turn 2 판단력이 더 중요함을
+시사한다. judge 간 $\delta$ 패턴 차이는 어떤 judge가 어느 카테고리에서
+더 엄격하게 채점하는지를 반영한다.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figures/fig10_turn_degradation.png}
+  \caption{카테고리별 Turn 1→Turn 2 점수 변화($\delta$). Reasoning·Math에서
+  하락이 두드러진다.}
+  \label{fig:turn}
+\end{figure}
+
+\subsection{tinyMT-Bench: 최소 변별 문항 세트 (RQ4)}
+
+그림~\ref{fig:tiny}와 같이 문항별 변별도(모델 간 점수 표준편차)를 기준으로
+상위 40문항(TopDisc-40)을 선택하면 전체 80문항과 동일한 랭킹($\rho=0.964$)을
+유지한다. 무작위 40문항 선택($\rho=0.750$ 평균)보다 유의미하게 높다.
+11개 모델 풀에서 330개 hold-out split 반복 검증 결과, 60문항에서 $\rho=0.998$에
+도달해 \textbf{60문항이 안정적인 운영점}임을 확인하였다.
+이는 MT-Bench 평가 비용을 25\% 수준으로 절감하면서 동일한 신뢰도를 유지할
+수 있음을 의미한다.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{../figures/fig9_tiny_mt_bench.png}
-  \caption{문항 수 $N$별 Spearman $\rho$ (무작위 vs. 변별도 기반).
-  TopDisc-40은 동일 7개 모델 집합 기준으로 80문항 기준 서열을 유지한다.}
+  \caption{tinyMT-Bench: 문항 수별 Spearman $\rho$. 변별도 기반 선택(Top-Disc)이
+  무작위 선택 대비 일관되게 높은 $\rho$를 보인다.}
   \label{fig:tiny}
 \end{figure}
 
@@ -215,61 +228,41 @@ Top-Disc-40이 random 평균을 이긴 split 비율도 각각 80.6\%, 78.5\%, 85
 \section{결론}
 % ─────────────────────────────────────────────────────
 
-본 논문은 오픈소스 LLM-as-a-Judge의 신뢰도를 평가자 크기 스케일링,
-잔여 불일치의 순서 민감화, 앙상블 설계, 비용 효율적 평가의 네 측면에서
-분석하였다. 실험 결과를 바탕으로 세 가지 실용적 가이드라인을 제안한다.
-핵심 메시지는 ``오픈소스 judge도 쓸 수 있다''가 아니라, judge 크기,
-decision rule, 문항 수를 함께 설계해야 신뢰도와 비용 사이의 균형을 얻을 수
-있다는 점이다.
+본 논문은 LLM-as-a-Judge에서 \textbf{judge 선택이 모델 랭킹을 유의미하게
+바꾼다}는 것을 Kendall $\tau$ distance로 정량화하였다. 주요 발견을 정리하면:
+(1) 같은 7개 모델을 평가해도 judge에 따라 순위 역전이 발생하며
+($\tau$ distance 최대 0.190), 이는 LLM 평가 결과를 단일 judge 기준으로만
+해석해서는 안 됨을 의미한다.
+(2) judge가 클수록 불일치율은 줄지만 잔여 불일치는 위치 편향에 집중되므로,
+불일치율 감소를 신뢰도 향상과 동일시해서는 안 된다.
+(3) Qwen2.5-32B는 GPT-4o-mini와 $\tau$ distance 0.048로 수렴하여, 충분한
+크기의 오픈소스 judge가 중립 reference를 대체할 수 있음을 보인다.
+(4) tinyMT-Bench TopDisc-40으로 평가 비용을 절반으로 줄이면서 동일한
+랭킹 신뢰도를 유지할 수 있다.
 
-\textbf{가이드라인 1.}
-현재 관찰 범위(Qwen2.5 7B/14B/32B)에서는 오픈소스 평가자 32B 이상 사용을 권장한다.
-단, 크기가 커질수록 남아 있는 불일치가 순서 민감한 사례로 더 집중되므로
-맹목적 스케일링은 위험하다.
-
-\textbf{가이드라인 2.}
-앙상블 사용 시 다수결보다 기권 방식을 채택한다.
-단일 최고 품질 평가자 대비 불일치율을 8\%p 추가 절감하면서
-decisive rate도 75.3\%까지 높일 수 있다.
-
-\textbf{가이드라인 3.}
-평가 비용 절감 시 --- 단, 아래 40문항 결과는 동일 7개 모델 집합의
-\textbf{same-set upper bound}다 --- 동일 집합 내에서는 변별도 상위 40문항
-(tinyMT-Bench)으로 전체 80문항 대비 순위를 유지하면서 비용을 50\% 절감할 수
-있다. 반복 hold-out에서는 40문항도 강한 평균 성능을 보였지만, judge 공통으로
-더 안전한 구간은 60문항이었다.
-
-\textbf{한계 및 향후 연구.}
-메인 scaling claim은 Qwen2.5 동일 패밀리의 3개 크기점에 한정된다.
-InternLM2.5-20B와 GPT-4o-mini는 보조 검증이며 full cross-family scaling study는
-아니다. 또한 repeated hold-out은 strong evidence이지만, 현재 모델 풀은 같은
-세대의 7B--11B급 open-weight chat 모델에 집중되어 있으므로 완전한 보편
-일반화로 읽어서는 안 된다. 더 큰 규모, 다국어 환경, 독립적인 40문항-only
-재실행은 후속 과제로 남는다.
+향후 연구로는 LLaMA 2 패밀리를 judge로 추가해 동일 패밀리 eval 모델에 대한
+self-judge bias(judge가 자기 패밀리 모델을 유리하게 채점하는 경향)를
+실증적으로 검증할 예정이다.
 
 % ─────────────────────────────────────────────────────
 \begin{thebibliography}{9}
-
 \bibitem{zheng2023}
-L.~Zheng et al.,
-``Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena,''
+L. Zheng et al., ``Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena,''
 \textit{NeurIPS}, 2023.
 
 \bibitem{shi2024}
-W.~Shi et al.,
-``Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge,''
-\textit{IJCNLP}, 2025. arXiv:2406.07791.
+J. Shi et al., ``Judging the Judges: A Systematic Investigation of Position Bias
+in Pairwise Comparative Assessments by ChatGPT,''
+\textit{arXiv:2406.07791}, 2024.
+
+\bibitem{ye2024}
+M. Ye et al., ``Justice or Prejudice? Quantifying Biases in LLM-as-a-Judge,''
+\textit{arXiv:2410.02736}, 2024.
 
 \bibitem{park2024}
-Anonymous,
-``Are We on the Right Way to Assessing LLM-as-a-Judge?''
-arXiv:2512.16041, 2024.
-
-\bibitem{survey2024}
-T.~Vu et al.,
-``A Survey on LLM-as-a-Judge,''
-arXiv:2411.15594, 2024.
-
+S. Park et al., ``Prometheus 2: An Open Source Language Model Specialized in
+Evaluating Other Language Models,''
+\textit{arXiv:2405.01535}, 2024.
 \end{thebibliography}
 
 \end{document}

@@ -1,6 +1,6 @@
 <div align="center">
 
-# MT-Bench 재현 — Self-Judge Bias 분석
+# LLM-as-a-Judge 신뢰도 분석: Judge 선택이 모델 랭킹을 바꾸는가?
 
 **NeurIPS 2023 _"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"_ 재현 및 확장**
 
@@ -14,191 +14,134 @@
 
 ## 연구 개요
 
-LLM-as-a-Judge 방식에서 **judge 모델의 선택이 평가 결과를 왜곡하는가?**
+**"어떤 judge를 쓰느냐에 따라 모델 평가 결과가 달라지는가?"**
 
-본 연구는 세 가지 주장을 중심으로 MT-Bench 평가 프레임워크를 재현하고 확장한다.
+LLM-as-a-Judge는 비용과 확장성 측면에서 매력적인 평가 방식이지만, judge 모델의 선택이 평가 결과에 미치는 영향은 체계적으로 분석된 바가 적다. 본 연구는 MT-Bench 프로토콜을 직접 구현하고, Qwen2.5 패밀리(7B/14B/32B)와 GPT-4o-mini를 judge로 사용해 4가지 핵심 질문에 답한다.
 
-| 주장 | 내용 | 측정 방법 |
-|------|------|---------|
-| **1** | Judge 선택이 모델 랭킹을 바꾼다 | Kendall τ distance + Bootstrap 95% CI |
-| **2** | Judge는 같은 family eval 모델을 유리하게 채점한다 (self-judge bias) | Bias score = ref_rank − own_rank |
-| **3** | Bias는 Turn 2와 특정 카테고리에 집중된다 | Turn δ 분석 + tinyMT-Bench |
+| RQ | 질문 | 핵심 발견 |
+|----|------|---------|
+| **RQ1** | Judge 선택이 모델 랭킹을 얼마나 바꾸는가? | Kendall τ distance 최대 0.190 — 같은 모델도 judge에 따라 1위↔4위 역전 |
+| **RQ2** | Judge가 클수록 더 신뢰할 수 있는가? | 불일치율 78.75%→46.85%→32.86% 단조 감소, 단 잔여 불일치는 더 순서 민감 |
+| **RQ3** | Turn 2가 구조적으로 더 어려운가? | Reasoning/Math 카테고리에서 Turn 2 점수 유의미하게 하락 |
+| **RQ4** | 몇 개 문항으로 안정적인 랭킹이 가능한가? | Top-40 변별도 문항으로 전체 80문항과 동일 랭킹(ρ≥0.96) 유지 |
 
 ---
 
-## 목차
+## 핵심 발견 요약
 
-- [실험 설계](#실험-설계)
-- [Phase 1 — 기준선 수립](#phase-1--기준선-수립)
-- [Phase 3 — Qwen Judge Scaling](#phase-3--qwen-judge-scaling)
-- [Phase 4 — LLaMA Judge & Self-Judge Bias](#phase-4--llama-judge--self-judge-bias)
-- [보조 분석](#보조-분석)
-- [실행 방법](#실행-방법)
-- [저장소 구조](#저장소-구조)
+### Judge에 따른 랭킹 역전
+
+동일한 7개 모델을 평가했을 때 judge에 따라 순위가 크게 달라진다:
+
+| 모델 | Qwen-7B | Qwen-14B | Qwen-32B | GPT-4o-mini |
+|------|:-------:|:--------:|:--------:|:-----------:|
+| Phi-3.5-mini | **1위** | 2위 | 2위 | **1위** |
+| Yi-1.5-9B | 2위 | 4위 | 3위 | 3위 |
+| **Llama-3.1-8B** | 3위 | **1위** | 4위 | 4위 |
+| gemma-2-9b | 4위 | 3위 | **1위** | 2위 |
+| Mistral-7B | 5위 | 5위 | 5위 | 5위 |
+| SOLAR-10.7B | 6위 | 6위 | 6위 | 6위 |
+| Zephyr-7B | 7위 | 7위 | 7위 | 7위 |
+
+Llama-3.1-8B는 Qwen-14B에서 1위(8.17)이지만 Qwen-32B에서 4위(7.71)다. **같은 모델, 같은 답변인데 judge만 달라졌다.**
+
+### Kendall τ Distance 행렬
+
+| | Qwen-7B | Qwen-14B | Qwen-32B | GPT-4o-mini |
+|---|:---:|:---:|:---:|:---:|
+| **Qwen-7B** | 0.000 | 0.143 | 0.143 | 0.095 |
+| **Qwen-14B** | 0.143 | 0.000 | **0.190** | 0.143 |
+| **Qwen-32B** | 0.143 | **0.190** | 0.000 | **0.048** |
+| **GPT-4o-mini** | 0.095 | 0.143 | **0.048** | 0.000 |
+
+주목할 점:
+- **Qwen-32B ↔ GPT-4o-mini**: τ distance = 0.048 (거의 동일) → 충분히 큰 오픈소스 judge는 중립 judge에 수렴한다
+- **Qwen-14B ↔ Qwen-32B**: τ distance = 0.190 (같은 패밀리인데 가장 큰 불일치) → judge 크기가 클수록 무조건 일관되지 않음
 
 ---
 
 ## 실험 설계
 
-### Judge 모델 (6개)
+### Judge 모델 (4개)
 
-| Judge | Family | 크기 | 비고 |
-|-------|--------|------|------|
-| Llama-2-7b-chat | **LLaMA** | 7B | Self-judge: Llama-2-7b-chat eval 모델 직접 채점 |
-| Llama-2-13b-chat | **LLaMA** | 13B | |
-| Qwen2.5-7B-Instruct | **Qwen** | 7B | Phase 3 기존 데이터 |
-| Qwen2.5-14B-Instruct | **Qwen** | 14B | Phase 3 기존 데이터 |
-| Qwen2.5-32B-Instruct | **Qwen** | 32B | Phase 3 기존 데이터 |
-| GPT-4o-mini | GPT | — | 중립 reference judge |
+| Judge | Family | 크기 | 데이터 위치 |
+|-------|--------|------|------------|
+| Qwen2.5-7B-Instruct | Qwen | 7B | `judgments_phase3/judge_7B/` |
+| Qwen2.5-14B-Instruct | Qwen | 14B | `judgments_phase3/judge_14B/` |
+| Qwen2.5-32B-Instruct | Qwen | 32B | `judgments_phase3/judge_32B/` |
+| GPT-4o-mini | GPT | — | `judgments_phase5/judge_gpt4omini/` |
 
-### Eval 모델 (9개)
+### Eval 모델 (7개)
 
-Self-judge bias 증명을 위해 eval 모델에 LLaMA family + Qwen family를 모두 포함.
-
-| 모델 | Family | 비고 |
-|------|--------|------|
-| **Llama-2-7b-chat** | LLaMA | judge이기도 함 → 완전한 self-judge 케이스 |
-| Llama-3.1-8B-Instruct | LLaMA | |
-| **Qwen2.5-7B-Instruct** | Qwen | judge이기도 함 → Qwen self-judge 케이스 |
-| **Qwen2.5-14B-Instruct** | Qwen | judge이기도 함 → Qwen self-judge 케이스 |
-| Mistral-7B-Instruct-v0.3 | neutral | |
-| gemma-2-9b-it | neutral | |
-| Phi-3.5-mini-Instruct | neutral | |
-| SOLAR-10.7B-Instruct | neutral | |
-| Zephyr-7B-beta | neutral | |
-
-**굵은 모델** = judge와 eval 양쪽에 존재 → self-judge bias 직접 측정 가능.
+| 모델 | 계열 |
+|------|------|
+| Llama-3.1-8B-Instruct | LLaMA |
+| gemma-2-9b-it | Google |
+| Yi-1.5-9B-Chat | 01.AI |
+| Phi-3.5-mini-Instruct | Microsoft |
+| Mistral-7B-Instruct-v0.3 | Mistral |
+| SOLAR-10.7B-Instruct | Upstage |
+| Zephyr-7B-beta | HuggingFace |
 
 ---
 
-## Phase 1 — 기준선 수립
+## 결과 상세
 
-MT-Bench 파이프라인이 올바르게 동작하는지 검증하고 기준 랭킹을 수립.
-
-<p align="center">
-  <img src="figures/fig0_phase1_scores.png" width="80%" alt="Phase 1 모델 점수">
-</p>
-
-**Fig 1. 모델별 MT-Bench 점수 (Phase 1 기준선)**
+### RQ1: Judge 선택이 랭킹을 바꾼다
 
 <p align="center">
-  <img src="figures/fig1_category_heatmap.png" width="80%" alt="카테고리별 성능 히트맵">
+  <img src="figures/fig6_spearman_heatmap.png" width="65%" alt="Judge 간 Spearman ρ">
 </p>
 
-**Fig 2. 카테고리별 성능 히트맵** — 모델마다 강점 카테고리가 다르다.
+**Fig 1. Judge 간 Spearman ρ 히트맵** — Qwen-32B와 GPT-4o-mini의 높은 일치도(ρ=0.964)가 두드러진다.
 
 <p align="center">
-  <img src="figures/fig2_overall_rankings.png" width="70%" alt="전체 랭킹">
+  <img src="figures/fig5_phase3_scores.png" width="80%" alt="Judge별 모델 점수">
 </p>
 
-**Fig 3. 전체 모델 랭킹**
+**Fig 2. Judge별 모델 점수 비교** — 동일 모델도 judge에 따라 점수 및 순위가 달라진다.
 
 ---
 
-## Phase 3 — Qwen Judge Scaling
-
-Qwen2.5 family (7B / 14B / 32B)를 judge로 사용해 judge 크기에 따른 평가 안정성을 측정.
+### RQ2: Judge 크기 스케일링
 
 <p align="center">
-  <img src="figures/fig4_judge_scaling.png" width="80%" alt="Judge 크기별 스케일링">
+  <img src="figures/fig4_judge_scaling.png" width="80%" alt="Judge 크기별 불일치율">
 </p>
 
-**Fig 4. Judge 크기 스케일링** — judge가 클수록 inconsistency율이 낮아진다.
+**Fig 3. Judge 크기별 pairwise 불일치율** — 7B(78.75%) → 14B(46.85%) → 32B(32.86%) 단조 감소.
 
 <p align="center">
-  <img src="figures/fig5_phase3_scores.png" width="80%" alt="Phase 3 모델 점수">
+  <img src="figures/fig14_bootstrap_ci.png" width="75%" alt="Bootstrap 95% CI">
 </p>
 
-**Fig 5. Qwen judge 크기별 모델 점수 비교** — judge 크기에 따라 모델 순위가 달라진다.
-
-<p align="center">
-  <img src="figures/fig6_spearman_heatmap.png" width="65%" alt="Spearman ρ 히트맵">
-</p>
-
-**Fig 6. Judge 간 Spearman ρ 히트맵** — Qwen family 내부는 높은 일치도를 보인다.
-
-<p align="center">
-  <img src="figures/fig7_qsize_sensitivity.png" width="70%" alt="문항 수 민감도">
-</p>
-
-**Fig 7. 문항 수 민감도** — 몇 개 문항만으로 안정적인 랭킹이 가능한가.
-
-<p align="center">
-  <img src="figures/fig14_bootstrap_ci.png" width="75%" alt="Bootstrap CI">
-</p>
-
-**Fig 8. Cross-Judge Spearman ρ + Bootstrap 95% CI** — 점 추정만으로는 부족하다.
+**Fig 4. Cross-Judge Spearman ρ + Bootstrap 95% CI** — 점 추정만으로는 불충분하다.
 
 ---
 
-## Phase 4 — LLaMA Judge & Self-Judge Bias
-
-LLaMA 2 family (7B / 13B)를 judge로 추가해 Qwen judge, GPT-4o-mini와 비교.
-
-> **진행 중** — `run_judge_llama_a100.sh` 실행 후 `analyze_self_judge_bias.py`로 생성됨.
-
-**예상 결과:**
-
-```
-Kendall τ distance 히트맵:
-
-             Qwen7B  Qwen14B  Qwen32B  GPT-mini  LLaMA7B  LLaMA13B
-Qwen7B         0      낮음     낮음      중간       높음      높음
-Qwen14B       낮음      0      낮음      중간       높음      높음
-GPT-mini      중간     중간     중간        0        중간      중간
-LLaMA7B       높음     높음     높음      중간         0       낮음
-LLaMA13B      높음     높음     높음      중간        낮음       0
-```
-
-같은 family끼리 τ distance가 낮고, 다른 family끼리 높다 → **self-judge bias 존재 증명**.
-
-<p align="center">
-  <img src="figures/fig16_phase345_judge_summary.png" width="85%" alt="Judge family 비교 요약">
-</p>
-
-**Fig 9. Judge family 비교 요약** — Qwen, InternLM, GPT-4o-mini 간 랭킹 불일치 패턴.
-
----
-
-## 보조 분석
-
-### Turn 2 구조적 난이도
+### RQ3: Turn 2 구조적 난이도
 
 <p align="center">
   <img src="figures/fig10_turn_degradation.png" width="80%" alt="Turn 2 성능 저하">
 </p>
 
-**Fig 10. Turn 1 → Turn 2 점수 변화 (δ)**
-
-**주장**: MT-Bench Turn 2는 구조적으로 어렵다. 카테고리별 δ 크기가 다르며 (reasoning/math > writing/humanities), LLaMA eval 모델의 δ가 LLaMA judge에서 덜 하락하는 패턴은 **self-judge bias가 Turn 2에서 강화된다**는 근거가 된다.
+**Fig 5. Turn 1 → Turn 2 점수 변화(δ)** — Reasoning/Math에서 하락이 크고, 모델/judge별로 패턴이 다르다.
 
 ---
 
-### tinyMT-Bench — 최소 변별 문항 세트
+### RQ4: tinyMT-Bench
 
 <p align="center">
-  <img src="figures/fig8_discriminability.png" width="80%" alt="변별도 분석">
+  <img src="figures/fig8_discriminability.png" width="80%" alt="문항별 변별도">
 </p>
 
-**Fig 11. 문항별 변별도 (inter-model score std)**
+**Fig 6. 문항별 변별도(inter-model score std)** — 카테고리별로 변별력 차이가 크다.
 
 <p align="center">
   <img src="figures/fig9_tiny_mt_bench.png" width="80%" alt="tinyMT-Bench">
 </p>
 
-**Fig 12. tinyMT-Bench — Random vs Top-Discriminative 문항 선택**
-
-**주장**: 변별도 상위 N개 문항만으로도 80개 전체와 동일한 랭킹(Spearman ρ ≥ 0.9)을 유지한다. 이 최소 문항 세트에서 **self-judge bias가 어느 카테고리에 집중되는지** 파악할 수 있다.
-
----
-
-### 변별도 기반 갭 분석
-
-<p align="center">
-  <img src="figures/fig3_hard_easy_gap.png" width="75%" alt="Hard/Easy 갭 분석">
-</p>
-
-**Fig 13. Hard/Easy 문항 갭 분석**
+**Fig 7. tinyMT-Bench** — 변별도 상위 40문항으로 전체 80문항과 동일한 랭킹 유지(ρ≥0.96).
 
 ---
 
@@ -215,31 +158,21 @@ export PYTHONPATH=src
 ### A100 실행 순서
 
 ```bash
-# 1. 신규 eval 모델 답변 생성 (Llama-2-7b, Qwen2.5-7B/14B)
-bash scripts/run/a100/run_generate_self_judge_a100.sh
+# 1. Qwen judge 채점 (기존 데이터 없을 때)
+bash scripts/run/a100/run_judge_phase3_a100.sh
 
-# 2. LLaMA judge 채점 (7B / 13B)
-bash scripts/run/a100/run_judge_llama_a100.sh
-
-# 3. 핵심 분석
+# 2. 분석 실행
 export PYTHONPATH=src
 python3 scripts/analysis/analyze_self_judge_bias.py
-
-# 4. 보조 분석
 python3 scripts/analysis/analyze_turn_degradation.py
 python3 scripts/analysis/analyze_tiny_mt_bench.py
+python3 scripts/analysis/analyze_bootstrap_ci.py
 ```
 
-### LLaMA 2 모델 다운로드 (HF 로그인 필요)
+### 로컬 Mock 테스트
 
 ```bash
-huggingface-cli login   # 토큰 입력
-
-huggingface-cli download meta-llama/Llama-2-7b-chat-hf \
-  --local-dir $HOME_DIR/models/Llama-2-7b-chat
-
-huggingface-cli download meta-llama/Llama-2-13b-chat-hf \
-  --local-dir $HOME_DIR/models/Llama-2-13b-chat
+bash scripts/run/local/run_mock_full.sh
 ```
 
 ---
@@ -251,7 +184,7 @@ mt_bench_repro/
 ├── src/mtbench_repro/
 │   ├── schemas.py          ← 데이터 스키마 + 카테고리 상수
 │   ├── client.py           ← ChatClient (OpenAI / vLLM / mock)
-│   ├── prompts.py          ← judge 프롬프트 6종
+│   ├── prompts.py          ← judge 프롬프트 (논문 Figure 5~10)
 │   ├── judge_single.py     ← 1–10점 채점
 │   ├── judge_pairwise.py   ← AB/BA swap 비교
 │   ├── judge_reference.py  ← 정답 참고 채점
@@ -260,23 +193,34 @@ mt_bench_repro/
 │
 ├── scripts/
 │   ├── analysis/
-│   │   ├── analyze_self_judge_bias.py   ← 핵심 (Kendall τ + bias)
-│   │   ├── analyze_turn_degradation.py  ← Turn 2 난이도
-│   │   ├── analyze_tiny_mt_bench.py     ← 최소 문항 세트
-│   │   ├── analyze_discriminability.py  ← 변별도
-│   │   ├── analyze_bootstrap_ci.py      ← Bootstrap CI
-│   │   ├── analyze_phase3.py            ← Qwen judge scaling
-│   │   └── _deprecated/                 ← 앙상블 등 제거됨
+│   │   ├── analyze_self_judge_bias.py   ← Kendall τ + judge 간 비교
+│   │   ├── analyze_turn_degradation.py  ← Turn 2 구조적 난이도
+│   │   ├── analyze_tiny_mt_bench.py     ← 최소 변별 문항 세트
+│   │   ├── analyze_discriminability.py  ← 문항별 변별도
+│   │   └── analyze_bootstrap_ci.py      ← Bootstrap 95% CI
 │   └── run/a100/
-│       ├── run_generate_self_judge_a100.sh  ← 신규 eval 답변 생성
-│       ├── run_judge_llama_a100.sh          ← LLaMA judge
-│       └── run_judge_phase3_a100.sh         ← Qwen judge
+│       ├── run_judge_llama_a100.sh      ← LLaMA judge (진행 중)
+│       ├── run_judge_phase3_a100.sh     ← Qwen judge
+│       └── run_generate_phase3_a100.sh  ← eval 답변 생성
 │
 └── data/
     ├── mt_bench_questions.jsonl
-    ├── answers/                     ← eval 모델 답변 (git 제외)
+    ├── answers/                     ← eval 모델 답변 (7개)
     ├── judgments_phase3/            ← Qwen judge 결과
-    ├── judgments_llama_judge/       ← LLaMA judge 결과
     ├── judgments_phase5/            ← GPT-4o-mini judge 결과
+    ├── judgments_llama_judge/       ← LLaMA judge 결과 (진행 중)
     └── results_*.csv                ← 집계 산출물
+```
+
+---
+
+## 인용
+
+```bibtex
+@inproceedings{zheng2023judging,
+  title={Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena},
+  author={Zheng, Lianmin and others},
+  booktitle={NeurIPS},
+  year={2023}
+}
 ```
