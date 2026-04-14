@@ -101,6 +101,22 @@ Llama-3.1-8B는 Qwen-14B에서 1위(8.17)이지만 Qwen-32B에서 4위(7.71)다.
 
 **Fig 2. Judge별 모델 점수 비교** — 동일 모델도 judge에 따라 점수 및 순위가 달라진다.
 
+#### 카테고리별 랭킹 불안정성
+
+<p align="center">
+  <img src="figures/fig_category_tau.png" width="80%" alt="카테고리별 Kendall τ distance">
+</p>
+
+**Fig 3. 카테고리별 Judge 랭킹 불안정도** — Writing(τ=0.191)이 가장 불안정하고 Coding(τ=0.083)이 가장 안정적이다. 주관적 평가 기준이 필요한 카테고리일수록 judge 의존도가 높다.
+
+#### 모델별 Judge 민감도
+
+<p align="center">
+  <img src="figures/fig_model_sensitivity.png" width="80%" alt="모델별 Judge 민감도">
+</p>
+
+**Fig 4. 모델별 Judge 민감도** — Llama-3.1-8B가 가장 민감(std=0.177, range=0.46)하고 Phi-3.5-mini가 가장 안정적(std=0.042)이다. 모델에 따라 judge 선택의 영향이 크게 다르다.
+
 ---
 
 ### RQ2: Judge 크기 스케일링
@@ -109,13 +125,21 @@ Llama-3.1-8B는 Qwen-14B에서 1위(8.17)이지만 Qwen-32B에서 4위(7.71)다.
   <img src="figures/fig4_judge_scaling.png" width="80%" alt="Judge 크기별 불일치율">
 </p>
 
-**Fig 3. Judge 크기별 pairwise 불일치율** — 7B(78.75%) → 14B(46.85%) → 32B(32.86%) 단조 감소.
+**Fig 5. Judge 크기별 pairwise 불일치율** — 7B(78.75%) → 14B(46.85%) → 32B(32.86%) 단조 감소.
 
 <p align="center">
   <img src="figures/fig14_bootstrap_ci.png" width="75%" alt="Bootstrap 95% CI">
 </p>
 
-**Fig 4. Cross-Judge Spearman ρ + Bootstrap 95% CI** — 점 추정만으로는 불충분하다.
+**Fig 6. Cross-Judge Spearman ρ + Bootstrap 95% CI** — 점 추정만으로는 불충분하다.
+
+#### Reference-guided 채점의 보정 효과
+
+<p align="center">
+  <img src="figures/fig_reference_penalty.png" width="90%" alt="Reference-guided 점수 하락">
+</p>
+
+**Fig 7. Reference 정답 제공 시 점수 하락** — Judge가 클수록 reference 제공 시 점수 하락이 크다(Qwen-7B: −1.2 → Qwen-32B: −2.7). 정답 기준이 생기면 큰 judge가 더 가혹하게 채점한다.
 
 ---
 
@@ -125,7 +149,7 @@ Llama-3.1-8B는 Qwen-14B에서 1위(8.17)이지만 Qwen-32B에서 4위(7.71)다.
   <img src="figures/fig10_turn_degradation.png" width="80%" alt="Turn 2 성능 저하">
 </p>
 
-**Fig 5. Turn 1 → Turn 2 점수 변화(δ)** — Reasoning/Math에서 하락이 크고, 모델/judge별로 패턴이 다르다.
+**Fig 8. Turn 1 → Turn 2 점수 변화(δ)** — Reasoning/Math에서 하락이 크고, 모델/judge별로 패턴이 다르다.
 
 ---
 
@@ -135,13 +159,13 @@ Llama-3.1-8B는 Qwen-14B에서 1위(8.17)이지만 Qwen-32B에서 4위(7.71)다.
   <img src="figures/fig8_discriminability.png" width="80%" alt="문항별 변별도">
 </p>
 
-**Fig 6. 문항별 변별도(inter-model score std)** — 카테고리별로 변별력 차이가 크다.
+**Fig 9. 문항별 변별도(inter-model score std)** — 카테고리별로 변별력 차이가 크다.
 
 <p align="center">
   <img src="figures/fig9_tiny_mt_bench.png" width="80%" alt="tinyMT-Bench">
 </p>
 
-**Fig 7. tinyMT-Bench** — 변별도 상위 40문항으로 전체 80문항과 동일한 랭킹 유지(ρ≥0.96).
+**Fig 10. tinyMT-Bench** — 변별도 상위 40문항으로 전체 80문항과 동일한 랭킹 유지(ρ≥0.96).
 
 ---
 
