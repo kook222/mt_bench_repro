@@ -9,7 +9,7 @@ Prepare a reproducible TopDisc-N MT-Bench subset from dev-model single-grade sco
 예시:
   export PYTHONPATH=src
   python3 scripts/tools/prepare_topdisc_subset.py \
-    --single-grade-dir data/judgments_phase3/judge_32B/single_grade \
+    --single-grade-dir data/en/judgments/qwen/judge_32B/single_grade \
     --top-n 40
 """
 

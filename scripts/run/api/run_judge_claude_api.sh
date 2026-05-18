@@ -20,11 +20,11 @@ fi
 
 export PYTHONPATH="$PROJECT_DIR/src:${PYTHONPATH:-}"
 
-QUESTIONS="${QUESTIONS:-$PROJECT_DIR/data/mt_bench_questions.jsonl}"
+QUESTIONS="${QUESTIONS:-$PROJECT_DIR/data/en/questions.jsonl}"
 ANSWERS_DIR="${ANSWERS_DIR:-$PROJECT_DIR/data/answers}"
-OUTPUT_DIR="${OUTPUT_DIR:-$PROJECT_DIR/data/judgments_phase5/judge_gpt4omini}"
-OUTPUT_CSV="${OUTPUT_CSV:-$PROJECT_DIR/data/results_phase5_gpt4omini.csv}"
-OUTPUT_REF_CSV="${OUTPUT_REF_CSV:-$PROJECT_DIR/data/results_phase5_gpt4omini_reference.csv}"
+OUTPUT_DIR="${OUTPUT_DIR:-$PROJECT_DIR/data/en/judgments/gpt/judge_gpt4omini}"
+OUTPUT_CSV="${OUTPUT_CSV:-$PROJECT_DIR/data/en/results/results_phase5_gpt4omini.csv}"
+OUTPUT_REF_CSV="${OUTPUT_REF_CSV:-$PROJECT_DIR/data/en/results/results_phase5_gpt4omini_reference.csv}"
 JUDGE_MODEL="${JUDGE_MODEL:-gpt-4o-mini}"
 BASE_URL="${BASE_URL:-https://api.openai.com/v1}"
 SLEEP_SINGLE="${SLEEP_SINGLE:-0.5}"

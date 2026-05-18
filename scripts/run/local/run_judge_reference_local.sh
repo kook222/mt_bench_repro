@@ -13,7 +13,7 @@ cd "$PROJECT_ROOT"
 
 export PYTHONPATH=src
 
-QUESTIONS="data/mt_bench_questions_sample.jsonl"
+QUESTIONS="data/en/questions_sample.jsonl"
 ANSWERS_DIR="data/mock/answers/"
 OUTPUT_DIR="data/mock/judgments/"
 

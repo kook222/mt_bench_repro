@@ -8,12 +8,12 @@
 #   - Llama-3.1-8B-Instruct 추가 (이종 아키텍처, 편향 없음)
 #
 # 나머지 6개 모델(SOLAR / gemma / Yi / Zephyr / Mistral / Phi)은
-# Phase 2에서 생성된 data/answers/ 파일을 그대로 재사용한다.
+# Phase 2에서 생성된 data/en/answers/ 파일을 그대로 재사용한다.
 # → Llama 1개 모델만 새로 생성하면 된다.
 #
 # 전제:
 #   - meta-llama/Llama-3.1-8B-Instruct 모델이 MODEL_BASE_DIR에 다운로드되어 있어야 함.
-#   - Phase 2 answers가 data/answers/ 에 있어야 함.
+#   - Phase 2 answers가 data/en/answers/ 에 있어야 함.
 
 set -euo pipefail
 
@@ -31,8 +31,8 @@ export TORCHINDUCTOR_CACHE_DIR="/tmp/torchinductor_cache"
 export TRITON_CACHE_DIR="/tmp/triton_cache"
 
 MODEL_BASE_DIR="$HOME_DIR/models"
-QUESTIONS="$PROJECT_DIR/data/mt_bench_questions.jsonl"
-ANSWERS_DIR="$PROJECT_DIR/data/answers/"
+QUESTIONS="$PROJECT_DIR/data/en/questions.jsonl"
+ANSWERS_DIR="$PROJECT_DIR/data/en/answers/"
 VLLM_PORT=8000
 VLLM_LOG="/tmp/vllm_generate_phase3.log"
 VLLM_PID=""

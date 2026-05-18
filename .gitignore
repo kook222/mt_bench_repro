@@ -1,5 +1,5 @@
 # ============================================================
-# MT-Bench 재현 프로젝트 .gitignore
+# Korean MT-Bench .gitignore
 # ============================================================
 
 # ── Python 빌드/캐시 ─────────────────────────────────────────
@@ -42,9 +42,13 @@ models/
 .env.*
 secrets.yaml
 
-# ── 전체 80문항 질문 파일 (FastChat에서 별도 다운로드) ───────
-# 다운로드 방법: scripts/tools/download_dataset.sh 참고
-data/mt_bench_questions.jsonl
+# ── 원본 영어 질문 파일 (FastChat에서 별도 다운로드) ─────────
+# 다운로드: scripts/tools/download_dataset.sh
+data/en/questions.jsonl
+
+# ── 한국어 질문 파일 (수작업 번역 — git에서 별도 관리) ───────
+# 번역 완성 후 명시적으로 git add data/ko/questions.jsonl
+data/ko/questions_back.jsonl
 
 # ── 로그 ─────────────────────────────────────────────────────
 *.log
@@ -54,30 +58,29 @@ run.out
 # ── 테스트 임시 디렉토리 ─────────────────────────────────────
 /tmp/
 data/mock/
-paper/*.aux
-paper/*.log
-paper/*.out
 scripts/**/__pycache__/
 src/**/__pycache__/
 
-# ── 재생성 가능한 raw 산출물 ─────────────────────────────────
-data/answers_unseen/
-data/archive/
-data/judgments_phase1/
-data/judgments_phase2/
-data/judgments_phase3/
-data/judgments_phase4/
-data/judgments_phase5/
-data/judgments_unseen/
+# ── 영어 실험 raw 산출물 (A100 생성, 재생성 가능) ────────────
+data/en/answers_unseen/
+data/en/archive/
+data/en/judgments/
+data/en/judgments_unseen/
+
+# ── 한국어 실험 raw 산출물 (A100 생성, 재생성 가능) ──────────
+data/ko/answers/
+data/ko/judgments/
 
 # ============================================================
-# 아래 요약 산출물만 git으로 관리 (실험 결과 추적 목적)
+# git으로 관리하는 산출물 (추적 목적)
 # ============================================================
-# data/results*.csv → 집계 결과 (점수표, 랭킹)
-# figures/*.png     → 논문/README용 최종 figure
-# paper/*.pdf       → 제출용 산출물
+# data/en/answers/*.jsonl      → 영어 eval 답변 (baseline)
+# data/en/results/*.csv        → 영어 집계 결과
+# data/ko/results/*.csv        → 한국어 집계 결과 (Phase 1 이후)
+# figures/en/*.png             → 영어 실험 figure
+# figures/ko/*.png             → 한국어 실험 figure
 # ============================================================
 
 # 샘플 파일과 다운로드 스크립트는 항상 포함
-!data/mt_bench_questions_sample.jsonl
+!data/en/questions_sample.jsonl
 !scripts/tools/download_dataset.sh

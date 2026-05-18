@@ -9,7 +9,7 @@
 #
 # 실행 전제:
 #   - PYTHONPATH=src 또는 이 스크립트에서 자동 설정됨
-#   - data/mt_bench_questions_sample.jsonl 존재
+#   - data/en/questions_sample.jsonl 존재
 
 set -e
 
@@ -19,7 +19,7 @@ cd "$PROJECT_ROOT"
 
 export PYTHONPATH=src
 
-QUESTIONS="data/mt_bench_questions_sample.jsonl"
+QUESTIONS="data/en/questions_sample.jsonl"
 ANSWERS_DIR="data/mock/answers/"
 JUDGMENTS_DIR="data/mock/judgments/"
 CSV_OUT="data/mock/results.csv"

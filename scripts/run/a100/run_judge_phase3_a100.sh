@@ -6,7 +6,7 @@
 #
 # 설계 원칙:
 #   - judge 1개씩 vLLM 올리고 → 전 모델 judge → 서버 내리고 → 다음 judge
-#   - 출력 경로를 judge 크기별로 분리: data/judgments_phase3/judge_7B/ 등
+#   - 출력 경로를 judge 크기별로 분리: data/en/judgments/qwen/judge_7B/ 등
 #   - 32B / 72B는 AWQ 4-bit 양자화 사용 (A100 40GB VRAM 제약)
 #   - 14B는 Phase 2와 eval 모델 셋이 다르므로(Llama 추가, Qwen 제거) 재실행
 #
@@ -41,9 +41,9 @@ export TORCHINDUCTOR_CACHE_DIR="/tmp/torchinductor_cache"
 export TRITON_CACHE_DIR="/tmp/triton_cache"
 
 MODEL_BASE_DIR="$HOME_DIR/models"
-QUESTIONS="$PROJECT_DIR/data/mt_bench_questions.jsonl"
-ANSWERS_DIR="$PROJECT_DIR/data/answers/"
-PHASE3_DIR="$PROJECT_DIR/data/judgments_phase3"
+QUESTIONS="$PROJECT_DIR/data/en/questions.jsonl"
+ANSWERS_DIR="$PROJECT_DIR/data/en/answers/"
+PHASE3_DIR="$PROJECT_DIR/data/en/judgments/qwen"
 VLLM_PORT=8000
 VLLM_LOG="/tmp/vllm_judge_phase3.log"
 VLLM_PID=""
@@ -132,7 +132,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
 
   JUDGE_MODEL_DIR="$MODEL_BASE_DIR/$JUDGE_MODEL_ID"
   JUDGMENTS_DIR="$PHASE3_DIR/$JUDGE_LABEL"
-  OUTPUT_CSV="$PROJECT_DIR/data/results_phase3_${JUDGE_LABEL}.csv"
+  OUTPUT_CSV="$PROJECT_DIR/data/en/results/results_phase3_${JUDGE_LABEL}.csv"
 
   echo ""
   echo "────────────────────────────────────────────"
@@ -269,7 +269,7 @@ echo ""
 echo "=============================="
 echo " Phase 3 Judge 전체 완료"
 echo " 결과 파일:"
-ls -lh "$PROJECT_DIR/data/results_phase3_"*.csv 2>/dev/null || echo "  (없음)"
+ls -lh "$PROJECT_DIR/data/en/results/results_phase3_"*.csv 2>/dev/null || echo "  (없음)"
 echo ""
 echo " 판정 디렉토리:"
 ls -lhd "$PHASE3_DIR"/judge_* 2>/dev/null || echo "  (없음)"
