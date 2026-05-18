@@ -15,7 +15,7 @@ tinyMT-Bench generalization validation on unseen test models.
 예시:
   export PYTHONPATH=src
   python3 scripts/analysis/analyze_tiny_mt_bench_generalization.py \
-    --judge qwen32=data/judgments_phase3/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
+    --judge qwen32=data/en/judgments/qwen/judge_32B/single_grade,data/judgments_unseen/qwen2_5_32b_instruct/single_grade \
     --test-size 3 \
     --n-splits 20
 """
