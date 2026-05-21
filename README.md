@@ -92,25 +92,68 @@ python3 scripts/translate/compare_en_ko.py
 
 ---
 
-## 영어 Baseline 결과 (Phase 3 데이터 기준)
+## 영어 Baseline 결과
+
+> 상세 분석: [RESULTS_EN.md](RESULTS_EN.md) | 논문 초안: [draft_paper.md](draft_paper.md)
+
+### 핵심 발견: Judge에 따라 랭킹이 바뀐다
+
+동일한 7개 모델, 동일한 답변인데 judge만 바뀌면 순위가 역전된다.
+
+| 순위 | Qwen-7B | Qwen-14B | Qwen-32B | GPT-4o-mini |
+|:---:|---------|---------|---------|------------|
+| 1 | Phi-3.5-mini (8.04) | **Llama-3.1-8B (8.17)** | **gemma-2-9b (8.09)** | Phi-3.5-mini (7.98) |
+| 2 | Yi-1.5-9B (7.98) | Phi-3.5-mini (8.09) | Phi-3.5-mini (8.06) | gemma-2-9b (7.96) |
+| 3 | Llama-3.1-8B (7.89) | gemma-2-9b (8.03) | Yi-1.5-9B (7.79) | Yi-1.5-9B (7.78) |
+| 4 | gemma-2-9b (7.87) | Yi-1.5-9B (7.97) | **Llama-3.1-8B (7.71)** | Llama-3.1-8B (7.76) |
+| 5 | Mistral-7B (7.45) | Mistral-7B (7.49) | Mistral-7B (7.09) | Mistral-7B (7.20) |
+| 6 | SOLAR-10.7B (7.34) | SOLAR-10.7B (7.07) | SOLAR-10.7B (7.02) | SOLAR-10.7B (6.82) |
+| 7 | Zephyr-7B (7.20) | Zephyr-7B (7.04) | Zephyr-7B (6.62) | Zephyr-7B (6.66) |
+
+**Llama-3.1-8B**: Qwen-14B에서 1위(8.17) → Qwen-32B에서 4위(7.71). **같은 모델, 같은 답변.**
+
+### Kendall τ Distance 행렬 (judge 쌍 간 랭킹 불일치)
+
+| | Qwen-7B | Qwen-14B | Qwen-32B | GPT-4o-mini |
+|---|:---:|:---:|:---:|:---:|
+| **Qwen-7B** | 0.000 | 0.143 | 0.143 | 0.095 |
+| **Qwen-14B** | 0.143 | 0.000 | **0.190** | 0.143 |
+| **Qwen-32B** | 0.143 | **0.190** | 0.000 | **0.048** |
+| **GPT-4o-mini** | 0.095 | 0.143 | **0.048** | 0.000 |
+
+- Qwen-32B ↔ GPT-4o-mini: τ=0.048 → 충분히 큰 오픈소스 judge는 중립 judge에 수렴
+- Qwen-14B ↔ Qwen-32B: τ=0.190 → 같은 패밀리여도 크기가 다르면 랭킹이 크게 달라짐
+
+### Judge 크기별 pairwise 불일치율
+
+| Judge | 불일치율 | First-position 승률 |
+|-------|---------|-------------------|
+| Qwen-7B | 78.75% | 84.2% |
+| Qwen-14B | 46.85% | 93.5% |
+| Qwen-32B | 32.86% | 94.9% |
+
+judge가 클수록 불일치율은 감소하지만, **남아있는 불일치는 더 순서 민감**해진다.
+
+### tinyMT-Bench (비용 절감)
+
+변별도 기준 Top-40 문항만으로 전체 80문항과 동일한 랭킹 유지 (Spearman ρ ≥ 0.96), 평가 비용 50% 절감.
 
 <details>
-<summary>GPT-4o-mini judge 기준 모델 랭킹 (클릭해서 펼치기)</summary>
+<summary>figures (클릭해서 펼치기)</summary>
 
-| 순위 | 모델 | Overall | Writing | Math | Coding |
-|------|------|---------|---------|------|--------|
-| 1 | Phi-3.5-mini-Instruct | 7.98 | 7.85 | 7.80 | 8.35 |
-| 2 | Llama-3.1-8B-Instruct | 7.76 | 7.90 | 6.40 | 8.65 |
-| 3 | gemma-2-9b-it | — | — | — | — |
-| 4 | Yi-1.5-9B-Chat | — | — | — | — |
-| 5 | Mistral-7B-Instruct-v0.3 | 7.20 | 7.75 | 5.65 | 6.25 |
-| 6 | Zephyr-7B-beta | — | — | — | — |
-| 7 | SOLAR-10.7B-Instruct | 6.82 | 7.35 | 6.00 | 5.65 |
-
-Judge 간 분석 결과: [`data/en/results/`](data/en/results/)
-영어 실험 figures: [`figures/en/`](figures/en/)
+| 그래프 | 내용 |
+|--------|------|
+| [`figures/en/fig6_spearman_heatmap.png`](figures/en/fig6_spearman_heatmap.png) | Judge 간 Spearman ρ 히트맵 |
+| [`figures/en/fig4_judge_scaling.png`](figures/en/fig4_judge_scaling.png) | Judge 크기별 불일치율 변화 |
+| [`figures/en/fig5_phase3_scores.png`](figures/en/fig5_phase3_scores.png) | Judge별 모델 점수 비교 |
+| [`figures/en/fig8_discriminability.png`](figures/en/fig8_discriminability.png) | 문항별 변별도 분포 |
+| [`figures/en/fig9_tiny_mt_bench.png`](figures/en/fig9_tiny_mt_bench.png) | tinyMT-Bench 랭킹 보존 |
+| [`figures/en/fig10_turn_degradation.png`](figures/en/fig10_turn_degradation.png) | Turn 2 구조적 난이도 |
+| [`figures/en/fig11_position_bias.png`](figures/en/fig11_position_bias.png) | Position bias 분석 |
 
 </details>
+
+전체 결과 CSV: [`data/en/results/`](data/en/results/)
 
 ---
 
