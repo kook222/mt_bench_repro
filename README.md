@@ -120,48 +120,7 @@ judge가 클수록 불일치율은 감소하지만, **남아있는 불일치는 
 
 ---
 
-### 6. tinyMT-Bench: 비용 50% 절감
-
-변별도 기준 문항 선택으로 평가 비용을 줄이면서 랭킹 보존.
-
-![tinyMT-Bench 랭킹 보존](figures/en/fig9_tiny_mt_bench.png)
-
-| 문항 수 | Random ρ (평균) | Top-Disc ρ |
-|--------|--------------|-----------|
-| 10 | 0.866 | 0.929 |
-| 20 | 0.931 | 0.893 |
-| 40 | 0.959 | **1.000** |
-| 60 | 0.972 | **1.000** |
-| 80 | 1.000 | 1.000 |
-
-**Top-40 문항**으로 전체 80문항과 동일 랭킹 달성 (ρ=1.000).
-
-![tinyMT-Bench 일반화](figures/en/fig15_tiny_mt_bench_generalization.png)
-
----
-
-### 7. Bootstrap 95% CI (통계적 유의성)
-
-![Bootstrap CI](figures/en/fig14_bootstrap_ci.png)
-
-| Judge 쌍 | Spearman ρ | 95% CI |
-|---------|-----------|--------|
-| Qwen-7B ↔ Qwen-14B | 0.821 | [0.643, 0.964] |
-| Qwen-7B ↔ Qwen-32B | 0.786 | [0.643, 0.964] |
-| Qwen-14B ↔ Qwen-32B | 0.750 | [0.607, 0.964] |
-
----
-
-### 8. 앙상블 Judge
-
-![앙상블 judge](figures/en/fig13_ensemble_v2.png)
-
-다수결 앙상블(58.6%)은 단일 고품질 judge(32B: 32.9%)보다 불일치율 높음.
-abstain 기반 개선 앙상블은 불일치율 24.7%로 최저, decisive율 75.3%.
-
----
-
-### 9. 외부 Judge 검증 (InternLM / GPT-4o-mini)
+### 6. 외부 Judge 검증 (InternLM / GPT-4o-mini)
 
 ![Phase 345 judge 요약](figures/en/fig16_phase345_judge_summary.png)
 
