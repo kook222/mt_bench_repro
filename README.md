@@ -110,9 +110,11 @@ python3 scripts/translate/compare_en_ko.py
 | 6 | SOLAR-10.7B (7.34) | SOLAR-10.7B (7.07) | SOLAR-10.7B (7.02) | SOLAR-10.7B (6.82) |
 | 7 | Zephyr-7B (7.20) | Zephyr-7B (7.04) | Zephyr-7B (6.62) | Zephyr-7B (6.66) |
 
-**Llama-3.1-8B**: Qwen-14B에서 1위(8.17) → Qwen-32B에서 4위(7.71). **같은 모델, 같은 답변.**
+**Llama-3.1-8B**: Qwen-14B에서 1위(8.17) → Qwen-32B에서 4위(7.71). 같은 모델, 같은 답변.
 
-### Kendall τ Distance 행렬 (judge 쌍 간 랭킹 불일치)
+![Judge별 모델 점수 비교](figures/en/fig5_phase3_scores.png)
+
+### Kendall τ Distance 행렬
 
 | | Qwen-7B | Qwen-14B | Qwen-32B | GPT-4o-mini |
 |---|:---:|:---:|:---:|:---:|
@@ -121,10 +123,12 @@ python3 scripts/translate/compare_en_ko.py
 | **Qwen-32B** | 0.143 | **0.190** | 0.000 | **0.048** |
 | **GPT-4o-mini** | 0.095 | 0.143 | **0.048** | 0.000 |
 
-- Qwen-32B ↔ GPT-4o-mini: τ=0.048 → 충분히 큰 오픈소스 judge는 중립 judge에 수렴
-- Qwen-14B ↔ Qwen-32B: τ=0.190 → 같은 패밀리여도 크기가 다르면 랭킹이 크게 달라짐
+![Judge 간 Spearman ρ 히트맵](figures/en/fig6_spearman_heatmap.png)
 
-### Judge 크기별 pairwise 불일치율
+- Qwen-32B ↔ GPT-4o-mini: τ=0.048 → 충분히 큰 오픈소스 judge는 중립 judge에 수렴
+- Qwen-14B ↔ Qwen-32B: τ=0.190 → 같은 패밀리여도 크기 차이가 랭킹을 가장 크게 바꿈
+
+### Judge 크기 스케일링
 
 | Judge | 불일치율 | First-position 승률 |
 |-------|---------|-------------------|
@@ -132,28 +136,21 @@ python3 scripts/translate/compare_en_ko.py
 | Qwen-14B | 46.85% | 93.5% |
 | Qwen-32B | 32.86% | 94.9% |
 
-judge가 클수록 불일치율은 감소하지만, **남아있는 불일치는 더 순서 민감**해진다.
+judge가 클수록 불일치율은 감소하지만, 남아있는 불일치는 더 순서 민감해진다.
 
-### tinyMT-Bench (비용 절감)
+![Judge 크기별 불일치율](figures/en/fig4_judge_scaling.png)
 
-변별도 기준 Top-40 문항만으로 전체 80문항과 동일한 랭킹 유지 (Spearman ρ ≥ 0.96), 평가 비용 50% 절감.
+### Position Bias
 
-<details>
-<summary>figures (클릭해서 펼치기)</summary>
+![Position bias 분석](figures/en/fig11_position_bias.png)
 
-| 그래프 | 내용 |
-|--------|------|
-| [`figures/en/fig6_spearman_heatmap.png`](figures/en/fig6_spearman_heatmap.png) | Judge 간 Spearman ρ 히트맵 |
-| [`figures/en/fig4_judge_scaling.png`](figures/en/fig4_judge_scaling.png) | Judge 크기별 불일치율 변화 |
-| [`figures/en/fig5_phase3_scores.png`](figures/en/fig5_phase3_scores.png) | Judge별 모델 점수 비교 |
-| [`figures/en/fig8_discriminability.png`](figures/en/fig8_discriminability.png) | 문항별 변별도 분포 |
-| [`figures/en/fig9_tiny_mt_bench.png`](figures/en/fig9_tiny_mt_bench.png) | tinyMT-Bench 랭킹 보존 |
-| [`figures/en/fig10_turn_degradation.png`](figures/en/fig10_turn_degradation.png) | Turn 2 구조적 난이도 |
-| [`figures/en/fig11_position_bias.png`](figures/en/fig11_position_bias.png) | Position bias 분석 |
+### tinyMT-Bench: 40문항으로 80문항과 동일 랭킹
 
-</details>
+변별도 기준 Top-40 문항 → 전체 80문항과 동일한 랭킹(Spearman ρ ≥ 0.96), 평가 비용 50% 절감.
 
-전체 결과 CSV: [`data/en/results/`](data/en/results/)
+![tinyMT-Bench 랭킹 보존](figures/en/fig9_tiny_mt_bench.png)
+
+전체 결과 CSV: [`data/en/results/`](data/en/results/) | 상세 분석: [RESULTS_EN.md](RESULTS_EN.md)
 
 ---
 
