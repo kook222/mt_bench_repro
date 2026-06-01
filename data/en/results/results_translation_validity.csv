@@ -1,4 +1,0 @@
-question_id,category,bleu_turn1,bleu_turn2,bleu_avg,llm_score_turn1,llm_score_turn2,llm_score_avg
-81,writing,0.0,0.0,0.0,4,4,4.0
-82,writing,0.0,0.0,0.0,4,4,4.0
-83,writing,0.0,0.0,0.0,4,4,4.0
