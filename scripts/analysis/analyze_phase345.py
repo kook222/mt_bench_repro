@@ -5,8 +5,8 @@ scripts/analysis/analyze_phase345.py
 Phase 3/4/5 judge 결과를 한 번에 요약하는 통합 분석 스크립트.
 
 출력:
-  - data/results_phase345_judge_summary.csv
-  - data/results_phase345_judge_agreement.csv
+  - data/judge_summary.csv
+  - data/judge_agreement.csv
   - figures/fig16_phase345_judge_summary.png
 
 핵심 목적:
@@ -34,7 +34,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = ROOT / "data" / "en" / "results"
 FIG_DIR = ROOT / "figures"
 FIG_DIR.mkdir(exist_ok=True)
 
@@ -57,8 +57,8 @@ JUDGES: List[JudgeConfig] = [
         family="Qwen2.5",
         label="Qwen2.5-7B",
         params_b="7",
-        results_csv=DATA_DIR / "results_phase3_judge_7B.csv",
-        pairwise_dir=DATA_DIR / "judgments_phase3" / "judge_7B" / "pairwise",
+        results_csv=DATA_DIR / "scores_qwen7b.csv",
+        pairwise_dir=ROOT / "data" / "en" / "judgments" / "qwen" / "judge_7B" / "pairwise",
     ),
     JudgeConfig(
         key="qwen14b",
@@ -66,8 +66,8 @@ JUDGES: List[JudgeConfig] = [
         family="Qwen2.5",
         label="Qwen2.5-14B",
         params_b="14",
-        results_csv=DATA_DIR / "results_phase3_judge_14B.csv",
-        pairwise_dir=DATA_DIR / "judgments_phase3" / "judge_14B" / "pairwise",
+        results_csv=DATA_DIR / "scores_qwen14b.csv",
+        pairwise_dir=ROOT / "data" / "en" / "judgments" / "qwen" / "judge_14B" / "pairwise",
     ),
     JudgeConfig(
         key="qwen32b",
@@ -75,26 +75,8 @@ JUDGES: List[JudgeConfig] = [
         family="Qwen2.5",
         label="Qwen2.5-32B",
         params_b="32",
-        results_csv=DATA_DIR / "results_phase3_judge_32B.csv",
-        pairwise_dir=DATA_DIR / "judgments_phase3" / "judge_32B" / "pairwise",
-    ),
-    JudgeConfig(
-        key="internlm7b",
-        phase="phase4",
-        family="InternLM2.5",
-        label="InternLM2.5-7B",
-        params_b="7",
-        results_csv=DATA_DIR / "results_phase4_judge_internlm7b.csv",
-        pairwise_dir=DATA_DIR / "judgments_phase4" / "judge_internlm7b" / "pairwise",
-    ),
-    JudgeConfig(
-        key="internlm20b",
-        phase="phase4",
-        family="InternLM2.5",
-        label="InternLM2.5-20B",
-        params_b="20",
-        results_csv=DATA_DIR / "results_phase4_judge_internlm20b.csv",
-        pairwise_dir=DATA_DIR / "judgments_phase4" / "judge_internlm20b" / "pairwise",
+        results_csv=DATA_DIR / "scores_qwen32b.csv",
+        pairwise_dir=ROOT / "data" / "en" / "judgments" / "qwen" / "judge_32B" / "pairwise",
     ),
     JudgeConfig(
         key="gpt4omini",
@@ -102,8 +84,8 @@ JUDGES: List[JudgeConfig] = [
         family="OpenAI",
         label="GPT-4o-mini",
         params_b="api",
-        results_csv=DATA_DIR / "results_phase5_gpt4omini.csv",
-        pairwise_dir=DATA_DIR / "judgments_phase5" / "judge_gpt4omini" / "pairwise",
+        results_csv=DATA_DIR / "scores_gpt4omini.csv",
+        pairwise_dir=ROOT / "data" / "en" / "judgments" / "gpt" / "judge_gpt4omini" / "pairwise",
     ),
 ]
 
@@ -466,8 +448,8 @@ def main() -> None:
                 }
             )
 
-    save_csv(DATA_DIR / "results_phase345_judge_summary.csv", summary_rows)
-    save_csv(DATA_DIR / "results_phase345_judge_agreement.csv", agreement_rows)
+    save_csv(DATA_DIR / "judge_summary.csv", summary_rows)
+    save_csv(DATA_DIR / "judge_agreement.csv", agreement_rows)
     make_matrix_figure(
         summary_rows=summary_rows,
         spearman=spearman,
@@ -477,8 +459,8 @@ def main() -> None:
     )
 
     print("\nSaved:")
-    print(f"  - {DATA_DIR / 'results_phase345_judge_summary.csv'}")
-    print(f"  - {DATA_DIR / 'results_phase345_judge_agreement.csv'}")
+    print(f"  - {DATA_DIR / 'judge_summary.csv'}")
+    print(f"  - {DATA_DIR / 'judge_agreement.csv'}")
     print(f"  - {FIG_DIR / 'fig16_phase345_judge_summary.png'}")
 
 

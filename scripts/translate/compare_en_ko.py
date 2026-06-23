@@ -128,10 +128,10 @@ def main() -> None:
 
     # 영어 결과 파일 매핑
     en_results = {
-        "gpt4omini": DATA_EN / "results" / "results_phase5_gpt4omini.csv",
-        "qwen_7B":   DATA_EN / "results" / "results_phase3_judge_7B.csv",
-        "qwen_14B":  DATA_EN / "results" / "results_phase3_judge_14B.csv",
-        "qwen_32B":  DATA_EN / "results" / "results_phase3_judge_32B.csv",
+        "gpt4omini": DATA_EN / "results" / "scores_gpt4omini.csv",
+        "qwen_7B":   DATA_EN / "results" / "scores_qwen7b.csv",
+        "qwen_14B":  DATA_EN / "results" / "scores_qwen14b.csv",
+        "qwen_32B":  DATA_EN / "results" / "scores_qwen32b.csv",
     }
 
     # 한국어 결과 파일 매핑 (Phase 1 완료 후 생성)

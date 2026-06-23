@@ -210,29 +210,29 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="번역 validity 검증")
     parser.add_argument(
         "--original",
-        default=str(PROJECT_ROOT / "data" / "mt_bench_questions.jsonl"),
+        default=str(PROJECT_ROOT / "data" / "en" / "questions.jsonl"),
     )
     parser.add_argument(
         "--translated",
-        default=str(PROJECT_ROOT / "data" / "mt_bench_questions_ko.jsonl"),
+        default=str(PROJECT_ROOT / "data" / "ko" / "questions.jsonl"),
     )
     parser.add_argument(
         "--back-translated",
-        default=str(PROJECT_ROOT / "data" / "mt_bench_questions_back.jsonl"),
+        default=str(PROJECT_ROOT / "data" / "ko" / "questions_back.jsonl"),
     )
     parser.add_argument(
         "--en-results",
-        default=str(PROJECT_ROOT / "data" / "results_phase5_gpt4omini.csv"),
+        default=str(PROJECT_ROOT / "data" / "en" / "results" / "scores_gpt4omini.csv"),
         help="영어 채점 기준 CSV (카테고리 난이도 분석용)",
     )
     parser.add_argument(
         "--output-csv",
-        default=str(PROJECT_ROOT / "data" / "results_translation_validity.csv"),
+        default=str(PROJECT_ROOT / "data" / "ko" / "results" / "results_translation_validity.csv"),
     )
     parser.add_argument(
         "--output-category-csv",
         default=str(
-            PROJECT_ROOT / "data" / "results_translation_validity_per_category.csv"
+            PROJECT_ROOT / "data" / "ko" / "results" / "results_translation_validity_per_category.csv"
         ),
     )
     parser.add_argument("--provider", choices=["anthropic", "openai"], default="anthropic")

@@ -389,8 +389,8 @@ def main() -> None:
 
     phase3_dir = project_dir / "data" / "judgments_phase3"
     phase2_judgments_dir = project_dir / "data" / "judgments_phase2"
-    scaling_csv = project_dir / "data" / "results_phase3_scaling.csv"
-    qsize_csv = project_dir / "data" / "results_phase3_qsize.csv"
+    scaling_csv = project_dir / "data" / "en" / "results" / "judge_scaling.csv"
+    qsize_csv = project_dir / "data" / "en" / "results" / "judge_qsize.csv"
 
     print("=" * 65)
     print("  Phase 3 Analysis")
