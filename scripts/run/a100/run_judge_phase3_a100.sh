@@ -72,13 +72,11 @@ if [ ! -f "$QUESTIONS" ]; then
   echo "[Init] 다운로드 완료 ($(wc -l < "$QUESTIONS")문항)"
 fi
 
-# ── eval 모델 목록 (self-judge bias 실험과 동일 7개) ─────────────────────────
+# ── eval 모델 목록 (한국어 실험과 동일 5개 — Yi, Zephyr 제외)
 EVAL_MODELS=(
   "Llama-3.1-8B-Instruct"
   "SOLAR-10.7B-Instruct"
   "gemma-2-9b-it"
-  "Yi-1.5-9B-Chat"
-  "Zephyr-7B-beta"
   "Mistral-7B-Instruct-v0.3"
   "Phi-3.5-mini-Instruct"
 )
