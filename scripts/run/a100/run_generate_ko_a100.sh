@@ -68,16 +68,17 @@ echo "[OK] 질문 파일: $QUESTIONS ($(wc -l < "$QUESTIONS")문항)"
 mkdir -p "$ANSWERS_DIR"
 
 # ── eval 모델 목록 ────────────────────────────────────────────────────────────
-# 형식: "모델_ID:HuggingFace_ID:max-model-len:gpu-util"
 # 형식: "모델_ID:HF_ID:max-model-len:gpu-util:use_system_prompt"
-# SOLAR는 한국어 특화 모델이라 system prompt 없이도 한국어로 답변
+# SOLAR: ### User/Assistant 템플릿 명시 적용 (Mistral [INST] 템플릿 혼용 방지)
 declare -a MODEL_LIST=(
   "Llama-3.1-8B-Instruct:meta-llama/Llama-3.1-8B-Instruct:4096:0.90:yes"
-  "SOLAR-10.7B-Instruct:upstage/SOLAR-10.7B-Instruct-v1.0:4096:0.90:no"
+  "SOLAR-10.7B-Instruct:upstage/SOLAR-10.7B-Instruct-v1.0:4096:0.90:yes"
   "gemma-2-9b-it:google/gemma-2-9b-it:4096:0.90:yes"
   "Mistral-7B-Instruct-v0.3:mistralai/Mistral-7B-Instruct-v0.3:4096:0.90:yes"
   "Phi-3.5-mini-Instruct:microsoft/Phi-3.5-mini-instruct:4096:0.90:yes"
 )
+
+SOLAR_TEMPLATE="$SCRIPT_DIR/solar_chat_template.jinja"
 
 echo "=============================="
 echo " 한국어 MT-Bench 답변 생성"
@@ -123,6 +124,12 @@ for ENTRY in "${MODEL_LIST[@]}"; do
 
   # vLLM 서버 시작
   echo "[Start] vLLM 서버 시작..."
+  # SOLAR는 ### User/Assistant 형식으로 학습 → 전용 템플릿 명시
+  CHAT_TEMPLATE_ARG=""
+  if [ "$MODEL_ID" = "SOLAR-10.7B-Instruct" ]; then
+    CHAT_TEMPLATE_ARG="--chat-template $SOLAR_TEMPLATE"
+    echo "[INFO] SOLAR 전용 chat template 적용: $SOLAR_TEMPLATE"
+  fi
   vllm serve "$MODEL_DIR" \
     --served-model-name "$MODEL_ID" \
     --api-key EMPTY \
@@ -130,6 +137,7 @@ for ENTRY in "${MODEL_LIST[@]}"; do
     --max-model-len "$MAX_LEN" \
     --dtype auto \
     --gpu-memory-utilization "$GPU_UTIL" \
+    $CHAT_TEMPLATE_ARG \
     > "$VLLM_LOG" 2>&1 &
   VLLM_PID=$!
 
