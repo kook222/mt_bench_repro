@@ -1,0 +1,2 @@
+judge_label,top_model,score_range,error_rate_pct,inconsistency_rate_valid_pct,decisive_rate_valid_pct,first_pos_rate_pct,spearman_vs_qwen32,kendall_vs_qwen32,exact_pairwise_vs_qwen32,common_valid_pairwise_vs_qwen32,spearman_vs_internlm20b,kendall_vs_internlm20b,exact_pairwise_vs_internlm20b,common_valid_pairwise_vs_internlm20b
+GPT-4o-mini,Phi-3.5-mini-Instruct,1.3188,0.0,33.99,66.01,99.65,0.9643,0.9048,0.5802,1677,0.8571,0.7143,0.5463,1543
