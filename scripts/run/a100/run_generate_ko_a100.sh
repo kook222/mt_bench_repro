@@ -1,11 +1,12 @@
 #!/bin/bash
 # scripts/run/a100/run_generate_ko_a100.sh
 #
-# Phase 1 (한국어): eval 모델 5개로 한국어 MT-Bench 답변 생성.
+# Phase 1 (한국어): eval 모델 6개로 한국어 MT-Bench 답변 생성.
 #
-# 영어 실험과 동일한 5개 eval 모델 사용:
+# 영어 실험과 동일한 6개 eval 모델:
 #   Llama-3.1-8B-Instruct
-#   SOLAR-10.7B-Instruct
+#   EEVE-Korean-Instruct-10.8B   ← 한국어 특화 (SOLAR 대체, SOLAR 기반 fine-tune)
+#   EXAONE-3.5-7.8B-Instruct     ← 한국어 특화 (LG AI Research)
 #   gemma-2-9b-it
 #   Mistral-7B-Instruct-v0.3
 #   Phi-3.5-mini-Instruct
@@ -13,7 +14,10 @@
 # 영어와의 차이:
 #   - 질문 파일: data/ko/questions.jsonl (한국어 번역본)
 #   - 답변 저장: data/ko/answers/
-#   - 5개 모델 전부 새로 생성 (영어 answers 재사용 불가)
+#   - 전 모델 새로 생성 (영어 answers 재사용 불가)
+#   - system prompt: "반드시 한국어로 답하세요."
+#
+# EEVE-Korean: SOLAR와 동일한 ### User/Assistant 템플릿 → solar_chat_template.jinja 재사용
 #
 # 전제:
 #   - 모든 모델이 MODEL_BASE_DIR에 다운로드되어 있어야 함.
@@ -68,14 +72,16 @@ echo "[OK] 질문 파일: $QUESTIONS ($(wc -l < "$QUESTIONS")문항)"
 mkdir -p "$ANSWERS_DIR"
 
 # ── eval 모델 목록 ────────────────────────────────────────────────────────────
-# 형식: "모델_ID:HF_ID:max-model-len:gpu-util:use_system_prompt"
-# SOLAR: ### User/Assistant 템플릿 명시 적용 (Mistral [INST] 템플릿 혼용 방지)
+# 형식: "모델_ID:HF_ID:max-model-len:gpu-util:chat_template"
+# chat_template: "solar" = solar_chat_template.jinja, "default" = vLLM 자동
+# EEVE-Korean: SOLAR 기반 fine-tune → 동일한 ### User/Assistant 포맷 사용
 declare -a MODEL_LIST=(
-  "Llama-3.1-8B-Instruct:meta-llama/Llama-3.1-8B-Instruct:4096:0.90:yes"
-  "SOLAR-10.7B-Instruct:upstage/SOLAR-10.7B-Instruct-v1.0:4096:0.90:yes"
-  "gemma-2-9b-it:google/gemma-2-9b-it:4096:0.90:yes"
-  "Mistral-7B-Instruct-v0.3:mistralai/Mistral-7B-Instruct-v0.3:4096:0.90:yes"
-  "Phi-3.5-mini-Instruct:microsoft/Phi-3.5-mini-instruct:4096:0.90:yes"
+  "Llama-3.1-8B-Instruct:meta-llama/Llama-3.1-8B-Instruct:4096:0.90:default"
+  "EEVE-Korean-Instruct-10.8B:upstage/EEVE-Korean-Instruct-10.8B-v1.0:4096:0.90:solar"
+  "EXAONE-3.5-7.8B-Instruct:LGAI-MEDIUS/EXAONE-3.5-7.8B-Instruct:4096:0.90:default"
+  "gemma-2-9b-it:google/gemma-2-9b-it:4096:0.90:default"
+  "Mistral-7B-Instruct-v0.3:mistralai/Mistral-7B-Instruct-v0.3:4096:0.90:default"
+  "Phi-3.5-mini-Instruct:microsoft/Phi-3.5-mini-instruct:4096:0.90:default"
 )
 
 SOLAR_TEMPLATE="$SCRIPT_DIR/solar_chat_template.jinja"
@@ -97,7 +103,7 @@ for ENTRY in "${MODEL_LIST[@]}"; do
   MAX_LEN="${REST%%:*}"
   REST="${REST#*:}"
   GPU_UTIL="${REST%%:*}"
-  USE_SYS_PROMPT="${REST##*:}"
+  TMPL="${REST##*:}"
 
   MODEL_DIR="$MODEL_BASE_DIR/$MODEL_ID"
   ANSWER_FILE="$ANSWERS_DIR/${MODEL_ID}.jsonl"
@@ -111,7 +117,6 @@ for ENTRY in "${MODEL_LIST[@]}"; do
   # 모델 디렉토리 확인
   if [ ! -d "$MODEL_DIR" ]; then
     echo "[ERROR] 모델 디렉토리 없음: $MODEL_DIR"
-    echo "        다운로드:"
     echo "        huggingface-cli download $HF_ID --local-dir $MODEL_DIR"
     exit 1
   fi
@@ -124,11 +129,11 @@ for ENTRY in "${MODEL_LIST[@]}"; do
 
   # vLLM 서버 시작
   echo "[Start] vLLM 서버 시작..."
-  # SOLAR는 ### User/Assistant 형식으로 학습 → 전용 템플릿 명시
+  # EEVE-Korean: SOLAR와 동일한 ### User/Assistant 포맷 → solar_chat_template.jinja 재사용
   CHAT_TEMPLATE_ARG=""
-  if [ "$MODEL_ID" = "SOLAR-10.7B-Instruct" ]; then
+  if [ "$TMPL" = "solar" ]; then
     CHAT_TEMPLATE_ARG="--chat-template $SOLAR_TEMPLATE"
-    echo "[INFO] SOLAR 전용 chat template 적용: $SOLAR_TEMPLATE"
+    echo "[INFO] solar chat template 적용: $SOLAR_TEMPLATE"
   fi
   vllm serve "$MODEL_DIR" \
     --served-model-name "$MODEL_ID" \
@@ -155,12 +160,8 @@ for ENTRY in "${MODEL_LIST[@]}"; do
   done
   echo "[OK] 서버 준비 완료 (${WAITED}s)"
 
-  # 답변 생성
-  SYS_PROMPT_ARG=""
-  if [ "$USE_SYS_PROMPT" = "yes" ]; then
-    SYS_PROMPT_ARG='--system-prompt "반드시 한국어로 답하세요."'
-  fi
-  eval python3 -m mtbench_repro.cli generate \
+  # 답변 생성 (한국어 system prompt 항상 적용)
+  python3 -m mtbench_repro.cli generate \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
     --model-id "$MODEL_ID" \
@@ -169,7 +170,7 @@ for ENTRY in "${MODEL_LIST[@]}"; do
     --temperature 0.7 \
     --max-tokens 1024 \
     --sleep 0.3 \
-    "$SYS_PROMPT_ARG"
+    --system-prompt "반드시 한국어로 답하세요."
 
   echo "[OK] 생성 완료: $ANSWER_FILE"
 

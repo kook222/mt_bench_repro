@@ -3,7 +3,7 @@
 #
 # 한국어 MT-Bench — Gemma 2 패밀리(2B / 9B / 27B) judge 실행.
 #
-# Qwen 실험(run_judge_ko_a100.sh)과 동일한 eval 모델 5개 사용.
+# Qwen 실험(run_judge_ko_a100.sh)과 동일한 eval 모델 6개 사용.
 # judge 프롬프트: 한국어 (--lang ko)
 #
 # ⚠️  Self-judge 주의:
@@ -72,7 +72,8 @@ mkdir -p "$GEMMA2_JUDGE_DIR" "$KO_RESULTS_DIR"
 # ── eval 모델 목록 ────────────────────────────────────────────────────────────
 EVAL_MODELS=(
   "Llama-3.1-8B-Instruct"
-  "SOLAR-10.7B-Instruct"
+  "EEVE-Korean-Instruct-10.8B"
+  "EXAONE-3.5-7.8B-Instruct"
   "gemma-2-9b-it"
   "Mistral-7B-Instruct-v0.3"
   "Phi-3.5-mini-Instruct"
@@ -88,7 +89,7 @@ JUDGE_LIST=(
 
 echo "=============================="
 echo " 한국어 MT-Bench — Gemma 2 Judge"
-echo " eval 모델 5개: ${EVAL_MODELS[*]}"
+echo " eval 모델 6개: ${EVAL_MODELS[*]}"
 echo " judge 3종: 2B / 9B / 27B-AWQ (한국어 프롬프트 --lang ko)"
 echo " Date: $(date)"
 echo "=============================="

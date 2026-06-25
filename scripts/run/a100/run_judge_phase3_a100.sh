@@ -10,7 +10,7 @@
 #   - 32B / 72B는 AWQ 4-bit 양자화 사용 (A100 40GB VRAM 제약)
 #   - 14B는 Phase 2와 eval 모델 셋이 다르므로(Llama 추가, Qwen 제거) 재실행
 #
-# eval 모델 7개 (Phase 2에서 변경):
+# eval 모델 6개 (Phase 2에서 변경):
 #   Llama-3.1-8B-Instruct  (신규 — Qwen2.5-7B 대체)
 #   SOLAR-10.7B-Instruct   (Phase 2 재사용)
 #   gemma-2-9b-it          (Phase 2 재사용)
@@ -75,7 +75,8 @@ fi
 # ── eval 모델 목록 (한국어 실험과 동일 5개 — Yi, Zephyr 제외)
 EVAL_MODELS=(
   "Llama-3.1-8B-Instruct"
-  "SOLAR-10.7B-Instruct"
+  "EEVE-Korean-Instruct-10.8B"
+  "EXAONE-3.5-7.8B-Instruct"
   "gemma-2-9b-it"
   "Mistral-7B-Instruct-v0.3"
   "Phi-3.5-mini-Instruct"

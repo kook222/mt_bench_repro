@@ -6,7 +6,7 @@
 #
 # 영어 실험(run_judge_phase3_a100.sh)과 동일한 구성:
 #   - judge 모델: Qwen2.5-7B / 14B / 32B (동일)
-#   - eval 모델 5개 (동일)
+#   - eval 모델 6개 (동일)
 #   - judge 프롬프트: --lang ko (한국어 버전, MT_Bench_Prompt_Translation.xlsx 기준)
 #
 # 영어와의 차이:
@@ -68,7 +68,8 @@ mkdir -p "$KO_JUDGE_DIR" "$KO_RESULTS_DIR"
 # ── eval 모델 목록 (영어 실험과 동일 5개) ────────────────────────────────────
 EVAL_MODELS=(
   "Llama-3.1-8B-Instruct"
-  "SOLAR-10.7B-Instruct"
+  "EEVE-Korean-Instruct-10.8B"
+  "EXAONE-3.5-7.8B-Instruct"
   "gemma-2-9b-it"
   "Mistral-7B-Instruct-v0.3"
   "Phi-3.5-mini-Instruct"
