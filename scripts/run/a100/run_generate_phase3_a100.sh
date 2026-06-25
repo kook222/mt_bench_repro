@@ -59,7 +59,7 @@ echo "[Init] 완료."
 SOLAR_TEMPLATE="$SCRIPT_DIR/solar_chat_template.jinja"
 
 declare -a MODEL_LIST=(
-  "EEVE-Korean-Instruct-10.8B:upstage/EEVE-Korean-Instruct-10.8B-v1.0:4096:0.90:solar"
+  "EEVE-Korean-Instruct-10.8B:yanolja/EEVE-Korean-Instruct-10.8B-v1.0:4096:0.90:solar"
   "EXAONE-3.5-7.8B-Instruct:LGAI-MEDIUS/EXAONE-3.5-7.8B-Instruct:4096:0.90:default"
 )
 

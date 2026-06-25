@@ -77,7 +77,7 @@ mkdir -p "$ANSWERS_DIR"
 # EEVE-Korean: SOLAR 기반 fine-tune → 동일한 ### User/Assistant 포맷 사용
 declare -a MODEL_LIST=(
   "Llama-3.1-8B-Instruct:meta-llama/Llama-3.1-8B-Instruct:4096:0.90:default"
-  "EEVE-Korean-Instruct-10.8B:upstage/EEVE-Korean-Instruct-10.8B-v1.0:4096:0.90:solar"
+  "EEVE-Korean-Instruct-10.8B:yanolja/EEVE-Korean-Instruct-10.8B-v1.0:4096:0.90:solar"
   "EXAONE-3.5-7.8B-Instruct:LGAI-MEDIUS/EXAONE-3.5-7.8B-Instruct:4096:0.90:default"
   "gemma-2-9b-it:google/gemma-2-9b-it:4096:0.90:default"
   "Mistral-7B-Instruct-v0.3:mistralai/Mistral-7B-Instruct-v0.3:4096:0.90:default"
