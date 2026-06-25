@@ -43,6 +43,7 @@ KO_RESULTS_DIR="$PROJECT_DIR/data/ko/results"
 VLLM_PORT=8000
 VLLM_LOG="/tmp/vllm_judge_gemma2_ko.log"
 VLLM_PID=""
+GEMMA2_TEMPLATE="$SCRIPT_DIR/gemma2_chat_template.jinja"
 
 cleanup_server() {
   if [ -n "${VLLM_PID:-}" ]; then
@@ -157,12 +158,13 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
       --served-model-name "$JUDGE_MODEL_ID" \
       --api-key EMPTY \
       --port "$VLLM_PORT" \
-      --max-model-len 4096 \
+      --max-model-len 8192 \
       --dtype auto \
       --quantization awq \
       --gpu-memory-utilization "$GPU_UTIL" \
       --enforce-eager \
       --max-num-seqs 1 \
+      --chat-template "$GEMMA2_TEMPLATE" \
       > "$VLLM_LOG" 2>&1 &
   else
     vllm serve "$JUDGE_MODEL_DIR" \
@@ -172,6 +174,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
       --max-model-len 8192 \
       --dtype bfloat16 \
       --gpu-memory-utilization "$GPU_UTIL" \
+      --chat-template "$GEMMA2_TEMPLATE" \
       > "$VLLM_LOG" 2>&1 &
   fi
   VLLM_PID=$!

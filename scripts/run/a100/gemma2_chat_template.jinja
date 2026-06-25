@@ -1,0 +1,9 @@
+{% set ns = namespace(system_prompt='', first_user=true) %}
+{% for message in messages %}{% if message['role'] == 'system' %}{% set ns.system_prompt = message['content'] %}{% endif %}{% endfor %}<bos>{% for message in messages %}{% if message['role'] == 'user' %}<start_of_turn>user
+{% if ns.first_user and ns.system_prompt %}{{ ns.system_prompt }}
+
+{% endif %}{% set ns.first_user = false %}{{ message['content'] }}<end_of_turn>
+{% elif message['role'] == 'assistant' %><start_of_turn>model
+{{ message['content'] }}<end_of_turn>
+{% endif %}{% endfor %}{% if add_generation_prompt %}<start_of_turn>model
+{% endif %}
