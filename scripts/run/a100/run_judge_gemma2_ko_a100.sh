@@ -159,7 +159,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
       --api-key EMPTY \
       --port "$VLLM_PORT" \
       --max-model-len 8192 \
-      --dtype auto \
+      --dtype float16 \
       --quantization awq \
       --gpu-memory-utilization "$GPU_UTIL" \
       --enforce-eager \
