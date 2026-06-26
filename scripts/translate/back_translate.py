@@ -55,13 +55,23 @@ def back_translate_text(
     text: str,
     model: str,
     sleep: float = 0.3,
+    prev_turn_en: str | None = None,
 ) -> str:
     if client._mock:
         return f"[back-translation mock] {text[:50]}..."
 
+    if prev_turn_en:
+        user_content = (
+            f"[Turn 1 — already translated, provided as context only. Do NOT retranslate.]\n"
+            f"{prev_turn_en}\n\n"
+            f"[Turn 2 — translate this Korean text into English]\n{text}"
+        )
+    else:
+        user_content = f"번역할 한국어 텍스트:\n{text}"
+
     messages = [
         {"role": "system", "content": _SYSTEM_BACK_TRANSLATE},
-        {"role": "user", "content": f"번역할 한국어 텍스트:\n{text}"},
+        {"role": "user", "content": user_content},
     ]
     result = client.chat(messages, model=model, temperature=0.0, max_tokens=2048)
     if sleep > 0:
@@ -78,8 +88,9 @@ def back_translate_question(
     back = dict(question)
 
     en_turns = []
-    for turn_text in question["turns"]:
-        en = back_translate_text(client, turn_text, model, sleep)
+    for t_idx, turn_text in enumerate(question["turns"]):
+        prev_en = en_turns[t_idx - 1] if t_idx > 0 else None
+        en = back_translate_text(client, turn_text, model, sleep, prev_turn_en=prev_en)
         en_turns.append(en)
     back["turns"] = en_turns
 
