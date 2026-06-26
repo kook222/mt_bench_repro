@@ -41,7 +41,7 @@ MT-Bench 80문항을 한국어로 번역하고 Qwen2.5 judge 패밀리(7B/14B/32
 | Qwen2.5-14B-Instruct | Same-family scaling | 완료 |
 | Qwen2.5-32B-Instruct-AWQ | Same-family scaling | 완료 |
 | EXAONE-3.5-32B-Instruct-AWQ | Cross-family | 실행 중 |
-| GPT-4o-mini | Gold standard | EN 완료 |
+| GPT-4o-mini | Gold standard | ⏳ 미실행 |
 
 ---
 
