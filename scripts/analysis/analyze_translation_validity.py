@@ -80,24 +80,30 @@ def bleu_score(hypothesis: str, reference: str, max_n: int = 4) -> float:
 # ── LLM 3차원 번역 품질 점수 ──────────────────────────────────────────────────
 
 _SYSTEM_VALIDITY = """\
-You are evaluating the quality of a Korean translation of an MT-Bench item.
+You are evaluating the quality of a Korean translation of an MT-Bench benchmark item.
 You will be given:
 1. The original English item.
-2. The back-translated English item generated from the Korean translation.
+2. The back-translated English item (produced by translating the Korean back into English).
 
-Compare the two items and evaluate whether the Korean translation likely preserved the original item.
+Your task is to infer whether the Korean translation faithfully preserved the original, by comparing the original and back-translated English.
 
-Evaluate the following dimensions:
+Evaluate the following three dimensions:
 - Semantic preservation: Does the back-translation preserve the original meaning and task intent?
 - Difficulty preservation: Does the back-translation preserve the original level of difficulty?
-- Constraint preservation: Are all explicit constraints preserved, such as roles, numbers, formats, required outputs, and reference-dependent information?
+- Constraint preservation: Are all explicit constraints preserved? (e.g., word/character limits, required format, role instructions, numbers, output structure)
 
-Use a 1-5 scale:
+Use a 1-5 scale for each:
 5 = fully preserved
 4 = mostly preserved with only minor wording differences
-3 = partially preserved with possible experimental impact
+3 = partially preserved; may have measurable impact on model responses
 2 = important information or constraints are changed
 1 = substantially different from the original
+
+Set needs_manual_check to true if ANY of the following apply:
+- Any dimension score is 3 or below
+- A constraint (number, format, role, length limit) is missing or changed
+- The task type appears to have changed (e.g., correction task became a generation task)
+- The back-translation performs the task instead of describing it
 
 Return JSON only, with no additional text:
 {
@@ -105,7 +111,7 @@ Return JSON only, with no additional text:
   "difficulty_preservation": 1-5,
   "constraint_preservation": 1-5,
   "overall_score": 1-5,
-  "issue_summary": "short explanation (max 1 sentence)",
+  "issue_summary": "one sentence describing the main issue, or 'no issue' if fully preserved",
   "needs_manual_check": true or false
 }\
 """
@@ -146,7 +152,7 @@ def llm_validity_score(
         {"role": "system", "content": _SYSTEM_VALIDITY},
         {"role": "user", "content": prompt},
     ]
-    response = client.chat(messages, model=model, temperature=0.0, max_tokens=200)
+    response = client.chat(messages, model=model, temperature=0.0, max_tokens=300)
     if sleep > 0:
         time.sleep(sleep)
 
