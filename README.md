@@ -115,31 +115,34 @@ EN 대비 순위 변동이 두드러진다. EN에서 2위였던 Phi-3.5-mini가 
 
 ## Judge 신뢰도 — Inconsistency & Position Bias
 
-> Inconsistency: AB/BA swap 판정 불일치율 (`winner == "inconsistent"`)  
-> 1st-pos bias: 두 판정 모두 첫 번째 위치 모델 선호 (`verdict_ab=A, verdict_ba=A`)  
-> 괄호 안은 bootstrap 95% CI
+> **Inconsistency**: AB/BA 판정 불일치율 (`winner == "inconsistent"`)  
+> **1st-pos bias**: `winner_ab=A AND winner_ba=A` — 항상 첫 번째 위치 모델 선호  
+>   (AB에서 A=첫째=model_a, BA에서 A=첫째=model_b → 둘 다 첫째 위치 선호 → inconsistent)  
+> 괄호 안은 해당 케이스 수 / bootstrap 95% CI
 
-### Inconsistency (EN)
+### Inconsistency & Position Bias (EN)
 
 | Judge | 총 pair | Inconsistency | 95% CI | 1st-pos bias |
 |-------|--------:|--------------:|--------|-------------:|
-| Qwen-7B  | 1,200 | **79.2%** | [76.9%, 81.6%] | 52.5% |
-| Qwen-14B | 1,200 | 45.1% | [42.3%, 47.8%] | 35.5% |
-| Qwen-32B | 1,198 | 31.0% | [28.3%, 33.6%] | 22.3% |
+| Qwen-7B  | 1,200 | **79.2%** | [76.9%, 81.6%] | **52.5%** (630) |
+| Qwen-14B | 1,200 | 45.1% | [42.3%, 47.8%] | 35.5% (426) |
+| Qwen-32B | 1,200 | 31.0% | [28.3%, 33.6%] | 22.3% (267) |
 
 7B→14B 차이: Δ=34.1%p (p<0.001 ***), 14B→32B 차이: Δ=14.2%p (p<0.001 ***)
 
-### Inconsistency (KO)
+### Inconsistency & Position Bias (KO)
 
 | Judge | 총 pair | Inconsistency | 95% CI | 1st-pos bias |
 |-------|--------:|--------------:|--------|-------------:|
-| Qwen-7B  | 1,197 | 44.5% | [41.8%, 47.3%] | 40.0% |
-| Qwen-14B | 1,200 | 23.0% | [20.7%, 25.4%] | 6.3% |
-| Qwen-32B | 1,199 | 20.2% | [18.0%, 22.5%] | 14.3% |
+| Qwen-7B  | 1,200 | 44.5% | [41.8%, 47.3%] | 40.0% (479) |
+| Qwen-14B | 1,200 | 23.0% | [20.7%, 25.4%] | 6.3% (76) |
+| Qwen-32B | 1,200 | 20.2% | [18.0%, 22.5%] | 14.3% (171) |
 
 7B→14B 차이: Δ=21.5%p (p<0.001 ***), 14B→32B 차이: Δ=2.8%p (p=0.022 *)
 
-EN과 KO의 inconsistency 차이(같은 judge): Qwen-7B Δ=34.8%p, 14B Δ=22.1%p, 32B Δ=10.7%p — 모두 p<0.001. EN에서 7B judge의 불일치율(79.2%)이 압도적으로 높다. KO에서 14B와 32B의 차이가 EN에 비해 작은 것(2.8%p, p=0.022)은, KO parse failure가 많아 valid pair 수가 줄어든 효과가 일부 반영된 것으로 해석해야 한다. Qwen-14B KO의 1st-pos bias 6.3%는 32B(14.3%)보다 낮은 이상값으로 추가 분석이 필요하다.
+Inconsistency는 judge가 클수록 감소하며, 이 패턴은 EN과 KO 모두에서 통계적으로 유의하다(모두 p<0.001). EN vs KO 비교(같은 judge): Qwen-7B Δ=34.8%p, 14B Δ=22.1%p, 32B Δ=10.7%p — 모두 p<0.001.
+
+1st-pos bias는 두 언어에서 다른 양상을 보인다. **EN**에서는 judge가 작을수록 1st-pos bias가 높고(7B: 52.5%), 모델 크기가 커질수록 감소한다(32B: 22.3%). **KO**에서는 반대로 Qwen-14B가 6.3%로 가장 낮고, 7B(40.0%)와 32B(14.3%)가 더 높다. 특히 KO Qwen-14B의 6.3%는 동일 조건 EN 값(35.5%)의 1/5 수준으로, 한국어에서 이 judge가 position 이외의 요인으로 판정함을 시사한다. 다만 이 이상값의 원인은 Phase 2 EXAONE cross-family 결과와 함께 추가 분석이 필요하다.
 
 ---
 
