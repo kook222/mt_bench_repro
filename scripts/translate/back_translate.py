@@ -105,12 +105,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="한국어 번역본 역번역 (→ 영어)")
     parser.add_argument(
         "--input",
-        default=str(PROJECT_ROOT / "data" / "mt_bench_questions_ko.jsonl"),
+        default=str(PROJECT_ROOT / "data" / "ko" / "questions.jsonl"),
         help="한국어 번역 JSONL 파일",
     )
     parser.add_argument(
         "--output",
-        default=str(PROJECT_ROOT / "data" / "mt_bench_questions_back.jsonl"),
+        default=str(PROJECT_ROOT / "data" / "ko" / "questions_back.jsonl"),
         help="역번역(영어) 출력 JSONL 파일",
     )
     parser.add_argument(

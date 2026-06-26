@@ -25,8 +25,8 @@ import numpy as np
 # ── 경로 설정 ─────────────────────────────────────────────────────────────────
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _PROJECT_DIR = _SCRIPT_DIR.parents[1]
-FIGURES_DIR = _PROJECT_DIR / "figures"
-FIGURES_DIR.mkdir(exist_ok=True)
+FIGURES_DIR = _PROJECT_DIR / "figures" / "en"
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── 스타일 ────────────────────────────────────────────────────────────────────
 FONT_FAMILY = "DejaVu Sans"

@@ -5,23 +5,15 @@
 # ── Python 빌드/캐시 ─────────────────────────────────────────
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 *.so
-*.egg
 *.egg-info/
 dist/
 build/
-.eggs/
 .venv/
 venv/
 env/
 
-# ── Jupyter ──────────────────────────────────────────────────
-.ipynb_checkpoints/
-*.ipynb
-
-# ── 모델 가중치 (수십 GB → 절대 커밋 금지) ──────────────────
+# ── 모델 가중치 (수십 GB — 절대 커밋 금지) ───────────────────
 *.bin
 *.safetensors
 *.pt
@@ -29,58 +21,64 @@ env/
 *.ckpt
 models/
 
-# ── IDE ──────────────────────────────────────────────────────
+# ── IDE / 시스템 ─────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 .DS_Store
 .claude/
+pyrightconfig.json
 
-# ── 환경변수 / API 키 (절대 커밋 금지) ──────────────────────
+# ── 환경변수 / API 키 (절대 커밋 금지) ───────────────────────
 .env
 .env.*
 secrets.yaml
 
-# ── 원본 영어 질문 파일 (FastChat에서 별도 다운로드) ─────────
-# 다운로드: scripts/tools/download_dataset.sh
-data/en/questions.jsonl
-
-# ── 한국어 질문 파일 (수작업 번역 — git에서 별도 관리) ───────
-# 번역 완성 후 명시적으로 git add data/ko/questions.jsonl
-data/ko/questions_back.jsonl
-
 # ── 로그 ─────────────────────────────────────────────────────
 *.log
+*.out
 vllm_server.log
-run.out
 
-# ── 테스트 임시 디렉토리 ─────────────────────────────────────
-/tmp/
-data/mock/
-scripts/**/__pycache__/
-src/**/__pycache__/
+# ── 원본 영어 질문 파일 (download_dataset.sh로 재다운로드) ────
+data/en/questions.jsonl
 
-# ── 영어 실험 raw 산출물 (A100 생성, 재생성 가능) ────────────
-data/en/answers_unseen/
-data/en/archive/
+# ── 역번역 결과 (back_translate.py 출력) ─────────────────────
+data/ko/questions_back.jsonl
+
+# ── A100 실험 raw 산출물 (재생성 가능) ───────────────────────
+#   data/en/answers/ 는 git 추적 (7개 eval 모델 답변 baseline)
 data/en/judgments/
-data/en/judgments_unseen/
-
-# ── 한국어 실험 raw 산출물 (A100 생성, 재생성 가능) ──────────
 data/ko/answers/
 data/ko/judgments/
 
-# ============================================================
-# git으로 관리하는 산출물 (추적 목적)
-# ============================================================
-# data/en/answers/*.jsonl      → 영어 eval 답변 (baseline)
-# data/en/results/*.csv        → 영어 집계 결과
-# data/ko/results/*.csv        → 한국어 집계 결과 (Phase 1 이후)
-# figures/en/*.png             → 영어 실험 figure
-# figures/ko/*.png             → 한국어 실험 figure
-# ============================================================
+# ── Mock 테스트 임시 결과 (run_mock_full.sh 출력) ─────────────
+data/mock/
 
-# 다운로드 스크립트는 항상 포함
-!scripts/tools/download_dataset.sh
+# ── 분석 스크립트 부산물 ──────────────────────────────────────
+#   analyze_phase345.py → data/ 루트에 저장
+data/judge_summary.csv
+data/judge_agreement.csv
+data/judge_agreement.png
+#   파싱 실패 리포트 (check_parse_fail_detail.py 출력, 재생성 가능)
+data/parse_fail_report.json
+
+# ── Figure (generate_figures.py, compare_en_ko.py 출력) ───────
+#   재생성 가능 — git 추적 불필요
+figures/en/*.png
+figures/ko/
+
+# ── 백업 파일 ─────────────────────────────────────────────────
 *.jsonl.bak
+*.bak
+
+# ============================================================
+# git 추적 대상 정리
+# ============================================================
+#   data/en/answers/          ← 7개 eval 모델 답변 (baseline)
+#   data/en/results/*.csv     ← Qwen/GPT judge 집계 결과
+#   data/ko/results/*.csv     ← 한국어 judge 집계 결과 (Phase 1 이후)
+#   data/ko/questions.jsonl   ← 수작업 한국어 번역
+#   data/parse_fail_report.json
+#   src/, scripts/            ← 핵심 패키지 및 스크립트
+# ============================================================
