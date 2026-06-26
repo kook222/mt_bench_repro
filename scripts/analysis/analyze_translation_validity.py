@@ -2,40 +2,28 @@
 """
 scripts/analysis/analyze_translation_validity.py
 
-MT-Bench 한국어 번역 validity & robustness 검증.
+MT-Bench 한국어 번역 validity 검증.
 
-교수님 피드백: 번역 validity가 설득되어야 이후 분석이 의미를 가진다.
-
-검증 항목 3개:
-
-  [검증 1] Back-translation 의미 보존
-    - 원본 → 한국어 → 영어(역번역) round-trip
+검증 항목:
+  [검증 1] Back-translation 기반 자동 품질 점수
     - BLEU score (단어 n-gram 오버랩)
-    - LLM semantic equivalence score (1~5점)
+    - LLM 3차원 점수 (semantic / difficulty / constraint preservation, 1~5)
+      + overall score + needs_manual_check
     - 카테고리별 분포
 
-  [검증 2] 카테고리별 난이도 구조 유지
-    - 기존 영어 judge 채점 기준 카테고리 평균 순위
-    - 번역 품질이 카테고리 간 편차를 보이는지 확인
-    - 기대: coding/math는 번역 영향 최소, writing/roleplay는 번역 영향 가능
-
-  [검증 3] Top-Discriminative 문항 Spearman ρ
-    - 영어 결과에서 문항별 분산이 가장 높은 Top-20 문항 선택
-    - 이 문항들의 LLM semantic score vs 카테고리 기준 Spearman ρ
-    - 변별력 높은 문항일수록 번역 품질이 중요 → 높은 ρ 필요
-
-출력:
-  data/results_translation_validity.csv
-  data/results_translation_validity_per_category.csv
-  figures/fig_translation_validity.png
-  figures/fig_translation_bleu_by_category.png
+  [검증 2] 카테고리별 집계
 
 사용법:
     export PYTHONPATH=src
-    python3 scripts/analysis/analyze_translation_validity.py
+    python3 scripts/analysis/analyze_translation_validity.py \\
+        --provider openai --model gpt-4o-mini --api-key $OPENAI_API_KEY
 
     # mock 테스트 (API 없이)
     python3 scripts/analysis/analyze_translation_validity.py --mock
+
+출력:
+    data/ko/results/results_translation_validity.csv
+    data/ko/results/results_translation_validity_per_category.csv
 """
 
 from __future__ import annotations
@@ -49,17 +37,16 @@ import sys
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from mtbench_repro.client import ChatClient
-from mtbench_repro.io_utils import append_jsonl, get_processed_ids
 from mtbench_repro.schemas import MT_BENCH_CATEGORIES
 
 
-# ── BLEU 계산 (sacrebleu 없이 단순 구현) ─────────────────────────────────────
+# ── BLEU 계산 ────────────────────────────────────────────────────────────────
 
 def _ngrams(tokens: List[str], n: int) -> Dict[tuple, int]:
     counts: Dict[tuple, int] = defaultdict(int)
@@ -69,19 +56,11 @@ def _ngrams(tokens: List[str], n: int) -> Dict[tuple, int]:
 
 
 def bleu_score(hypothesis: str, reference: str, max_n: int = 4) -> float:
-    """
-    간소화된 BLEU-4 계산 (sacrebleu 의존성 없이).
-    단어 토크나이즈 후 1~4-gram precision의 기하평균 × brevity penalty.
-    """
     hyp_tokens = hypothesis.lower().split()
     ref_tokens = reference.lower().split()
-
     if len(hyp_tokens) == 0:
         return 0.0
-
-    # brevity penalty
     bp = min(1.0, math.exp(1 - len(ref_tokens) / max(len(hyp_tokens), 1)))
-
     precisions = []
     for n in range(1, max_n + 1):
         hyp_ngrams = _ngrams(hyp_tokens, n)
@@ -89,68 +68,107 @@ def bleu_score(hypothesis: str, reference: str, max_n: int = 4) -> float:
         if not hyp_ngrams:
             precisions.append(0.0)
             continue
-        clipped = sum(
-            min(cnt, ref_ngrams.get(gram, 0)) for gram, cnt in hyp_ngrams.items()
-        )
+        clipped = sum(min(cnt, ref_ngrams.get(gram, 0)) for gram, cnt in hyp_ngrams.items())
         total = sum(hyp_ngrams.values())
         precisions.append(clipped / total if total > 0 else 0.0)
-
     if any(p == 0 for p in precisions):
         return 0.0
-
     log_avg = sum(math.log(p) for p in precisions) / max_n
     return bp * math.exp(log_avg)
 
 
-# ── LLM 의미 보존 점수 ────────────────────────────────────────────────────────
+# ── LLM 3차원 번역 품질 점수 ──────────────────────────────────────────────────
 
-_SYSTEM_SEMANTIC_SCORE = """\
-You are an expert evaluator of translation quality. Given an original English text and
-a back-translated English text (translated from a Korean intermediate), rate how well
-the semantic meaning is preserved on a scale of 1 to 5:
+_SYSTEM_VALIDITY = """\
+You are evaluating the quality of a Korean translation of an MT-Bench item.
+You will be given:
+1. The original English item.
+2. The back-translated English item generated from the Korean translation.
 
-5 = Identical meaning, same intent and key details preserved
-4 = Mostly equivalent, minor wording differences only
-3 = Core meaning preserved but some details lost or altered
-2 = Significant meaning loss, key information missing or changed
-1 = Fundamentally different meaning
+Compare the two items and evaluate whether the Korean translation likely preserved the original item.
 
-Respond with ONLY a single integer (1-5) on the first line, followed by a one-sentence justification.\
+Evaluate the following dimensions:
+- Semantic preservation: Does the back-translation preserve the original meaning and task intent?
+- Difficulty preservation: Does the back-translation preserve the original level of difficulty?
+- Constraint preservation: Are all explicit constraints preserved, such as roles, numbers, formats, required outputs, and reference-dependent information?
+
+Use a 1-5 scale:
+5 = fully preserved
+4 = mostly preserved with only minor wording differences
+3 = partially preserved with possible experimental impact
+2 = important information or constraints are changed
+1 = substantially different from the original
+
+Return JSON only, with no additional text:
+{
+  "semantic_preservation": 1-5,
+  "difficulty_preservation": 1-5,
+  "constraint_preservation": 1-5,
+  "overall_score": 1-5,
+  "issue_summary": "short explanation (max 1 sentence)",
+  "needs_manual_check": true or false
+}\
 """
 
+_FAIL_RESULT = {
+    "semantic_preservation": -1,
+    "difficulty_preservation": -1,
+    "constraint_preservation": -1,
+    "overall_score": -1,
+    "issue_summary": "parse error",
+    "needs_manual_check": True,
+}
 
-def llm_semantic_score(
+
+def llm_validity_score(
     client: ChatClient,
     original: str,
     back_translated: str,
     model: str,
     sleep: float = 0.3,
-) -> Tuple[int, str]:
-    """LLM으로 의미 보존 점수(1~5) 반환. 실패 시 (-1, "")."""
+) -> dict:
+    """3차원 번역 품질 점수 반환. 실패 시 _FAIL_RESULT."""
     if client._mock:
-        return (4, "Mock: meaning mostly preserved.")
+        return {
+            "semantic_preservation": 4,
+            "difficulty_preservation": 4,
+            "constraint_preservation": 4,
+            "overall_score": 4,
+            "issue_summary": "mock: mostly preserved.",
+            "needs_manual_check": False,
+        }
 
     prompt = (
-        f"ORIGINAL:\n{original}\n\n"
-        f"BACK-TRANSLATED:\n{back_translated}\n\n"
-        "Rate the semantic equivalence (1-5):"
+        f"Original English item:\n{original}\n\n"
+        f"Back-translated English item:\n{back_translated}"
     )
     messages = [
-        {"role": "system", "content": _SYSTEM_SEMANTIC_SCORE},
+        {"role": "system", "content": _SYSTEM_VALIDITY},
         {"role": "user", "content": prompt},
     ]
-    response = client.chat(messages, model=model, temperature=0.0, max_tokens=100)
+    response = client.chat(messages, model=model, temperature=0.0, max_tokens=200)
     if sleep > 0:
         time.sleep(sleep)
 
-    # 첫 줄에서 숫자 파싱
-    first_line = response.strip().split("\n")[0].strip()
-    match = re.search(r"[1-5]", first_line)
-    if match:
-        score = int(match.group())
-        justification = response.strip().split("\n", 1)[-1].strip()
-        return (score, justification)
-    return (-1, response[:200])
+    # JSON 파싱
+    try:
+        # 마크다운 코드블록 제거
+        text = re.sub(r"```json\s*|\s*```", "", response.strip())
+        # 첫 번째 { ... } 블록 추출
+        m = re.search(r"\{.*\}", text, re.DOTALL)
+        if not m:
+            return {**_FAIL_RESULT, "issue_summary": f"no JSON: {response[:100]}"}
+        data = json.loads(m.group())
+        return {
+            "semantic_preservation": int(data.get("semantic_preservation", -1)),
+            "difficulty_preservation": int(data.get("difficulty_preservation", -1)),
+            "constraint_preservation": int(data.get("constraint_preservation", -1)),
+            "overall_score": int(data.get("overall_score", -1)),
+            "issue_summary": str(data.get("issue_summary", ""))[:300],
+            "needs_manual_check": bool(data.get("needs_manual_check", False)),
+        }
+    except Exception as e:
+        return {**_FAIL_RESULT, "issue_summary": f"parse error: {e} / {response[:100]}"}
 
 
 # ── 데이터 로드 ───────────────────────────────────────────────────────────────
@@ -186,86 +204,68 @@ def spearman_rho(xs: List[float], ys: List[float]) -> float:
     return 1 - 6 * d2 / (n * (n * n - 1))
 
 
-# ── 카테고리별 난이도 분석 ─────────────────────────────────────────────────────
+# ── CSV 필드 ──────────────────────────────────────────────────────────────────
 
-def load_category_scores(results_csv: str) -> Dict[str, Dict[str, float]]:
-    """results_phase5_gpt4omini.csv 같은 파일에서 {model: {category: score}} 로드."""
-    scores: Dict[str, Dict[str, float]] = {}
-    with open(results_csv, encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            model = row["model"]
-            scores[model] = {}
-            for cat in MT_BENCH_CATEGORIES:
-                try:
-                    scores[model][cat] = float(row[cat])
-                except (KeyError, ValueError):
-                    scores[model][cat] = float("nan")
-    return scores
+FIELDNAMES = [
+    "question_id", "category",
+    "bleu_turn1", "bleu_turn2", "bleu_avg",
+    "semantic_turn1", "semantic_turn2", "semantic_avg",
+    "difficulty_turn1", "difficulty_turn2", "difficulty_avg",
+    "constraint_turn1", "constraint_turn2", "constraint_avg",
+    "overall_turn1", "overall_turn2", "overall_avg",
+    "needs_manual_check",
+    "issue_summary_turn1", "issue_summary_turn2",
+]
+
+CAT_FIELDNAMES = [
+    "category", "n",
+    "bleu_mean",
+    "semantic_mean", "difficulty_mean", "constraint_mean", "overall_mean",
+    "needs_manual_check_count",
+]
+
+
+def _avg_scores(scores: List[int], dim: str) -> float | str:
+    valid = [s[dim] for s in scores if s[dim] > 0]
+    return round(sum(valid) / len(valid), 2) if valid else ""
 
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="번역 validity 검증")
-    parser.add_argument(
-        "--original",
-        default=str(PROJECT_ROOT / "data" / "en" / "questions.jsonl"),
-    )
-    parser.add_argument(
-        "--translated",
-        default=str(PROJECT_ROOT / "data" / "ko" / "questions.jsonl"),
-    )
-    parser.add_argument(
-        "--back-translated",
-        default=str(PROJECT_ROOT / "data" / "ko" / "questions_back.jsonl"),
-    )
-    parser.add_argument(
-        "--en-results",
-        default=str(PROJECT_ROOT / "data" / "en" / "results" / "scores_gpt4omini.csv"),
-        help="영어 채점 기준 CSV (카테고리 난이도 분석용)",
-    )
-    parser.add_argument(
-        "--output-csv",
-        default=str(PROJECT_ROOT / "data" / "ko" / "results" / "results_translation_validity.csv"),
-    )
-    parser.add_argument(
-        "--output-category-csv",
-        default=str(
-            PROJECT_ROOT / "data" / "ko" / "results" / "results_translation_validity_per_category.csv"
-        ),
-    )
-    parser.add_argument("--provider", choices=["anthropic", "openai"], default="anthropic")
-    parser.add_argument("--model", default="claude-haiku-4-5-20251001",
-                        help="의미 보존 점수용 모델 (빠른 모델 권장)")
+    parser = argparse.ArgumentParser(description="번역 validity 검증 (3차원)")
+    parser.add_argument("--original",
+        default=str(PROJECT_ROOT / "data" / "en" / "questions.jsonl"))
+    parser.add_argument("--translated",
+        default=str(PROJECT_ROOT / "data" / "ko" / "questions.jsonl"))
+    parser.add_argument("--back-translated",
+        default=str(PROJECT_ROOT / "data" / "ko" / "questions_back.jsonl"))
+    parser.add_argument("--output-csv",
+        default=str(PROJECT_ROOT / "data" / "ko" / "results" / "results_translation_validity.csv"))
+    parser.add_argument("--output-category-csv",
+        default=str(PROJECT_ROOT / "data" / "ko" / "results" / "results_translation_validity_per_category.csv"))
+    parser.add_argument("--provider", choices=["anthropic", "openai"], default="openai")
+    parser.add_argument("--model", default="gpt-4o-mini")
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--sleep", type=float, default=0.3)
     parser.add_argument("--mock", action="store_true")
     parser.add_argument("--skip-llm-score", action="store_true",
-                        help="LLM 의미 보존 점수 생략 (BLEU만 계산)")
-    parser.add_argument("--no-resume", action="store_true")
+                        help="LLM 점수 생략 (BLEU만 계산)")
+    parser.add_argument("--no-resume", action="store_true",
+                        help="기존 결과 무시하고 처음부터 재실행")
     args = parser.parse_args()
 
     # 파일 존재 확인
     for label, path in [
         ("원본", args.original),
-        ("한국어 번역", args.translated),
         ("역번역", args.back_translated),
     ]:
         if not Path(path).exists():
             print(f"[오류] {label} 파일 없음: {path}")
-            if label != "원본":
-                script = (
-                    "translate_questions.py"
-                    if "ko" in path
-                    else "back_translate.py"
-                )
-                print(f"  먼저 scripts/translate/{script}를 실행하세요.")
             sys.exit(1)
 
     original_by_id = load_jsonl_by_id(args.original)
     back_by_id = load_jsonl_by_id(args.back_translated)
-
     common_ids = sorted(set(original_by_id) & set(back_by_id))
     print(f"[검증] 비교 가능 문항: {len(common_ids)}개")
 
@@ -284,23 +284,28 @@ def main() -> None:
             provider=args.provider,
         )
 
-    # resume: 이미 처리된 question_id 건너뜀
+    # resume: 새 필드 포함 여부 확인 후 호환 가능한 것만 로드
     output_path = Path(args.output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    done_ids: set[int] = set()
-
     rows_by_id: Dict[int, dict] = {}
+    done_ids: set = set()
+
     if not args.no_resume and output_path.exists():
         with open(output_path, encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            for row in reader:
-                qid = int(row["question_id"])
-                rows_by_id[qid] = row
-                done_ids.add(qid)
-        if done_ids:
-            print(f"[resume] 이미 처리된 {len(done_ids)}개 건너뜀")
+            existing_fields = reader.fieldnames or []
+            # 새 3차원 필드 포함 여부 확인
+            if "semantic_turn1" in existing_fields:
+                for row in reader:
+                    qid = int(row["question_id"])
+                    rows_by_id[qid] = row
+                    done_ids.add(qid)
+                if done_ids:
+                    print(f"[resume] 이미 처리된 {len(done_ids)}개 건너뜀")
+            else:
+                print("[resume] 기존 CSV가 구버전 형식 — 전체 재실행합니다.")
 
-    # ── 검증 1: Back-translation BLEU + LLM score ────────────────────────────
+    # ── 검증: Back-translation BLEU + 3차원 LLM score ────────────────────────
     total = len(common_ids)
     for i, qid in enumerate(common_ids, 1):
         if qid in done_ids:
@@ -310,9 +315,8 @@ def main() -> None:
         back = back_by_id[qid]
         category = orig.get("category", "unknown")
 
-        # Turn 1, Turn 2 각각 비교
         turn_bleus = []
-        turn_llm_scores = []
+        turn_scores = []  # 각 턴의 dict
 
         for t_idx in range(min(len(orig["turns"]), len(back["turns"]))):
             orig_text = orig["turns"][t_idx]
@@ -322,16 +326,21 @@ def main() -> None:
             turn_bleus.append(bleu)
 
             if not args.skip_llm_score:
-                score, _ = llm_semantic_score(
-                    client, orig_text, back_text, args.model, args.sleep
-                )
-                turn_llm_scores.append(score)
+                sc = llm_validity_score(client, orig_text, back_text, args.model, args.sleep)
             else:
-                turn_llm_scores.append(-1)
+                sc = {k: -1 for k in ["semantic_preservation", "difficulty_preservation",
+                                       "constraint_preservation", "overall_score"]}
+                sc["issue_summary"] = ""
+                sc["needs_manual_check"] = False
+            turn_scores.append(sc)
 
         avg_bleu = sum(turn_bleus) / len(turn_bleus) if turn_bleus else 0.0
-        valid_llm = [s for s in turn_llm_scores if s > 0]
-        avg_llm = sum(valid_llm) / len(valid_llm) if valid_llm else -1.0
+
+        def _avg(dim: str) -> str:
+            valid = [s[dim] for s in turn_scores if s[dim] > 0]
+            return str(round(sum(valid) / len(valid), 2)) if valid else ""
+
+        needs_check = any(s["needs_manual_check"] for s in turn_scores)
 
         row = {
             "question_id": qid,
@@ -339,30 +348,52 @@ def main() -> None:
             "bleu_turn1": round(turn_bleus[0], 4) if len(turn_bleus) > 0 else "",
             "bleu_turn2": round(turn_bleus[1], 4) if len(turn_bleus) > 1 else "",
             "bleu_avg": round(avg_bleu, 4),
-            "llm_score_turn1": turn_llm_scores[0] if len(turn_llm_scores) > 0 else "",
-            "llm_score_turn2": turn_llm_scores[1] if len(turn_llm_scores) > 1 else "",
-            "llm_score_avg": round(avg_llm, 2) if avg_llm > 0 else "",
+            "semantic_turn1": turn_scores[0]["semantic_preservation"] if len(turn_scores) > 0 else "",
+            "semantic_turn2": turn_scores[1]["semantic_preservation"] if len(turn_scores) > 1 else "",
+            "semantic_avg": _avg("semantic_preservation"),
+            "difficulty_turn1": turn_scores[0]["difficulty_preservation"] if len(turn_scores) > 0 else "",
+            "difficulty_turn2": turn_scores[1]["difficulty_preservation"] if len(turn_scores) > 1 else "",
+            "difficulty_avg": _avg("difficulty_preservation"),
+            "constraint_turn1": turn_scores[0]["constraint_preservation"] if len(turn_scores) > 0 else "",
+            "constraint_turn2": turn_scores[1]["constraint_preservation"] if len(turn_scores) > 1 else "",
+            "constraint_avg": _avg("constraint_preservation"),
+            "overall_turn1": turn_scores[0]["overall_score"] if len(turn_scores) > 0 else "",
+            "overall_turn2": turn_scores[1]["overall_score"] if len(turn_scores) > 1 else "",
+            "overall_avg": _avg("overall_score"),
+            "needs_manual_check": needs_check,
+            "issue_summary_turn1": turn_scores[0]["issue_summary"] if len(turn_scores) > 0 else "",
+            "issue_summary_turn2": turn_scores[1]["issue_summary"] if len(turn_scores) > 1 else "",
         }
         rows_by_id[qid] = row
+
+        sem = row["semantic_avg"]
+        diff = row["difficulty_avg"]
+        con = row["constraint_avg"]
+        ov = row["overall_avg"]
+        flag = " ⚠" if needs_check else ""
         print(
             f"  [{i}/{total}] q{qid} ({category}) "
-            f"BLEU={avg_bleu:.3f} LLM={avg_llm:.1f}"
+            f"BLEU={avg_bleu:.3f} sem={sem} diff={diff} con={con} overall={ov}{flag}"
         )
 
-    # ── CSV 저장 ─────────────────────────────────────────────────────────────
+        # append to CSV incrementally (crash-safe)
+        write_header = not output_path.exists() or (i == 1 and not done_ids)
+        with open(str(output_path), "a" if not write_header else "w",
+                  newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            if write_header:
+                writer.writeheader()
+            writer.writerow(row)
+
+    # ── 전체 CSV 재정렬 저장 ──────────────────────────────────────────────────
     all_rows = [rows_by_id[qid] for qid in sorted(rows_by_id)]
-    fieldnames = [
-        "question_id", "category",
-        "bleu_turn1", "bleu_turn2", "bleu_avg",
-        "llm_score_turn1", "llm_score_turn2", "llm_score_avg",
-    ]
     with open(str(output_path), "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
         writer.writeheader()
         writer.writerows(all_rows)
     print(f"\n[저장] {output_path}")
 
-    # ── 검증 2: 카테고리별 집계 ───────────────────────────────────────────────
+    # ── 카테고리별 집계 ───────────────────────────────────────────────────────
     cat_rows: Dict[str, list] = defaultdict(list)
     for row in all_rows:
         cat_rows[row["category"]].append(row)
@@ -372,87 +403,67 @@ def main() -> None:
         rows = cat_rows.get(cat, [])
         if not rows:
             continue
+
+        def cat_mean(field: str) -> str:
+            vals = [float(r[field]) for r in rows if r[field] not in ("", "-1", -1)]
+            return str(round(sum(vals) / len(vals), 2)) if vals else ""
+
         bleus = [float(r["bleu_avg"]) for r in rows if r["bleu_avg"] != ""]
-        llms = [float(r["llm_score_avg"]) for r in rows if r["llm_score_avg"] not in ("", "-1")]
+        check_count = sum(1 for r in rows if str(r["needs_manual_check"]) == "True")
         cat_summary.append({
             "category": cat,
             "n": len(rows),
             "bleu_mean": round(sum(bleus) / len(bleus), 4) if bleus else "",
-            "bleu_min": round(min(bleus), 4) if bleus else "",
-            "bleu_max": round(max(bleus), 4) if bleus else "",
-            "llm_score_mean": round(sum(llms) / len(llms), 2) if llms else "",
+            "semantic_mean": cat_mean("semantic_avg"),
+            "difficulty_mean": cat_mean("difficulty_avg"),
+            "constraint_mean": cat_mean("constraint_avg"),
+            "overall_mean": cat_mean("overall_avg"),
+            "needs_manual_check_count": check_count,
         })
 
     cat_output = Path(args.output_category_csv)
     with open(str(cat_output), "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=["category", "n", "bleu_mean", "bleu_min", "bleu_max", "llm_score_mean"],
-        )
+        writer = csv.DictWriter(f, fieldnames=CAT_FIELDNAMES)
         writer.writeheader()
         writer.writerows(cat_summary)
     print(f"[저장] {cat_output}")
 
     # ── 요약 출력 ─────────────────────────────────────────────────────────────
-    print("\n" + "=" * 55)
-    print(" 번역 Validity 요약")
-    print("=" * 55)
-    print(f"{'카테고리':<14} {'문항수':>4}  {'BLEU(avg)':>9}  {'LLM점수':>7}")
-    print("-" * 55)
+    print("\n" + "=" * 75)
+    print(" 번역 Validity 요약 (3차원)")
+    print("=" * 75)
+    print(f"{'카테고리':<14} {'n':>3}  {'BLEU':>6}  {'Semantic':>8}  {'Difficulty':>10}  {'Constraint':>10}  {'Overall':>7}  {'⚠':>3}")
+    print("-" * 75)
     for s in cat_summary:
-        llm_str = f"{s['llm_score_mean']:.2f}" if s["llm_score_mean"] != "" else "  N/A"
-        bleu_str = f"{s['bleu_mean']:.4f}" if s["bleu_mean"] != "" else "   N/A"
-        print(f"{s['category']:<14} {s['n']:>4}  {bleu_str:>9}  {llm_str:>7}")
-    print("-" * 55)
+        print(
+            f"{s['category']:<14} {s['n']:>3}  "
+            f"{str(s['bleu_mean']):>6}  "
+            f"{str(s['semantic_mean']):>8}  "
+            f"{str(s['difficulty_mean']):>10}  "
+            f"{str(s['constraint_mean']):>10}  "
+            f"{str(s['overall_mean']):>7}  "
+            f"{s['needs_manual_check_count']:>3}"
+        )
+    print("-" * 75)
+
+    def global_mean(field: str) -> str:
+        vals = [float(r[field]) for r in all_rows if r.get(field) not in ("", "-1", -1, None)]
+        return f"{sum(vals)/len(vals):.2f}" if vals else "N/A"
 
     all_bleus = [float(r["bleu_avg"]) for r in all_rows if r["bleu_avg"] != ""]
-    all_llms = [float(r["llm_score_avg"]) for r in all_rows if r["llm_score_avg"] not in ("", "-1")]
-    if all_bleus:
-        print(f"{'전체 평균':<14} {len(all_bleus):>4}  {sum(all_bleus)/len(all_bleus):.4f}  ", end="")
-        if all_llms:
-            print(f"{sum(all_llms)/len(all_llms):.2f}")
-        else:
-            print("  N/A")
-    print("=" * 55)
-
-    # ── 검증 3: Spearman ρ — 영어 분석 결과 있을 때만 ────────────────────────
-    if Path(args.en_results).exists() and all_bleus:
-        print("\n[검증 3] BLEU vs 영어 점수 분산 Spearman ρ")
-        en_scores = load_category_scores(args.en_results)
-
-        # 문항별 분산: 여러 모델의 점수 분포를 대리 지표로 카테고리 평균 사용
-        # (문항 단위 점수 집계는 judgment CSV에서 가능하나 여기서는 카테고리 단위)
-        cat_bleu_mean = {
-            s["category"]: float(s["bleu_mean"])
-            for s in cat_summary
-            if s["bleu_mean"] != ""
-        }
-        # 카테고리별 모델 점수 분산 (변별력 proxy)
-        cat_variance: Dict[str, float] = {}
-        for cat in MT_BENCH_CATEGORIES:
-            vals = [
-                model_scores[cat]
-                for model_scores in en_scores.values()
-                if cat in model_scores and not math.isnan(model_scores[cat])
-            ]
-            if len(vals) >= 2:
-                mean = sum(vals) / len(vals)
-                cat_variance[cat] = sum((v - mean) ** 2 for v in vals) / len(vals)
-
-        common_cats = sorted(set(cat_bleu_mean) & set(cat_variance))
-        if len(common_cats) >= 3:
-            bleu_vals = [cat_bleu_mean[c] for c in common_cats]
-            var_vals = [cat_variance[c] for c in common_cats]
-            rho = spearman_rho(var_vals, bleu_vals)
-            print(f"  카테고리 BLEU vs 점수 분산 Spearman ρ = {rho:.4f}")
-            print(
-                "  (ρ > 0: 분산 높은 카테고리일수록 번역 품질 높음 → 좋은 신호)"
-            )
-
-    print(f"\n다음 단계:")
-    print(f"  1. figures/ 디렉토리에 시각화 추가 (BLEU bar chart, LLM score heatmap)")
-    print(f"  2. 번역 품질이 낮은 문항 수동 검토 (BLEU < 0.3인 문항)")
-    print(f"  3. 한국어 eval 답변 생성 후 영어-한국어 랭킹 Spearman ρ 측정")
+    total_check = sum(1 for r in all_rows if str(r.get("needs_manual_check")) == "True")
+    bleu_mean = f"{sum(all_bleus)/len(all_bleus):.4f}" if all_bleus else "N/A"
+    print(
+        f"{'전체 평균':<14} {len(all_rows):>3}  "
+        f"{bleu_mean:>6}  "
+        f"{global_mean('semantic_avg'):>8}  "
+        f"{global_mean('difficulty_avg'):>10}  "
+        f"{global_mean('constraint_avg'):>10}  "
+        f"{global_mean('overall_avg'):>7}  "
+        f"{total_check:>3}"
+    )
+    print("=" * 75)
+    print(f"\n수동 확인 필요 문항: {total_check}개 (needs_manual_check=True)")
 
 
 if __name__ == "__main__":
