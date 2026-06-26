@@ -83,3 +83,4 @@ data/ko/judgments/
 
 # 다운로드 스크립트는 항상 포함
 !scripts/tools/download_dataset.sh
+*.jsonl.bak
