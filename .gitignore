@@ -75,7 +75,7 @@ figures/ko/
 # ============================================================
 # git 추적 대상 정리
 # ============================================================
-#   data/en/answers/          ← 7개 eval 모델 답변 (baseline)
+#   data/en/answers/          ← 6개 eval 모델 답변 (baseline)
 #   data/en/results/*.csv     ← Qwen/GPT judge 집계 결과
 #   data/ko/results/*.csv     ← 한국어 judge 집계 결과 (Phase 1 이후)
 #   data/ko/questions.jsonl   ← 수작업 한국어 번역
