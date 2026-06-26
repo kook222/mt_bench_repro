@@ -1,2 +1,9 @@
-category,n,bleu_mean,bleu_min,bleu_max,llm_score_mean
-writing,3,0.0,0.0,0.0,4.0
+category,n,bleu_mean,semantic_mean,difficulty_mean,constraint_mean,overall_mean,needs_manual_check_count
+writing,10,0.2022,4.25,4.8,4.35,4.15,4
+roleplay,10,0.2233,4.25,4.95,4.9,4.25,2
+extraction,10,0.2312,3.7,4.7,4.1,3.65,8
+reasoning,10,0.3349,3.8,4.7,4.2,3.75,4
+math,10,0.3032,4.15,4.85,3.95,3.95,7
+coding,10,0.3506,4.25,4.95,4.75,4.2,5
+stem,10,0.3157,4.55,5.0,4.95,4.55,2
+humanities,10,0.3566,4.55,5.0,4.9,4.5,2

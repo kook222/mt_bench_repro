@@ -1,4 +1,81 @@
-question_id,category,bleu_turn1,bleu_turn2,bleu_avg,llm_score_turn1,llm_score_turn2,llm_score_avg
-81,writing,0.0,0.0,0.0,4,4,4.0
-82,writing,0.0,0.0,0.0,4,4,4.0
-83,writing,0.0,0.0,0.0,4,4,4.0
+question_id,category,bleu_turn1,bleu_turn2,bleu_avg,semantic_turn1,semantic_turn2,semantic_avg,difficulty_turn1,difficulty_turn2,difficulty_avg,constraint_turn1,constraint_turn2,constraint_avg,overall_turn1,overall_turn2,overall_avg,needs_manual_check,issue_summary_turn1,issue_summary_turn2
+81,writing,0.2545,0.3029,0.2787,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+82,writing,0.5815,0.0,0.2908,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,The back-translation slightly changes the wording but retains the overall meaning and task intent.
+83,writing,0.5939,0.0,0.297,3,5,4.0,4,5,4.5,2,5,3.5,2,5,3.5,True,"The word limit changed from 200 words to 200 characters, which significantly alters the task constraints.",no issue
+84,writing,0.2364,0.3938,0.3151,4,5,4.5,4,5,4.5,5,5,5.0,4,5,4.5,False,The back-translation mostly preserves the original meaning and constraints with minor wording differences.,no issue
+85,writing,0.3199,0.0,0.1599,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+86,writing,0.3047,0.0,0.1524,4,4,4.0,5,5,5.0,5,3,4.0,4,3,3.5,True,The back-translation mostly preserves the original meaning with minor wording differences.,"The back-translation changes the instruction from reworking the response to rewriting it, which alters the task intent."
+87,writing,0.3505,0.0,0.1753,4,2,3.0,5,3,4.0,4,2,3.0,4,2,3.0,True,The back-translation changes the wording slightly but retains the overall meaning and task intent.,"The task changed from repeating a task to rewriting a story, and the constraint of using four-word sentences was altered to using only four words in one sentence."
+88,writing,0.2061,0.2942,0.2501,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+89,writing,0.0,0.1394,0.0697,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,The back-translation slightly alters wording but retains the original meaning and constraints.,no issue
+90,writing,0.0669,0.0,0.0335,2,4,3.0,5,5,5.0,2,4,3.0,2,4,3.0,True,The back-translation changes the original task from editing to correcting and alters the content significantly.,The back-translation slightly alters the phrasing but retains the original meaning and intent.
+91,roleplay,0.2037,0.239,0.2214,4,4,4.0,5,5,5.0,5,5,5.0,4,4,4.0,True,"The back-translation slightly changes the phrasing from 'need to go' to 'should go', which may affect the intent.",The back-translation slightly changes the phrasing of the first question but retains the overall meaning.
+92,roleplay,0.2193,0.0,0.1096,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,The back-translation slightly alters the phrasing but retains the overall meaning and intent.,no issue
+93,roleplay,0.1926,0.0,0.0963,4,5,4.5,4,5,4.5,5,5,5.0,4,5,4.5,False,Minor wording differences but overall meaning and constraints are preserved.,no issue
+94,roleplay,0.1758,0.0,0.0879,4,4,4.0,5,5,5.0,4,5,4.5,4,4,4.0,False,"Minor wording differences and slight changes in phrasing, but overall meaning and task intent are mostly preserved.",The back-translation slightly alters the phrasing but retains the overall meaning and intent.
+95,roleplay,0.2583,0.0,0.1291,5,2,3.5,5,5,5.0,5,5,5.0,5,2,3.5,True,no issue,The idiomatic meaning of the original phrase is lost in the back-translation.
+96,roleplay,0.5784,0.2333,0.4058,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,"The meaning is mostly preserved, but the phrasing is slightly altered."
+97,roleplay,0.1102,0.5555,0.3329,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,Minor wording differences but overall meaning and task intent are preserved.,no issue
+98,roleplay,0.0,0.4374,0.2187,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,The back-translation slightly alters the phrasing of the question but retains the overall meaning.,no issue
+99,roleplay,0.2619,1.0,0.631,4,5,4.5,5,5,5.0,4,5,4.5,4,5,4.5,False,The back-translation slightly alters the wording but retains the original meaning and constraints.,no issue
+100,roleplay,0.0,0.0,0.0,4,4,4.0,5,5,5.0,5,5,5.0,4,4,4.0,False,Minor wording differences but overall meaning is preserved.,"The back-translation uses 'loggers' instead of 'deforesters', which slightly alters the meaning."
+101,reasoning,0.2417,0.1115,0.1766,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,The back-translation uses slightly different wording but retains the original meaning.
+102,reasoning,0.2007,0.3724,0.2866,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,"The back-translation uses 'hint' instead of 'clue', which is a minor wording difference."
+103,reasoning,0.7358,0.5969,0.6664,4,4,4.0,5,5,5.0,4,5,4.5,4,4,4.0,False,"The back-translation has a minor wording difference ('must' instead of 'has to' and 'reason' instead of 'reasons'), but the overall meaning is mostly preserved.","The term 'above' was changed to 'previous', which is a minor wording difference."
+104,reasoning,0.0,0.381,0.1905,2,3,2.5,4,4,4.0,2,2,2.0,2,2,2.0,True,The back-translation changes the relationship of siblings and introduces ambiguity about the number of brothers.,"The back-translation introduces a change in the number of brothers and alters the term 'brothers' to 'male siblings', which affects the original meaning."
+105,reasoning,0.467,0.0,0.2335,4,4,4.0,5,5,5.0,5,4,4.5,4,4,4.0,False,The back-translation has minor wording differences but retains the original meaning and task intent.,The back-translation slightly alters the phrasing but retains the overall meaning and task intent.
+106,reasoning,0.2277,0.0,0.1138,3,4,3.5,4,5,4.5,4,5,4.5,3,4,3.5,True,"The back-translation changes the wording and structure, which may impact the clarity of the task.","The back-translation uses 'unknown' instead of 'uncertain', which slightly alters the nuance."
+107,reasoning,0.8137,0.5518,0.6828,5,4,4.5,5,4,4.5,5,4,4.5,5,4,4.5,False,no issue,The back-translation maintains the original meaning and difficulty but slightly alters the phrasing regarding the familial relationship.
+108,reasoning,0.4759,0.3408,0.4083,4,4,4.0,5,5,5.0,5,5,5.0,4,4,4.0,False,The back-translation has a minor wording difference but retains the original meaning and constraints.,The back-translation slightly alters the wording but retains the original meaning.
+109,reasoning,0.5117,0.0,0.2558,4,2,3.0,5,4,4.5,5,2,3.5,4,2,3.0,True,"Minor wording differences, but overall meaning and task intent are preserved.","The name 'Suresh' was changed to 'Thresh', altering the subject, and the phrasing of the question was modified, impacting clarity."
+110,reasoning,0.282,0.3868,0.3344,3,4,3.5,4,5,4.5,3,4,3.5,3,4,3.5,True,"The back-translation changes some details and context, affecting the clarity of the task and the specific roles involved.","The roles of 'aides' and 'supervising teachers' are different, which affects the context slightly."
+111,math,0.7522,0.0,0.3761,5,3,4.0,5,5,5.0,5,2,3.5,5,2,3.5,True,no issue,The back-translation introduces a reference to a 'previous problem' which alters the context and introduces ambiguity.
+112,math,0.6392,0.4327,0.536,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+113,math,0.5626,0.0,0.2813,5,2,3.5,5,4,4.5,5,2,3.5,5,2,3.5,True,no issue,"The back-translation changes the meaning by implying the student dislikes green, which alters the original intent."
+114,math,0.3226,0.2709,0.2968,5,2,3.5,5,4,4.5,5,2,3.5,5,2,3.5,True,no issue,"The back-translation changes the context from rolling a single number to the total sum of two dice, altering the original meaning."
+115,math,0.492,0.3282,0.4101,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,"The back-translation uses 'a few' instead of 'some', which slightly alters the meaning but does not significantly impact the overall understanding.",no issue
+116,math,0.0,0.0,0.0,4,5,4.5,5,5,5.0,2,5,3.5,3,5,4.0,True,"The back-translation omits the equations and specific relationships between x, y, and z.",no issue
+117,math,0.7448,0.1531,0.4489,5,2,3.5,5,4,4.5,5,2,3.5,5,2,3.5,True,no issue,"The back-translation changes the task from stating the inequality to asking for the number of integers in the solution, altering the original intent."
+118,math,0.4384,0.183,0.3107,5,3,4.0,5,5,5.0,5,2,3.5,5,2,3.5,True,no issue,"The back-translation changes the focus from a general inquiry about division to a specific question about the remainder, altering the original intent."
+119,math,0.2707,0.2082,0.2394,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+120,math,0.2656,0.0,0.1328,5,3,4.0,5,5,5.0,5,2,3.5,5,2,3.5,True,no issue,The back-translation introduces a reference to a 'previous problem' which alters the context and constraints of the task.
+121,coding,0.3213,0.0,0.1606,4,3,3.5,5,5,5.0,5,5,5.0,4,3,3.5,True,The back-translation has minor wording differences but retains the original meaning.,"The meaning is partially preserved but changes the phrasing significantly, which may impact understanding."
+122,coding,0.7349,0.3702,0.5526,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+123,coding,0.0,0.0,0.0,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,The back-translation slightly alters the phrasing but retains the overall meaning.
+124,coding,0.0368,0.4643,0.2506,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,The back-translation slightly changes the wording but retains the overall meaning and task intent.,no issue
+125,coding,0.8394,0.4238,0.6316,1,5,3.0,5,5,5.0,5,5,5.0,1,5,3.0,True,The back-translation incorrectly identifies the task as finding the lowest common ancestor instead of the highest common ancestor.,no issue
+126,coding,0.5003,0.3376,0.419,4,4,4.0,5,5,5.0,4,5,4.5,4,4,4.0,True,"The back-translation adds a phrase about minimal additional memory usage, which slightly alters the original intent.",The back-translation slightly changes the phrasing but retains the original meaning.
+127,coding,0.7778,0.0,0.3889,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,True,no issue,The back-translation introduces the term 'method' which slightly alters the original intent.
+128,coding,0.201,0.7612,0.4811,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+129,coding,0.4711,0.2575,0.3643,5,3,4.0,5,4,4.5,5,2,3.5,5,2,3.5,True,no issue,"The task intent has changed from a direct question and instruction to a suggestion, and the implementation constraint is altered."
+130,coding,0.3889,0.1263,0.2576,5,4,4.5,5,5,5.0,5,4,4.5,5,4,4.5,False,no issue,"The meaning is mostly preserved, but the wording differs slightly regarding the restriction on data structures."
+131,extraction,0.2436,0.0,0.1218,3,4,3.5,5,5,5.0,2,4,3.0,2,4,3.0,True,The back-translation changes some key phrases and the format of the response is not preserved.,The back-translation slightly changes the wording but retains the overall meaning and task intent.
+132,extraction,0.389,0.0,0.1945,3,5,4.0,4,5,4.5,3,5,4.0,3,5,4.0,True,"The back-translation alters some wording and structure, impacting clarity and adherence to the original task format.",no issue
+133,extraction,0.0013,0.3259,0.1636,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+134,extraction,0.2164,0.23,0.2232,1,4,2.5,1,5,3.0,1,5,3.0,1,4,2.5,True,"The back-translation contains numerous factual inaccuracies regarding profits and revenues, significantly altering the task's requirements.","The task intent is slightly altered from asking to find out to recording, but the meaning remains mostly intact."
+135,extraction,0.2222,0.3202,0.2712,3,5,4.0,4,5,4.5,3,5,4.0,3,5,4.0,True,"The back-translation changes the plural form of 'countries' to singular and alters some specific language details, impacting the overall meaning.",no issue
+136,extraction,0.0,0.0,0.0,2,4,3.0,5,5,5.0,2,5,3.5,2,4,3.0,True,"The counts for 'Amazon' and 'river' are correct, but 'you' is significantly undercounted, affecting the overall accuracy.","The back-translation uses 'targeting' instead of 'using', which slightly alters the phrasing but retains the overall meaning."
+137,extraction,0.5489,0.2102,0.3796,4,4,4.0,5,5,5.0,5,5,5.0,4,4,4.0,False,Minor wording differences but overall meaning and task intent are preserved.,Minor wording differences but overall meaning preserved.
+138,extraction,0.2473,0.0,0.1236,3,4,3.5,5,5,5.0,5,4,4.5,3,4,3.5,True,"The back-translation omits the instruction to consider complex and contradictory reviews, which may impact the analysis.",Minor wording differences but overall meaning and constraints are mostly preserved.
+139,extraction,0.6566,0.2577,0.4572,4,4,4.0,5,5,5.0,5,5,5.0,4,4,4.0,True,"The back-translation uses 'formulas' instead of 'equations', which is a minor semantic difference.","The back-translation slightly changes 'equations' to 'formulas', which may affect the interpretation."
+140,extraction,0.4114,0.343,0.3772,2,5,3.5,5,5,5.0,3,5,4.0,2,5,3.5,True,"The time frame was changed from 'the following records' to 'the next week', altering the context significantly.",no issue
+141,stem,0.5109,0.0,0.2554,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,"The back-translation uses 'previous answer' instead of 'response', which is a minor wording difference."
+142,stem,0.1743,0.6666,0.4204,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,The back-translation slightly changes the wording but retains the original meaning.
+143,stem,0.3288,0.6414,0.4851,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,True,"The back-translation slightly changes 'outline' to 'explain', which may affect the specificity of the response required.",no issue
+144,stem,0.7917,0.2907,0.5412,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,The term 'coined' instead of 'named' introduces a slight wording difference but does not change the meaning.,no issue
+145,stem,0.4941,0.0,0.247,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,The back-translation has minor wording differences but retains the original meaning and intent.,no issue
+146,stem,0.2193,0.0,0.1096,5,4,4.5,5,5,5.0,5,4,4.5,5,4,4.5,True,no issue,"The back-translation slightly changes wording and adds 'example', which may affect the interpretation of the task."
+147,stem,0.2506,0.2859,0.2683,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,Minor wording differences but overall meaning is preserved.
+148,stem,0.2759,0.5444,0.4101,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+149,stem,0.3579,0.0,0.179,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,The meaning is mostly preserved with minor wording differences.
+150,stem,0.4825,0.0,0.2412,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,"The back-translation uses 'specific' instead of 'concrete', which slightly alters the nuance but retains the overall meaning."
+151,humanities,0.4802,0.0,0.2401,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+152,humanities,0.6998,0.4111,0.5554,4,4,4.0,5,5,5.0,5,5,5.0,4,4,4.0,False,"The term 'mortality' was changed to 'death', which slightly alters the nuance but retains the overall meaning.","The back-translation uses 'expresses' instead of 'illustrates', which slightly alters the nuance but retains the overall meaning."
+153,humanities,0.3877,0.8633,0.6255,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,"Minor wording differences, but overall meaning is preserved.",no issue
+154,humanities,0.4015,0.8932,0.6473,5,5,5.0,5,5,5.0,4,5,4.5,4,5,4.5,False,"The overall meaning and task intent are preserved, but the phrasing of the duration is slightly altered.",no issue
+155,humanities,0.4776,0.0,0.2388,4,4,4.0,5,5,5.0,5,5,5.0,4,4,4.0,True,"The back-translation slightly changes the wording from 'share ideas' to 'suggest an idea', which may imply a single idea instead of multiple.","The back-translation uses 'specific' instead of 'concrete', which is a minor wording difference."
+156,humanities,0.4413,0.6703,0.5558,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+157,humanities,0.0,0.2842,0.1421,4,4,4.0,5,5,5.0,5,4,4.5,4,4,4.0,True,"The back-translation uses 'explain' instead of 'describe', which slightly alters the task intent.",The back-translation slightly alters the wording but maintains the overall meaning and task intent.
+158,humanities,0.0,0.2818,0.1409,5,5,5.0,5,5,5.0,5,5,5.0,5,5,5.0,False,no issue,no issue
+159,humanities,0.3707,0.0,0.1853,5,4,4.5,5,5,5.0,5,5,5.0,5,4,4.5,False,no issue,The back-translation slightly alters the wording but retains the overall meaning and task intent.
+160,humanities,0.1317,0.337,0.2344,4,5,4.5,5,5,5.0,5,5,5.0,4,5,4.5,False,The back-translation slightly alters the phrasing but retains the overall meaning and intent.,no issue
