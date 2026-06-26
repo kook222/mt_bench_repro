@@ -26,7 +26,7 @@ def is_truncation_error(entry: dict) -> bool:
     return ab_err or ba_err
 
 
-def clean_file(path: Path, dry_run: bool = False) -> tuple[int, int]:
+def clean_file(path: Path, dry_run: bool = False):
     """
     파일에서 truncation 에러 건 제거.
     Returns: (total, removed)
