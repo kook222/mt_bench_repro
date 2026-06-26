@@ -37,7 +37,7 @@ import sys
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -231,19 +231,12 @@ CAT_FIELDNAMES = [
 ]
 
 
-def _avg_scores(scores: List[int], dim: str) -> float | str:
-    valid = [s[dim] for s in scores if s[dim] > 0]
-    return round(sum(valid) / len(valid), 2) if valid else ""
-
-
 # ── 메인 ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="번역 validity 검증 (3차원)")
     parser.add_argument("--original",
         default=str(PROJECT_ROOT / "data" / "en" / "questions.jsonl"))
-    parser.add_argument("--translated",
-        default=str(PROJECT_ROOT / "data" / "ko" / "questions.jsonl"))
     parser.add_argument("--back-translated",
         default=str(PROJECT_ROOT / "data" / "ko" / "questions_back.jsonl"))
     parser.add_argument("--output-csv",
