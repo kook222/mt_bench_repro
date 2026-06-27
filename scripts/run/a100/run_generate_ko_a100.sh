@@ -147,7 +147,7 @@ for ENTRY in "${MODEL_LIST[@]}"; do
   VLLM_PID=$!
 
   # 서버 준비 대기
-  MAX_WAIT=300
+  MAX_WAIT=600
   WAITED=0
   until curl -s "http://localhost:$VLLM_PORT/health" > /dev/null 2>&1; do
     if [ "$WAITED" -ge "$MAX_WAIT" ]; then
