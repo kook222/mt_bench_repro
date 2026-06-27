@@ -57,7 +57,7 @@ JUDGES: List[JudgeConfig] = [
         family="Qwen2.5",
         label="Qwen2.5-7B",
         params_b="7",
-        results_csv=DATA_DIR / "scores_qwen7b.csv",
+        results_csv=DATA_DIR / "results_phase3_judge_7B.csv",
         pairwise_dir=ROOT / "data" / "en" / "judgments" / "qwen" / "judge_7B" / "pairwise",
     ),
     JudgeConfig(
@@ -66,7 +66,7 @@ JUDGES: List[JudgeConfig] = [
         family="Qwen2.5",
         label="Qwen2.5-14B",
         params_b="14",
-        results_csv=DATA_DIR / "scores_qwen14b.csv",
+        results_csv=DATA_DIR / "results_phase3_judge_14B.csv",
         pairwise_dir=ROOT / "data" / "en" / "judgments" / "qwen" / "judge_14B" / "pairwise",
     ),
     JudgeConfig(
@@ -75,7 +75,7 @@ JUDGES: List[JudgeConfig] = [
         family="Qwen2.5",
         label="Qwen2.5-32B",
         params_b="32",
-        results_csv=DATA_DIR / "scores_qwen32b.csv",
+        results_csv=DATA_DIR / "results_phase3_judge_32B.csv",
         pairwise_dir=ROOT / "data" / "en" / "judgments" / "qwen" / "judge_32B" / "pairwise",
     ),
     JudgeConfig(
@@ -84,7 +84,7 @@ JUDGES: List[JudgeConfig] = [
         family="OpenAI",
         label="GPT-4o-mini",
         params_b="api",
-        results_csv=DATA_DIR / "scores_gpt4omini.csv",
+        results_csv=DATA_DIR / "results_phase3_judge_gpt4omini.csv",
         pairwise_dir=ROOT / "data" / "en" / "judgments" / "gpt" / "judge_gpt4omini" / "pairwise",
     ),
 ]
@@ -186,7 +186,7 @@ def iter_jsonl(path: Path) -> Iterable[dict]:
 
 def load_pairwise_records(pairwise_dir: Path) -> List[dict]:
     files = sorted(pairwise_dir.glob("*.jsonl"))
-    expected_files = 21
+    expected_files = 15  # 6모델 기준 C(6,2) = 15 pairs
     if len(files) != expected_files:
         raise ValueError(
             f"{pairwise_dir} should contain {expected_files} pairwise files, found {len(files)}"

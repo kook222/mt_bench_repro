@@ -568,7 +568,7 @@ def resolve_pairwise_winner(
     - verdict_ba: [B, A] 순서로 swap 후 판정
       (BA 순서이므로 "A"는 실제로 model_b가 더 좋다는 의미)
     - 두 판정이 일치하면 해당 모델이 winner.
-    - 불일치하면 "inconsistent" → aggregate에서 tie로 처리.
+    - 불일치하면 "inconsistent" → aggregate에서 집계 제외 (win-rate 분모에서도 제외).
 
     왜 conservative approach인가:
     - 논문 Section 3.4: "only declare a win when an answer is preferred in both orders"

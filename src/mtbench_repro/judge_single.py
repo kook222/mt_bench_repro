@@ -225,7 +225,7 @@ def run_judge_single(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MT-Bench Single-answer Grading")
-    parser.add_argument("--questions", type=str, default="data/mt_bench_questions.jsonl")
+    parser.add_argument("--questions", type=str, default="data/en/questions.jsonl")
     parser.add_argument("--answers-dir", type=str, default="data/answers/")
     parser.add_argument("--output-dir", type=str, default="data/judgments/")
     parser.add_argument("--model-id", type=str, required=True,

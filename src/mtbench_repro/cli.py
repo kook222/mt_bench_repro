@@ -43,7 +43,7 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--questions", type=str,
-        default="data/mt_bench_questions.jsonl",
+        default="data/en/questions.jsonl",
         help="MT-Bench 질문 JSONL 경로",
     )
     parser.add_argument(

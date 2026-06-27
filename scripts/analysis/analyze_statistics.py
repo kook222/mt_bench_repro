@@ -81,7 +81,7 @@ def permutation_test(
     combined = np.concatenate([a, b])
     na = len(a)
     null = np.array([
-        (RNG.permutation(combined)[:na].mean() - RNG.permutation(combined)[na:].mean())
+        (lambda p: p[:na].mean() - p[na:].mean())(RNG.permutation(combined))
         for _ in range(n_perm)
     ])
     if alternative == "two-sided":

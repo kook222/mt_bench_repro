@@ -197,7 +197,7 @@ def run_generation(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MT-Bench 모델 답변 생성")
     parser.add_argument("--questions", type=str,
-                        default="data/mt_bench_questions.jsonl")
+                        default="data/en/questions.jsonl")
     parser.add_argument("--answers-dir", type=str, default="data/answers/")
     parser.add_argument("--model-id", type=str, required=True,
                         help="생성 모델 ID (vLLM served-model-name과 일치)")

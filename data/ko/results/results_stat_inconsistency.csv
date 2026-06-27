@@ -5,11 +5,11 @@ EN,Qwen-32B,1200,0.3092,0.2833,0.3358,,,,
 EN,7B vs 14B,1200 vs 1200,,,,permutation_test,0.3417,0.0,***
 EN,14B vs 32B,1200 vs 1200,,,,permutation_test,0.1417,0.0,***
 EN,7B vs 32B,1200 vs 1200,,,,permutation_test,0.4833,0.0,***
-KO,Qwen-7B,1200,0.445,0.4175,0.4734,,,,
-KO,Qwen-14B,1200,0.23,0.2067,0.2542,,,,
-KO,Qwen-32B,1200,0.2025,0.18,0.225,,,,
+KO,Qwen-7B,1200,0.445,0.4167,0.4733,,,,
+KO,Qwen-14B,1200,0.23,0.2067,0.2533,,,,
+KO,Qwen-32B,1200,0.2025,0.18,0.2258,,,,
 KO,7B vs 14B,1200 vs 1200,,,,permutation_test,0.215,0.0,***
-KO,14B vs 32B,1200 vs 1200,,,,permutation_test,0.0275,0.0219,*
+KO,14B vs 32B,1200 vs 1200,,,,permutation_test,0.0275,0.1086,ns
 KO,7B vs 32B,1200 vs 1200,,,,permutation_test,0.2425,0.0,***
 EN vs KO,Qwen-7B,1200 vs 1200,,,,EN_vs_KO,0.3475,0.0,***
 EN vs KO,Qwen-14B,1200 vs 1200,,,,EN_vs_KO,0.2208,0.0,***
