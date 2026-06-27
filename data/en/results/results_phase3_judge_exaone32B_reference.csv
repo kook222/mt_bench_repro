@@ -1,0 +1,7 @@
+model,writing,roleplay,extraction,reasoning,math,coding,stem,humanities,overall,n_questions,n_samples,coverage,expected_count
+EEVE-Korean-Instruct-10.8B,NaN,NaN,NaN,5.3000,4.8000,5.1111,NaN,NaN,5.0690,29.0000,29.0000,1.0000,29.0000
+EXAONE-3.5-7.8B-Instruct,NaN,NaN,NaN,7.3000,8.4000,8.2222,NaN,NaN,7.9655,29.0000,29.0000,1.0000,29.0000
+Llama-3.1-8B-Instruct,NaN,NaN,NaN,6.7000,6.5000,7.2222,NaN,NaN,6.7931,29.0000,29.0000,1.0000,29.0000
+Mistral-7B-Instruct-v0.3,NaN,NaN,NaN,6.4000,6.2000,7.2222,NaN,NaN,6.5862,29.0000,29.0000,1.0000,29.0000
+Phi-3.5-mini-Instruct,NaN,NaN,NaN,6.4000,6.4000,7.4444,NaN,NaN,6.7241,29.0000,29.0000,1.0000,29.0000
+gemma-2-9b-it,NaN,NaN,NaN,6.1000,7.4000,8.2222,NaN,NaN,7.2069,29.0000,29.0000,1.0000,29.0000
