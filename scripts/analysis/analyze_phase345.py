@@ -205,11 +205,13 @@ def compute_pairwise_summary(records: List[dict]) -> dict:
     valid_records = [r for r in records if r.get("winner") != "error"]
     inconsistent = [r for r in valid_records if r.get("winner") == "inconsistent"]
     decisive = [r for r in valid_records if r.get("winner") not in {"inconsistent", "error"}]
+    # 1st-position bias: 두 순서 모두 position 1 모델이 이긴 경우
+    # winner_ab="A" → AB 순서에서 position 1(model_a)이 이김
+    # winner_ba="A" → BA 순서에서 position 1(model_b)이 이김 (raw verdict 기준)
+    # 분모: total (논문 Table 2와 동일)
     first_pos_wins = 0
     for record in inconsistent:
-        if record.get("winner_ab") == "A":
-            first_pos_wins += 1
-        elif record.get("winner_ba") == "B":
+        if record.get("winner_ab") == "A" and record.get("winner_ba") == "A":
             first_pos_wins += 1
 
     error_n = len(error_records)
@@ -219,7 +221,7 @@ def compute_pairwise_summary(records: List[dict]) -> dict:
     error_rate = error_n / total if total else float("nan")
     inconsistency_rate_total = inconsistent_n / total if total else float("nan")
     inconsistency_rate_valid = inconsistent_n / valid_n if valid_n else float("nan")
-    first_pos_rate = first_pos_wins / inconsistent_n if inconsistent_n else float("nan")
+    first_pos_rate = first_pos_wins / total if total else float("nan")  # 논문 기준: /total
     decisive_rate_total = decisive_n / total if total else float("nan")
     decisive_rate_valid = decisive_n / valid_n if valid_n else float("nan")
 

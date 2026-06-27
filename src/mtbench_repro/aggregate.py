@@ -288,8 +288,8 @@ def compute_win_rates(
     totals: Dict[str, Dict[str, float]] = {m: defaultdict(float) for m in model_ids}
 
     for j in all_judgments:
-        if j.winner in ("inconsistent", "error"):
-            continue  # position bias로 판정 불일치한 항목은 집계 제외
+        if j.winner == "error":
+            continue  # 파싱 실패는 집계 제외
 
         cat = j.category if j.category else "unknown"
 
@@ -302,7 +302,9 @@ def compute_win_rates(
             if j.winner == model:
                 wins[model][cat] += 1.0
                 wins[model]["overall"] += 1.0
-            elif j.winner == "tie":
+            elif j.winner in ("tie", "inconsistent"):
+                # 논문 Section 3.4 conservative approach:
+                # inconsistent(AB/BA 불일치) → tie로 처리 (0.5점씩)
                 wins[model][cat] += 0.5
                 wins[model]["overall"] += 0.5
 

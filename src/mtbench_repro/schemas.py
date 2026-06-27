@@ -176,8 +176,8 @@ class JudgmentPairwise:
         judge_id: judge 모델 ID
         winner: "A" / "B" / "tie" / "inconsistent"
                 - "inconsistent": swap 후 결과가 달라진 경우
-                  aggregate.py에서 pairwise win-rate 집계 시 제외됨
-                  (분모에도 포함되지 않음; inconsistency rate 분석은 별도 수행)
+                  논문 Section 3.4 conservative approach:
+                  aggregate.py에서 tie로 처리 (양 모델에 0.5점씩)
         judgment_ab: model_a가 먼저인 경우 judge 원문 응답
         judgment_ba: model_b가 먼저인 경우 judge 원문 응답 (swap 결과)
         winner_ab: swap 전 판정 ("A" / "B" / "tie")
