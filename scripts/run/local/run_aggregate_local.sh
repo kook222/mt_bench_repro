@@ -11,11 +11,12 @@ cd "$PROJECT_ROOT"
 
 export PYTHONPATH=src
 
-OUTPUT_DIR="data/judgments_phase2/"
-CSV_OUT="data/en/results/results_multi.csv"
+# mock 파이프라인 결과 집계용 (run_mock_full.sh 이후 실행)
+OUTPUT_DIR="data/mock/judgments/"
+CSV_OUT="data/mock/results.csv"
 
 echo "=============================="
-echo " Step 4: 집계 및 Trend 분석"
+echo " 집계 (mock)"
 echo "=============================="
 
 python -m mtbench_repro.cli aggregate \

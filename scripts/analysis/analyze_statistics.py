@@ -2,13 +2,12 @@
 """
 scripts/analysis/analyze_statistics.py
 
-Bootstrap 95% CI + Permutation test 통계 검정.
+Permutation test 기반 통계 검정.
 
 분석 항목:
-  [1] EN vs KO 점수 차이 — 모델 × judge별 bootstrap CI
-  [2] Judge size별 inconsistency — bootstrap CI + permutation test (7B↔14B, 14B↔32B)
-  [3] EN vs KO inconsistency 차이 — permutation test (같은 judge)
-  [4] Reference vs Non-reference 점수 차이 — bootstrap CI (turn2 기준)
+  [1] EN vs KO 점수 차이 — 모델 × judge별 permutation test
+  [2] Judge size별 inconsistency — permutation test (7B↔14B, 14B↔32B, EN vs KO)
+  [3] Reference vs Non-reference 점수 차이 — permutation test (turn2 기준)
 
 출력:
   data/ko/results/results_stat_en_ko_diff.csv
@@ -46,28 +45,11 @@ MODELS = [
     "Mistral-7B-Instruct-v0.3",
     "Phi-3.5-mini-Instruct",
 ]
-N_BOOT = 10_000
 N_PERM = 10_000
 RNG    = np.random.default_rng(42)
 
 
-# ── 기본 통계 함수 ─────────────────────────────────────────────────────────────
-
-def bootstrap_ci(
-    data: List[float],
-    n_boot: int = N_BOOT,
-    alpha: float = 0.05,
-) -> Tuple[float, float, float]:
-    """(mean, ci_lo, ci_hi) 반환. data 길이 < 2면 nan."""
-    arr = np.array(data, dtype=float)
-    if len(arr) < 2:
-        return float("nan"), float("nan"), float("nan")
-    means = np.array([
-        RNG.choice(arr, len(arr), replace=True).mean()
-        for _ in range(n_boot)
-    ])
-    return float(arr.mean()), float(np.percentile(means, alpha / 2 * 100)), float(np.percentile(means, (1 - alpha / 2) * 100))
-
+# ── 통계 함수 ──────────────────────────────────────────────────────────────────
 
 def permutation_test(
     a: List[float],
@@ -93,11 +75,11 @@ def permutation_test(
     return float(obs), p
 
 
-def sig_stars(p: float) -> str:
-    if p < 0.001: return "***"
-    if p < 0.01:  return "**"
-    if p < 0.05:  return "*"
-    return "ns"
+def sig_label(p: float) -> str:
+    if p < 0.001: return "p<0.001"
+    if p < 0.01:  return "p<0.01"
+    if p < 0.05:  return "p<0.05"
+    return f"p={p:.3f} (ns)"
 
 
 # ── JSONL 로더 ────────────────────────────────────────────────────────────────
@@ -146,7 +128,7 @@ def load_pairwise_inconsistency(lang: str, judge: str) -> List[int]:
     return labels
 
 
-# ── 분석 1: EN vs KO 점수 차이 Bootstrap CI ──────────────────────────────────
+# ── 분석 1: EN vs KO 점수 차이 ───────────────────────────────────────────────
 
 def analyze_en_ko_diff() -> List[dict]:
     rows = []
@@ -161,7 +143,6 @@ def analyze_en_ko_diff() -> List[dict]:
             for qid in common_qids:
                 e1, e2 = en_scores[qid]
                 k1, k2 = ko_scores[qid]
-                # 둘 다 유효한 turn만
                 if e1 > 0 and k1 > 0:
                     diffs.append(e1 - k1)
                 if e2 > 0 and k2 > 0:
@@ -170,20 +151,21 @@ def analyze_en_ko_diff() -> List[dict]:
             if not diffs:
                 continue
 
-            mean_d, lo, hi = bootstrap_ci(diffs)
+            mean_d = float(np.mean(diffs))
+            # permutation test: diff vs 0 (one-sample → compare diffs to zeros)
+            _, p = permutation_test(diffs, [0.0] * len(diffs), alternative="two-sided")
             rows.append({
                 "judge": judge_label,
                 "model": model,
                 "n_samples": len(diffs),
                 "mean_diff": round(mean_d, 4),
-                "ci95_lo": round(lo, 4),
-                "ci95_hi": round(hi, 4),
-                "sig": "yes" if lo > 0 or hi < 0 else "no",  # CI가 0을 포함하지 않으면 유의
+                "p_value": round(p, 4),
+                "sig": sig_label(p),
             })
     return rows
 
 
-# ── 분석 2: Judge size별 inconsistency CI + permutation test ─────────────────
+# ── 분석 2: Judge size별 inconsistency permutation test ──────────────────────
 
 def analyze_inconsistency() -> List[dict]:
     rows = []
@@ -198,21 +180,17 @@ def analyze_inconsistency() -> List[dict]:
             labels = incon_by_judge[judge]
             if not labels:
                 continue
-            mean_r, lo, hi = bootstrap_ci([float(x) for x in labels])
             rows.append({
                 "lang": lang.upper(),
                 "judge": judge.replace("judge_", "Qwen-"),
                 "n_pairs": len(labels),
-                "inconsistency_rate": round(mean_r, 4),
-                "ci95_lo": round(lo, 4),
-                "ci95_hi": round(hi, 4),
+                "inconsistency_rate": round(float(np.mean(labels)), 4),
                 "comparison": "",
                 "obs_diff": "",
                 "p_value": "",
                 "sig": "",
             })
 
-        # pairwise permutation test: 인접 크기 judge 간 차이
         pairs = [("judge_7B", "judge_14B"), ("judge_14B", "judge_32B"), ("judge_7B", "judge_32B")]
         for j_a, j_b in pairs:
             la = [float(x) for x in incon_by_judge.get(j_a, [])]
@@ -225,12 +203,10 @@ def analyze_inconsistency() -> List[dict]:
                 "judge": f"{j_a.replace('judge_','')} vs {j_b.replace('judge_','')}",
                 "n_pairs": f"{len(la)} vs {len(lb)}",
                 "inconsistency_rate": "",
-                "ci95_lo": "",
-                "ci95_hi": "",
                 "comparison": "permutation_test",
                 "obs_diff": round(obs, 4),
                 "p_value": round(p, 4),
-                "sig": sig_stars(p),
+                "sig": sig_label(p),
             })
 
     # EN vs KO 같은 judge permutation test
@@ -245,18 +221,16 @@ def analyze_inconsistency() -> List[dict]:
             "judge": judge.replace("judge_", "Qwen-"),
             "n_pairs": f"{len(la)} vs {len(lb)}",
             "inconsistency_rate": "",
-            "ci95_lo": "",
-            "ci95_hi": "",
             "comparison": "EN_vs_KO",
             "obs_diff": round(obs, 4),
             "p_value": round(p, 4),
-            "sig": sig_stars(p),
+            "sig": sig_label(p),
         })
 
     return rows
 
 
-# ── 분석 3: Reference vs Non-reference 점수 차이 Bootstrap CI ────────────────
+# ── 분석 3: Reference vs Non-reference 점수 차이 ─────────────────────────────
 
 def analyze_ref_vs_nonref() -> List[dict]:
     rows = []
@@ -267,13 +241,10 @@ def analyze_ref_vs_nonref() -> List[dict]:
             ref_scores: List[float]    = []
 
             for model in MODELS:
-                # non-ref: turn2만 (turn1은 ref와 비교 불가)
                 sg = load_single_scores(lang, judge, model)
                 for qid, (s1, s2) in sg.items():
                     if s2 > 0:
                         nonref_scores.append(s2)
-
-                # ref: turn2
                 ref = load_ref_scores(lang, judge, model)
                 for qid, s2 in ref.items():
                     ref_scores.append(s2)
@@ -281,24 +252,17 @@ def analyze_ref_vs_nonref() -> List[dict]:
             if not nonref_scores or not ref_scores:
                 continue
 
-            mean_nr, lo_nr, hi_nr = bootstrap_ci(nonref_scores)
-            mean_r,  lo_r,  hi_r  = bootstrap_ci(ref_scores)
             obs, p = permutation_test(ref_scores, nonref_scores, alternative="two-sided")
-
             rows.append({
                 "lang": lang.upper(),
                 "judge": judge_label,
                 "n_nonref": len(nonref_scores),
-                "nonref_mean": round(mean_nr, 4),
-                "nonref_ci95_lo": round(lo_nr, 4),
-                "nonref_ci95_hi": round(hi_nr, 4),
+                "nonref_mean": round(float(np.mean(nonref_scores)), 4),
                 "n_ref": len(ref_scores),
-                "ref_mean": round(mean_r, 4),
-                "ref_ci95_lo": round(lo_r, 4),
-                "ref_ci95_hi": round(hi_r, 4),
+                "ref_mean": round(float(np.mean(ref_scores)), 4),
                 "diff_ref_minus_nonref": round(obs, 4),
                 "p_value": round(p, 4),
-                "sig": sig_stars(p),
+                "sig": sig_label(p),
             })
 
     return rows
@@ -321,56 +285,54 @@ def save_csv(rows: List[dict], path: Path) -> None:
 # ── 요약 출력 ─────────────────────────────────────────────────────────────────
 
 def print_en_ko_summary(rows: List[dict]) -> None:
-    print("\n" + "=" * 70)
-    print(" [1] EN vs KO 점수 차이 — Bootstrap 95% CI (Qwen-32B)")
-    print("=" * 70)
-    print(f"{'모델':<35} {'n':>4}  {'diff':>6}  {'95% CI':>18}  {'유의'}")
-    print("-" * 70)
+    print("\n" + "=" * 65)
+    print(" [1] EN vs KO 점수 차이 — Permutation test (Qwen-32B)")
+    print("=" * 65)
+    print(f"{'모델':<35} {'n':>4}  {'diff':>6}  {'유의'}")
+    print("-" * 65)
     for r in rows:
         if r["judge"] != "Qwen-32B":
             continue
-        ci = f"[{r['ci95_lo']:.3f}, {r['ci95_hi']:.3f}]"
-        print(f"{r['model']:<35} {r['n_samples']:>4}  {r['mean_diff']:>+6.3f}  {ci:>18}  {r['sig']}")
+        print(f"{r['model']:<35} {r['n_samples']:>4}  {r['mean_diff']:>+6.3f}  {r['sig']}")
 
 
 def print_inconsistency_summary(rows: List[dict]) -> None:
-    print("\n" + "=" * 70)
-    print(" [2] Inconsistency — Bootstrap CI + Permutation test")
-    print("=" * 70)
+    print("\n" + "=" * 65)
+    print(" [2] Inconsistency — Permutation test")
+    print("=" * 65)
     for r in rows:
         if r["comparison"] == "":
             rate = f"{float(r['inconsistency_rate'])*100:.1f}%"
-            ci   = f"[{float(r['ci95_lo'])*100:.1f}%, {float(r['ci95_hi'])*100:.1f}%]"
-            print(f"  {r['lang']} {r['judge']:<12}  {rate}  95%CI {ci}")
+            print(f"  {r['lang']} {r['judge']:<12}  {rate}")
         else:
-            print(f"  {r['lang']} {r['judge']:<20}  diff={r['obs_diff']:>+.4f}  p={r['p_value']:.4f} {r['sig']}")
+            print(f"  {r['lang']} {r['judge']:<20}  diff={r['obs_diff']:>+.4f}  {r['sig']}")
 
 
 def print_ref_summary(rows: List[dict]) -> None:
-    print("\n" + "=" * 70)
-    print(" [3] Reference vs Non-reference — Bootstrap CI + Permutation test")
-    print("=" * 70)
-    print(f"{'lang':<4} {'judge':<12}  {'nonref_mean':>11}  {'ref_mean':>8}  {'diff':>6}  {'p':>7}  sig")
-    print("-" * 70)
+    print("\n" + "=" * 65)
+    print(" [3] Reference vs Non-reference — Permutation test")
+    print("=" * 65)
+    print(f"{'lang':<4} {'judge':<12}  {'nonref':>7}  {'ref':>7}  {'diff':>6}  {'유의'}")
+    print("-" * 65)
     for r in rows:
         print(
             f"{r['lang']:<4} {r['judge']:<12}  "
-            f"{r['nonref_mean']:>11.4f}  {r['ref_mean']:>8.4f}  "
-            f"{r['diff_ref_minus_nonref']:>+6.4f}  {r['p_value']:>7.4f}  {r['sig']}"
+            f"{r['nonref_mean']:>7.4f}  {r['ref_mean']:>7.4f}  "
+            f"{r['diff_ref_minus_nonref']:>+6.4f}  {r['sig']}"
         )
 
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    print("[통계 분석] bootstrap n_boot=10,000  permutation n_perm=10,000  seed=42")
+    print("[통계 분석] permutation n_perm=10,000  seed=42")
 
     print("\n[1/3] EN vs KO 점수 차이 계산 중...")
     diff_rows = analyze_en_ko_diff()
     save_csv(diff_rows, OUT / "results_stat_en_ko_diff.csv")
     print_en_ko_summary(diff_rows)
 
-    print("\n[2/3] Inconsistency CI + permutation test 계산 중...")
+    print("\n[2/3] Inconsistency permutation test 계산 중...")
     incon_rows = analyze_inconsistency()
     save_csv(incon_rows, OUT / "results_stat_inconsistency.csv")
     print_inconsistency_summary(incon_rows)

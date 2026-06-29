@@ -2,17 +2,19 @@
 """
 scripts/analysis/analyze_phase345.py
 
-Phase 3/4/5 judge 결과를 한 번에 요약하는 통합 분석 스크립트.
+전체 judge(Qwen same-family 3종 + GPT-4o cross-family) 결과를 통합 요약.
 
 출력:
-  - data/judge_summary.csv
-  - data/judge_agreement.csv
-  - figures/fig16_phase345_judge_summary.png
+  - data/en/results/judge_summary.csv
+  - data/en/results/judge_agreement.csv
+  - figures/en/fig_judge_summary.png
 
 핵심 목적:
-  1. same-family scaling claim(Phase 3)과 cross-family judge check(Phase 4/5)를 분리해 정리
-  2. judge별 모델 서열, pairwise inconsistency, 불일치 내 first-position bias를 한 번에 확인
+  1. same-family scaling(Qwen 7B/14B/32B)과 cross-family(GPT-4o)를 분리해 정리
+  2. judge별 모델 서열, pairwise inconsistency, 불일치 내 1st-position bias를 한 번에 확인
   3. judge 간 rank agreement / pairwise agreement를 실제 산출물 기준으로 다시 계산
+
+NOTE: GPT-4o judge 결과(data/en/judgments/gpt/) 생성 후 실행 가능.
 """
 
 from __future__ import annotations
@@ -80,7 +82,7 @@ JUDGES: List[JudgeConfig] = [
     ),
     JudgeConfig(
         key="gpt4omini",
-        phase="phase5",
+        phase="phase1c",
         family="OpenAI",
         label="GPT-4o-mini",
         params_b="api",
@@ -401,8 +403,8 @@ def make_matrix_figure(
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
     fig.suptitle(
-        "Phase 3/4/5 Seen-7 Judge Summary\n"
-        "same-family Qwen scaling + cross-family InternLM / GPT-4o-mini checks",
+        "Judge Reliability Summary\n"
+        "same-family Qwen scaling (7B/14B/32B) + cross-family GPT-4o-mini",
         fontsize=15,
         fontweight="bold",
         y=0.98,
@@ -457,13 +459,13 @@ def main() -> None:
         spearman=spearman,
         pairwise_agree=pairwise_agree,
         labels=labels,
-        output_path=FIG_DIR / "fig16_phase345_judge_summary.png",
+        output_path=FIG_DIR / "fig_judge_summary.png",
     )
 
     print("\nSaved:")
     print(f"  - {DATA_DIR / 'judge_summary.csv'}")
     print(f"  - {DATA_DIR / 'judge_agreement.csv'}")
-    print(f"  - {FIG_DIR / 'fig16_phase345_judge_summary.png'}")
+    print(f"  - {FIG_DIR / 'fig_judge_summary.png'}")
 
 
 if __name__ == "__main__":

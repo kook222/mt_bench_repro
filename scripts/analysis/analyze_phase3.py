@@ -5,8 +5,8 @@ scripts/analysis/analyze_phase3.py
 Phase 3 Judge Scaling Law 분석 스크립트.
 
 두 가지 분석을 통합 실행:
-1. Judge 크기 스케일링: judge 7B/14B/32B/72B 별 inconsistency율 + 모델 순위 비교
-2. 문항 수 민감도: Phase 2 데이터에서 서브샘플링 → 몇 문항으로 순위가 수렴하는가
+1. Judge 크기 스케일링: judge 7B/14B/32B 별 inconsistency율 + 모델 순위 비교
+2. 문항 수 민감도: 서브샘플링 → 몇 문항으로 순위가 수렴하는가
 
 사용법:
     # 로컬 실행 (PYTHONPATH 필요)
@@ -83,8 +83,8 @@ def spearman_rho(scores_a: Dict[str, float], scores_b: Dict[str, float]) -> Opti
 # 1. Judge 크기 스케일링 분석
 # ============================================================================
 
-JUDGE_LABELS = ["judge_7B", "judge_14B", "judge_32B", "judge_72B"]
-JUDGE_PARAMS = {"judge_7B": 7, "judge_14B": 14, "judge_32B": 32, "judge_72B": 72}
+JUDGE_LABELS = ["judge_7B", "judge_14B", "judge_32B"]
+JUDGE_PARAMS = {"judge_7B": 7, "judge_14B": 14, "judge_32B": 32}
 
 
 def compute_inconsistency_rate(judgments_dir: Path) -> Tuple[int, int, float]:
@@ -387,16 +387,16 @@ def main() -> None:
 
     project_dir = Path(args.project_dir) if args.project_dir else _PROJECT_DIR
 
-    phase3_dir = project_dir / "data" / "judgments_phase3"
-    phase2_judgments_dir = project_dir / "data" / "judgments_phase2"
+    # 실제 구조: data/en/judgments/qwen/judge_{7B,14B,32B}/
+    phase3_dir = project_dir / "data" / "en" / "judgments" / "qwen"
+    phase2_judgments_dir = project_dir / "data" / "en" / "judgments" / "qwen" / "judge_32B"
     scaling_csv = project_dir / "data" / "en" / "results" / "judge_scaling.csv"
     qsize_csv = project_dir / "data" / "en" / "results" / "judge_qsize.csv"
 
     print("=" * 65)
-    print("  Phase 3 Analysis")
+    print("  Judge Scaling Analysis")
     print(f"  project_dir  : {project_dir}")
-    print(f"  phase3_dir   : {phase3_dir}")
-    print(f"  phase2_judge : {phase2_judgments_dir}")
+    print(f"  judgments_dir: {phase3_dir}")
     print("=" * 65)
 
     if not args.skip_scaling:

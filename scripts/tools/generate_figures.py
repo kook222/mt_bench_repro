@@ -142,11 +142,11 @@ PHASE3_OVERALL = {
              "Yi-1.5-9B": 7.79, "Mistral-7B": 7.09, "SOLAR-10.7B": 7.02, "Zephyr-7B": 6.62},
 }
 
-# Inconsistency scaling data
+# Inconsistency scaling data (EN, 실제 집계값: data/en/results/results_phase3_judge_*.csv)
 SCALING_DATA = [
-    {"label": "7B",  "params": 7,  "rate": 0.7875},
-    {"label": "14B", "params": 14, "rate": 0.4685},
-    {"label": "32B", "params": 32, "rate": 0.3286},
+    {"label": "7B",  "params": 7,  "rate": 0.7925},
+    {"label": "14B", "params": 14, "rate": 0.4508},
+    {"label": "32B", "params": 32, "rate": 0.3092},
 ]
 
 # Q-size sensitivity
