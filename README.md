@@ -253,8 +253,6 @@ bash scripts/run/local/run_quality_check_local.sh
 | EXAONE-3.5-32B-Instruct-AWQ | Cross-family (한국어 특화) | ✅ 완료 |
 | GPT-4o | Cross-family (상용, Phase 1c) | ⏳ 실행 예정 |
 
-Judge 유형별 GPT-4o 실행 범위: single_grade (EN+KO), pairwise (EN+KO), reference-guided (EN+KO) — 총 약 3,700 API 호출, 예상 비용 $25.
-
 Judge 유형은 세 가지다. **Single-grade**: 각 모델 답변을 독립적으로 채점(1~10점). **Pairwise**: 두 모델 답변을 AB, BA 순으로 제시하고 승자를 판정하며 AB/BA 결과가 다르면 `inconsistent`로 처리. **Reference-guided**: math/coding/reasoning 29문항에 한해 참조 정답을 함께 제공하는 single-grade 방식.
 
 ---
