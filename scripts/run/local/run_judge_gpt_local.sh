@@ -70,7 +70,7 @@ run_judge_for_lang() {
 
   echo ""
   echo "────────────────────────────────────────────"
-  echo " [${LANG^^}] $JUDGE_MODEL Judge"
+  echo " [$(echo "$LANG" | tr '[:lower:]' '[:upper:]')] $JUDGE_MODEL Judge"
   echo " 질문:  $QUESTIONS"
   echo " 판정:  $JUDGE_DIR"
   echo "────────────────────────────────────────────"
@@ -91,7 +91,7 @@ run_judge_for_lang() {
 
   # ── Step 1: Single-answer grading ────────────────────────────────────────
   echo ""
-  echo "[${LANG^^} 1/4] Single-answer grading..."
+  echo "[$(echo "$LANG" | tr '[:lower:]' '[:upper:]') 1/4] Single-answer grading..."
   for MODEL_ID in "${EVAL_MODELS[@]}"; do
     echo "  채점: $MODEL_ID"
     python3 -m mtbench_repro.cli judge-single \
@@ -109,7 +109,7 @@ run_judge_for_lang() {
 
   # ── Step 2: Pairwise comparison ───────────────────────────────────────────
   echo ""
-  echo "[${LANG^^} 2/4] Pairwise comparison (AB + BA)..."
+  echo "[$(echo "$LANG" | tr '[:lower:]' '[:upper:]') 2/4] Pairwise comparison (AB + BA)..."
   for ((i=0; i<${#EVAL_MODELS[@]}; i++)); do
     for ((j=i+1; j<${#EVAL_MODELS[@]}; j++)); do
       MODEL_A="${EVAL_MODELS[$i]}"
@@ -132,7 +132,7 @@ run_judge_for_lang() {
 
   # ── Step 3: Reference-guided grading ─────────────────────────────────────
   echo ""
-  echo "[${LANG^^} 3/4] Reference-guided grading..."
+  echo "[$(echo "$LANG" | tr '[:lower:]' '[:upper:]') 3/4] Reference-guided grading..."
   for MODEL_ID in "${EVAL_MODELS[@]}"; do
     echo "  ref 채점: $MODEL_ID"
     python3 -m mtbench_repro.cli judge-reference \
@@ -151,7 +151,7 @@ run_judge_for_lang() {
 
   # ── Step 4: 집계 ─────────────────────────────────────────────────────────
   echo ""
-  echo "[${LANG^^} 4/4] 집계..."
+  echo "[$(echo "$LANG" | tr '[:lower:]' '[:upper:]') 4/4] 집계..."
   python3 -m mtbench_repro.cli aggregate \
     --judgments-dir  "$JUDGE_DIR" \
     --questions-path "$QUESTIONS" \
