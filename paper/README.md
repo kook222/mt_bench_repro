@@ -1,7 +1,19 @@
-# KCI Figure Notes
+# KIPS Paper Artifacts
 
-이 도표 세트는 한국어 LLM 벤치마크/평가 논문에 맞춰 본문 삽입용으로 설계했다.
+이 도표 세트는 KIPS 정보처리학회논문지 투고 원고에 맞춰 본문 삽입용으로 설계했다.
 색 의존도를 줄이고, 흑백 인쇄에서도 구분되도록 marker shape, line style, hatch를 사용한다.
+
+## Regeneration
+
+```bash
+python3 scripts/paper/generate_figures.py
+```
+
+Generated outputs:
+
+- `paper/figures/*.png`
+- `paper/figures/*.pdf`
+- `paper/tables/kci_tables.md`
 
 ## Suggested Figure Order
 

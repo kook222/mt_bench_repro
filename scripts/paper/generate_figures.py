@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Generate KCI-style paper figures and copy-ready result tables.
+Generate KIPS-ready paper figures and copy-ready result tables.
 
 The script uses committed aggregate CSVs for most panels and raw judge JSONL
 files for the reference-guided turn-2 comparison so every judge family can be
 reported with the same scoring rule.
 
 Usage:
-    python3 scripts/tools/generate_figures.py
+    python3 scripts/paper/generate_figures.py
 """
 
 from __future__ import annotations
@@ -26,8 +26,10 @@ from matplotlib.patches import Rectangle
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "figures" / "paper"
-OUT.mkdir(parents=True, exist_ok=True)
+FIG_OUT = ROOT / "paper" / "figures"
+TABLE_OUT = ROOT / "paper" / "tables"
+FIG_OUT.mkdir(parents=True, exist_ok=True)
+TABLE_OUT.mkdir(parents=True, exist_ok=True)
 
 SCORE_FILES = {
     ("EN", "Qwen-7B"): ROOT / "data/en/results/results_phase3_judge_7B.csv",
@@ -125,8 +127,8 @@ def read_csv(path: Path) -> pd.DataFrame:
 
 
 def save(fig: plt.Figure, stem: str) -> None:
-    png = OUT / f"{stem}.png"
-    pdf = OUT / f"{stem}.pdf"
+    png = FIG_OUT / f"{stem}.png"
+    pdf = FIG_OUT / f"{stem}.pdf"
     fig.savefig(png)
     fig.savefig(pdf)
     plt.close(fig)
@@ -474,7 +476,7 @@ def write_tables() -> None:
     ref_parse["Total"] = ref_parse["expected"].map(lambda x: f"{int(round(x))}")
     ref_parse["Failure rate"] = ref_parse["failure_rate"].map(lambda x: f"{x * 100:.1f}%")
 
-    content = "# KCI-style Copy Tables\n\n"
+    content = "# KIPS-ready Copy Tables\n\n"
     content += "## Table 1. Qwen-32B EN-KO single-grade score gap\n\n"
     content += gap[["Model", "EN", "KO", "KO-EN"]].to_markdown(index=False, disable_numparse=True)
     content += "\n\n## Table 2. Inconsistency and first-position tendency\n\n"
@@ -498,7 +500,7 @@ def write_tables() -> None:
     )
     content += "\n"
 
-    path = OUT / "kci_tables.md"
+    path = TABLE_OUT / "kci_tables.md"
     path.write_text(content, encoding="utf-8")
     print(f"saved {path.relative_to(ROOT)}")
 
@@ -506,10 +508,22 @@ def write_tables() -> None:
 def write_notes() -> None:
     notes = dedent(
         """
-        # KCI Figure Notes
+        # KIPS Paper Artifacts
 
-        이 도표 세트는 한국어 LLM 벤치마크/평가 논문에 맞춰 본문 삽입용으로 설계했다.
+        이 도표 세트는 KIPS 정보처리학회논문지 투고 원고에 맞춰 본문 삽입용으로 설계했다.
         색 의존도를 줄이고, 흑백 인쇄에서도 구분되도록 marker shape, line style, hatch를 사용한다.
+
+        ## Regeneration
+
+        ```bash
+        python3 scripts/paper/generate_figures.py
+        ```
+
+        Generated outputs:
+
+        - `paper/figures/*.png`
+        - `paper/figures/*.pdf`
+        - `paper/tables/kci_tables.md`
 
         ## Suggested Figure Order
 
@@ -534,7 +548,7 @@ def write_notes() -> None:
           included for independent audit and recomputation.
         """
     ).strip()
-    path = OUT / "README.md"
+    path = ROOT / "paper" / "README.md"
     path.write_text(notes + "\n", encoding="utf-8")
     print(f"saved {path.relative_to(ROOT)}")
 
@@ -557,7 +571,7 @@ def print_audit() -> None:
 
 def main() -> None:
     setup_style()
-    print(f"Generating KCI-style figures under {OUT.relative_to(ROOT)}/")
+    print(f"Generating KIPS-ready figures under {FIG_OUT.relative_to(ROOT)}/")
     fig1_protocol()
     fig2_score_gap()
     fig3_reliability_bias()
