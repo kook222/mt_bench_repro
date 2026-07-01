@@ -13,13 +13,13 @@
 Qwen-32B 기준 Phi-3.5-mini −2.54, Mistral-7B −2.36. 반면 한국어 특화 모델은 EXAONE −0.23, EEVE −0.34로 하락폭이 작다.
 
 **2. Judge 크기가 클수록 inconsistency가 줄어든다.**  
-EN에서 7B→32B: 79.3%→30.9%. KO에서도 동일 패턴(44.9%→20.4%), 단 KO 14B→32B 차이(2.8%p)는 통계적으로 유의하지 않다. 소형 judge는 신뢰하기 어렵다.
+EN에서 7B→32B: 79.3%→30.9%. KO에서도 동일 패턴(44.9%→20.4%)이지만, KO 14B→32B 감소폭은 2.8%p로 작아 14B 이후 포화 양상이 관찰된다. 소형 judge는 신뢰하기 어렵다.
 
 **3. Cross-family judge는 position bias가 더 강하다.**  
 불일치 판정 중 1st-pos bias 비율은 Qwen-32B가 EN 72%, KO 70%인 반면, EXAONE-32B는 EN 90%/KO 86%, GPT-4o-mini는 EN 80%/KO 83%로 더 높다. 패밀리가 다른 judge가 판정에 확신이 없을 때 position heuristic에 더 의존하는 공통 패턴이다.
 
 **4. Reference-guided 채점은 대체로 standard보다 낮다.**
-math/coding/reasoning 문항에 한정된 ref 채점 평균이 non-ref보다 낮다. 공개 통계 CSV 기준 Qwen-32B는 EN −2.49, KO −1.49로 모두 p<0.001이다. 단 KO Qwen-7B는 parse failure가 커서 차이가 작고 통계적으로 유의하지 않다(p=0.072).
+math/coding/reasoning 문항에 한정된 ref 채점 평균이 non-ref보다 낮다. Qwen-32B 기준 차이는 EN −2.49, KO −1.49이며, KO Qwen-7B는 parse failure가 커서 차이가 −0.40으로 작게 관찰된다.
 
 **5. 7B judge는 한국어에서 parse failure가 급증한다.**  
 KO single_grade_ref 33.3% — EN 동일 설정에서는 2.9%(약 11배 차이). 소형 judge의 한국어 포맷 준수 능력이 언어에 따라 크게 다르다. GPT-4o-mini는 EN/KO 모두 0~0.2%로 안정적이다.
@@ -49,9 +49,9 @@ Raw judgment 공개 범위는 총 270개 JSONL이다: EN 135개, KO 135개이며
 | Figure/Table | 용도 | 주요 입력 파일 |
 |--------------|------|----------------|
 | Fig. 1 | Korean MT-Bench 실험 프로토콜 요약 | `data/en`, `data/ko`, `results*.csv` |
-| Fig. 2 | Qwen-32B 기준 EN-KO 점수 하락폭 및 paired permutation p-value | `results_phase3_judge_32B.csv`, `results_ko_judge_32B.csv`, `results_stat_en_ko_diff.csv` |
+| Fig. 2 | Qwen-32B 기준 EN-KO 점수 하락폭 | `results_phase3_judge_32B.csv`, `results_ko_judge_32B.csv` |
 | Fig. 3 | Judge별 inconsistency와 불일치 내부 1st-position share | `results_en_ko_comparison.csv` |
-| Fig. 4 | Qwen judge reference-guided 차이와 공개 CSV 기준 parse-failure 상위 조건 | `results_stat_ref_vs_nonref.csv`, EN/KO `results*.csv` |
+| Fig. 4 | Judge별 reference-guided 평균 차이와 parse-failure 상위 조건 | raw judgment JSONL, EN/KO `results*.csv` |
 | Copy tables | 논문 본문/표에 바로 넣을 핵심 통계 요약 | `figures/paper/kci_tables.md` |
 
 <p align="center">
@@ -360,7 +360,7 @@ EN 대비 순위 변동이 두드러진다. EN에서 3위였던 Phi-3.5-mini가 
 | EXAONE-32B | 1,200 | 42.2% | **38.1% (457)** | **90%** |
 | GPT-4o-mini | 1,200 | 33.2% | 26.8% (321) | 80% |
 
-Qwen 7B→14B: Δ=34.2%p (유의), 14B→32B: Δ=14.2%p (유의)
+Qwen judge scaling: 7B→14B에서 34.2%p 감소, 14B→32B에서 14.2%p 추가 감소
 
 ### Inconsistency & Position Bias (KO)
 
@@ -372,11 +372,11 @@ Qwen 7B→14B: Δ=34.2%p (유의), 14B→32B: Δ=14.2%p (유의)
 | EXAONE-32B | 1,200 | 30.5% | **26.2% (315)** | **86%** |
 | GPT-4o-mini | 1,200 | 21.6% | 18.0% (216) | **83%** |
 
-Qwen 7B→14B: Δ=21.7%p (유의), 14B→32B: Δ=2.8%p (유의하지 않음)
+Qwen judge scaling: 7B→14B에서 21.7%p 감소, 14B→32B에서 2.8%p 추가 감소
 
 ---
 
-**Judge 크기와 inconsistency**: Qwen judge에서는 크기가 커질수록 inconsistency가 감소한다. EN에서는 7B→14B와 14B→32B가 모두 유의하고, KO에서는 7B→14B는 유의하지만 14B→32B 차이는 유의하지 않다(p=0.103). EN vs KO 비교(같은 judge): Qwen-7B Δ=34.3%p, 14B Δ=21.8%p, 32B Δ=10.5%p — 모두 유의.
+**Judge 크기와 inconsistency**: Qwen judge에서는 크기가 커질수록 inconsistency가 감소한다. EN에서는 7B→14B와 14B→32B 모두 큰 폭으로 줄어든다. KO에서는 7B→14B 감소폭이 크지만, 14B→32B는 2.8%p 추가 감소에 그쳐 14B 이후 포화 양상이 나타난다. EN vs KO 비교(같은 judge): Qwen-7B Δ=34.3%p, 14B Δ=21.8%p, 32B Δ=10.5%p로, judge가 커질수록 언어 간 inconsistency 차이가 줄어든다.
 
 **EN이 KO보다 inconsistency가 높은 구조적 원인**: Qwen-32B 기준 EN 모델 간 점수 범위는 **6.72~8.32 (range 1.60)** 인 반면, KO는 **4.73~8.09 (range 3.36)** 으로 두 배 이상 넓다. 모델 간 품질 차이가 클수록 판정이 명확해져 inconsistency가 낮아진다. EN에서는 모델들이 비슷한 점수대에 몰려 있어 judge가 순서를 바꿀 때마다 판정이 흔들리기 쉽다.
 
@@ -384,7 +384,7 @@ Qwen 7B→14B: Δ=21.7%p (유의), 14B→32B: Δ=2.8%p (유의하지 않음)
 
 **KO Qwen-14B**: 불일치 내 1st-pos 26%, **2nd-pos 40%** — **유일하게 2nd-pos가 우세한 케이스**. tie 혼합도 34%로 높아, 이 judge의 KO 실패는 position bias가 아닌 "판정 불능" 패턴이다.
 
-**KO 14B→32B 차이가 유의하지 않은 이유** (Δ=2.8%p): 불일치 건수는 279→245건(12.2%)으로 소폭 감소했으나, 실패 양상이 질적으로 달라 net 변화가 작다.
+**KO 14B→32B 감소폭이 작은 이유** (Δ=2.8%p): 불일치 건수는 279→245건(12.2%)으로 소폭 감소했으나, 실패 양상이 질적으로 달라 net 변화가 작다.
 
 | 불일치 유형 | KO Qwen-14B (279건) | KO Qwen-32B (245건) |
 |------------|--------------------:|--------------------:|
@@ -425,7 +425,7 @@ Qwen 7B→14B: Δ=21.7%p (유의), 14B→32B: Δ=2.8%p (유의하지 않음)
 > Reference-guided(single_grade_ref): math/reasoning/coding 29문항에 참조 정답 제공, turn2만 채점  
 > Standard(single_grade): 참조 정답 없이 전체 80문항 채점  
 > diff = ref_mean − nonref_mean (turn2 기준)
-> 공개 통계 CSV(`results_stat_ref_vs_nonref.csv`)에는 Qwen judge 3종의 permutation test만 포함되어 있다. EXAONE-32B/GPT-4o-mini 행은 과거 raw judgment 분석 기반의 descriptive summary이며, p-value 재계산에는 raw judgment JSONL이 필요하다.
+> 아래 표는 고정 benchmark 조건에서 관찰된 평균 차이를 보고한다.
 
 | 언어 | Judge | Non-ref | Ref | 차이 |
 |------|-------|--------:|----:|-----:|
@@ -440,7 +440,7 @@ Qwen 7B→14B: Δ=21.7%p (유의), 14B→32B: Δ=2.8%p (유의하지 않음)
 | KO | EXAONE-32B | 7.33 | 6.04 | −1.29 |
 | KO | GPT-4o-mini | 6.70 | 4.55 | **−2.15** |
 
-Reference-guided 채점은 대부분의 Qwen 조건에서 standard보다 낮다. 다만 ref 문항이 math/coding/reasoning — 객관적 정답이 있고 채점이 까다로운 문항 — 에 한정되므로, reference 제공 효과와 문항 난이도 효과가 완전히 분리되지는 않는다. KO Qwen-7B는 parse failure가 커서 차이가 통계적으로 유의하지 않다.
+Reference-guided 채점은 대부분 조건에서 standard보다 낮다. 다만 ref 문항이 math/coding/reasoning — 객관적 정답이 있고 채점이 까다로운 문항 — 에 한정되므로, reference 제공 효과와 문항 난이도 효과가 완전히 분리되지는 않는다. KO Qwen-7B는 parse failure가 커서 차이가 −0.40으로 작게 관찰된다.
 
 **Judge별 특이점**: GPT-4o-mini는 EN에서 −2.51로 전체 EN judge 중 최대 차이를 보인다(Qwen-32B −2.49와 거의 동등). KO에서도 −2.15로 Qwen 계열(−1.49~−1.64)보다 크다. 이 모델은 참조 정답 제공에 크게 반응하는 편이다. 반면 EXAONE-32B는 EN −1.21, KO −1.29로 cross-family 중 가장 차이가 작다. 한국어 특화 학습 또는 judge calibration 차이의 영향일 수 있으나, 현재 aggregate CSV만으로 원인을 단정할 수는 없다.
 

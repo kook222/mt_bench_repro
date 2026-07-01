@@ -2,9 +2,9 @@
 """
 Generate KCI-style paper figures and copy-ready result tables.
 
-The repository includes raw judge JSONL files, but this paper figure script uses
-the committed aggregate CSVs so the manuscript figures remain compact and stable.
-Raw judgments can be used to audit or recompute the aggregate statistics.
+The script uses committed aggregate CSVs for most panels and raw judge JSONL
+files for the reference-guided turn-2 comparison so every judge family can be
+reported with the same scoring rule.
 
 Usage:
     python3 scripts/tools/generate_figures.py
@@ -12,6 +12,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from textwrap import dedent
 
@@ -52,6 +53,19 @@ REF_FILES = {
     ("KO", "Qwen-32B"): ROOT / "data/ko/results/results_ko_judge_32B_reference.csv",
     ("KO", "EXAONE-32B"): ROOT / "data/ko/results/results_ko_judge_exaone32B_reference.csv",
     ("KO", "GPT-4o-mini"): ROOT / "data/ko/results/results_ko_judge_gpt4omini_ref.csv",
+}
+
+RAW_JUDGE_DIRS = {
+    ("EN", "Qwen-7B"): ROOT / "data/en/judgments/qwen/judge_7B",
+    ("EN", "Qwen-14B"): ROOT / "data/en/judgments/qwen/judge_14B",
+    ("EN", "Qwen-32B"): ROOT / "data/en/judgments/qwen/judge_32B",
+    ("EN", "EXAONE-32B"): ROOT / "data/en/judgments/exaone/judge_32B",
+    ("EN", "GPT-4o-mini"): ROOT / "data/en/judgments/gpt/judge_gpt4omini",
+    ("KO", "Qwen-7B"): ROOT / "data/ko/judgments/qwen/judge_7B",
+    ("KO", "Qwen-14B"): ROOT / "data/ko/judgments/qwen/judge_14B",
+    ("KO", "Qwen-32B"): ROOT / "data/ko/judgments/qwen/judge_32B",
+    ("KO", "EXAONE-32B"): ROOT / "data/ko/judgments/exaone/judge_32B",
+    ("KO", "GPT-4o-mini"): ROOT / "data/ko/judgments/gpt/judge_gpt4omini",
 }
 
 MODEL_LABELS = {
@@ -108,16 +122,6 @@ def read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(path)
     return pd.read_csv(path)
-
-
-def p_label(p_value: float) -> str:
-    if p_value < 0.001:
-        return "p<.001"
-    if p_value < 0.01:
-        return "p<.01"
-    if p_value < 0.05:
-        return "p<.05"
-    return f"p={p_value:.3f}"
 
 
 def save(fig: plt.Figure, stem: str) -> None:
@@ -206,15 +210,11 @@ def fig1_protocol() -> None:
 def qwen32_gap_frame() -> pd.DataFrame:
     en = read_csv(SCORE_FILES[("EN", "Qwen-32B")])
     ko = read_csv(SCORE_FILES[("KO", "Qwen-32B")])
-    stat = read_csv(ROOT / "data/ko/results/results_stat_en_ko_diff.csv")
-    stat = stat[stat["judge"] == "Qwen-32B"].set_index("model")
 
     df = en[["model", "overall", "n_samples"]].merge(
         ko[["model", "overall", "n_samples"]], on="model", suffixes=("_en", "_ko")
     )
     df["gap"] = df["overall_ko"] - df["overall_en"]
-    df["paired_diff"] = df["model"].map(stat["mean_diff"])
-    df["p_value"] = df["model"].map(stat["p_value"])
     df["label"] = df["model"].map(MODEL_LABELS)
     return df.sort_values("gap")
 
@@ -237,16 +237,6 @@ def fig2_score_gap() -> None:
             va="center",
             fontsize=8,
         )
-        ax.text(
-            max(row.overall_en, row.overall_ko) + 0.08,
-            idx,
-            p_label(row.p_value),
-            ha="left",
-            va="center",
-            fontsize=7.6,
-            color=MONO["dark"],
-        )
-
     ax.set_yticks(y)
     ax.set_yticklabels(df["label"])
     ax.set_xlabel("MT-Bench score (1-10)")
@@ -256,7 +246,7 @@ def fig2_score_gap() -> None:
     ax.text(
         0.0,
         -0.20,
-        "Open circle=EN, filled square=KO. Left annotations show KO-EN gaps; right annotations show paired permutation-test results.",
+        "Open circle=EN, filled square=KO. Left annotations show the observed KO-EN score gaps.",
         transform=ax.transAxes,
         fontsize=7.2,
         color=MONO["dark"],
@@ -309,6 +299,50 @@ def fig3_reliability_bias() -> None:
     save(fig, "fig3_reliability_bias")
 
 
+def valid_score(value: object) -> bool:
+    return isinstance(value, (int, float)) and value > 0
+
+
+def load_turn2_scores(path: Path) -> list[float]:
+    scores = []
+    if not path.exists():
+        return scores
+    with path.open(encoding="utf-8") as f:
+        for line in f:
+            d = json.loads(line)
+            score = d.get("score_turn2", -1.0)
+            if valid_score(score):
+                scores.append(float(score))
+    return scores
+
+
+def collect_ref_score_diff() -> pd.DataFrame:
+    rows = []
+    model_ids = list(MODEL_LABELS.keys())
+    for (lang, judge), judge_dir in RAW_JUDGE_DIRS.items():
+        nonref_scores = []
+        ref_scores = []
+        for model_id in model_ids:
+            nonref_scores.extend(load_turn2_scores(judge_dir / "single_grade" / f"{model_id}.jsonl"))
+            ref_scores.extend(load_turn2_scores(judge_dir / "single_grade_ref" / f"{model_id}.jsonl"))
+        if not nonref_scores or not ref_scores:
+            continue
+        nonref_mean = float(np.mean(nonref_scores))
+        ref_mean = float(np.mean(ref_scores))
+        rows.append(
+            {
+                "lang": lang,
+                "judge": judge,
+                "n_nonref": len(nonref_scores),
+                "nonref_mean": nonref_mean,
+                "n_ref": len(ref_scores),
+                "ref_mean": ref_mean,
+                "diff_ref_minus_nonref": ref_mean - nonref_mean,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def collect_parse_coverage() -> pd.DataFrame:
     rows = []
     for (lang, judge), path in SCORE_FILES.items():
@@ -345,10 +379,8 @@ def collect_parse_coverage() -> pd.DataFrame:
 
 
 def fig4_ref_parse() -> None:
-    ref = read_csv(ROOT / "data/ko/results/results_stat_ref_vs_nonref.csv")
-    ref = ref[ref["judge"].isin(["Qwen-7B", "Qwen-14B", "Qwen-32B"])].copy()
-    ref["label"] = ref["lang"] + "\n" + ref["judge"]
-
+    ref = collect_ref_score_diff()
+    ref["label"] = ref["lang"] + " " + ref["judge"]
     coverage = collect_parse_coverage()
     summary = (
         coverage.groupby(["lang", "judge", "type"], as_index=False)
@@ -358,23 +390,36 @@ def fig4_ref_parse() -> None:
     top = summary.sort_values("failure_rate", ascending=False).head(6)
     top["label"] = top["lang"] + " " + top["judge"] + "\n" + top["type"]
 
-    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.4))
+    fig, axes = plt.subplots(1, 2, figsize=(8.8, 4.25))
 
     ax = axes[0]
-    x = np.arange(len(ref))
+    y = np.arange(len(ref))[::-1]
     hatch = ["///" if lang == "KO" else "" for lang in ref["lang"]]
-    bars = ax.bar(x, ref["diff_ref_minus_nonref"], color=MONO["light"], edgecolor=MONO["black"], lw=0.7)
+    bars = ax.barh(
+        y,
+        ref["diff_ref_minus_nonref"],
+        color=MONO["light"],
+        edgecolor=MONO["black"],
+        lw=0.7,
+    )
     for bar, h in zip(bars, hatch):
         bar.set_hatch(h)
-    ax.axhline(0, color=MONO["black"], lw=0.8)
-    ax.set_ylabel("Ref - non-ref score")
+    ax.axvline(0, color=MONO["black"], lw=0.8)
+    ax.set_xlabel("Ref - non-ref score")
     ax.set_title("Reference-guided scoring")
-    ax.set_xticks(x)
-    ax.set_xticklabels(ref["label"], rotation=40, ha="right")
-    ax.set_ylim(-2.8, 0.3)
-    ax.grid(axis="y", color="#E6E6E6", lw=0.6)
-    for idx, row in enumerate(ref.itertuples(index=False)):
-        ax.text(idx, row.diff_ref_minus_nonref - 0.12, p_label(row.p_value), ha="center", va="top", fontsize=7)
+    ax.set_yticks(y)
+    ax.set_yticklabels(ref["label"])
+    ax.set_xlim(min(-3.0, ref["diff_ref_minus_nonref"].min() * 1.22), 0.35)
+    ax.grid(axis="x", color="#E6E6E6", lw=0.6)
+    for ypos, row in zip(y, ref.itertuples(index=False)):
+        ax.text(
+            row.diff_ref_minus_nonref - 0.06,
+            ypos,
+            f"{row.diff_ref_minus_nonref:+.2f}",
+            ha="right",
+            va="center",
+            fontsize=7,
+        )
     add_panel_label(ax, "(a)")
 
     ax = axes[1]
@@ -402,7 +447,6 @@ def write_tables() -> None:
     gap["EN"] = gap["overall_en"].map(lambda x: f"{x:.2f}")
     gap["KO"] = gap["overall_ko"].map(lambda x: f"{x:.2f}")
     gap["KO-EN"] = gap["gap"].map(lambda x: f"{x:+.2f}")
-    gap["p"] = gap["p_value"].map(p_label)
 
     comp = read_csv(ROOT / "data/ko/results/results_en_ko_comparison.csv").copy()
     comp["Judge"] = comp["judge"].map(JUDGE_LABELS)
@@ -412,15 +456,16 @@ def write_tables() -> None:
     comp["EN first-pos/incon"] = (comp["en_fp_pct"] / comp["en_incon_pct"] * 100).map(lambda x: f"{x:.0f}%")
     comp["KO first-pos/incon"] = (comp["ko_fp_pct"] / comp["ko_incon_pct"] * 100).map(lambda x: f"{x:.0f}%")
 
-    stat = read_csv(ROOT / "data/ko/results/results_stat_inconsistency.csv")
-    stat = stat[stat["comparison"].notna() & (stat["comparison"].astype(str) != "")].copy()
-    stat["Comparison"] = stat["lang"] + " " + stat["judge"]
-    stat["Observed diff"] = stat["obs_diff"].map(lambda x: f"{float(x):+.4f}")
-    stat["p"] = stat["p_value"].map(lambda x: p_label(float(x)))
+    ref = collect_ref_score_diff().copy()
+    ref["Lang"] = ref["lang"]
+    ref["Judge"] = ref["judge"]
+    ref["Non-ref"] = ref["nonref_mean"].map(lambda x: f"{float(x):.2f}")
+    ref["Ref"] = ref["ref_mean"].map(lambda x: f"{float(x):.2f}")
+    ref["Ref - non-ref"] = ref["diff_ref_minus_nonref"].map(lambda x: f"{float(x):+.2f}")
 
     content = "# KCI-style Copy Tables\n\n"
     content += "## Table 1. Qwen-32B EN-KO single-grade score gap\n\n"
-    content += gap[["Model", "EN", "KO", "KO-EN", "p"]].to_markdown(index=False)
+    content += gap[["Model", "EN", "KO", "KO-EN"]].to_markdown(index=False, disable_numparse=True)
     content += "\n\n## Table 2. Inconsistency and first-position tendency\n\n"
     content += comp[
         [
@@ -431,9 +476,11 @@ def write_tables() -> None:
             "EN first-pos/incon",
             "KO first-pos/incon",
         ]
-    ].to_markdown(index=False)
-    content += "\n\n## Table 3. Permutation tests for inconsistency rates\n\n"
-    content += stat[["Comparison", "Observed diff", "p", "sig"]].to_markdown(index=False)
+    ].to_markdown(index=False, disable_numparse=True)
+    content += "\n\n## Table 3. Reference-guided score difference by judge\n\n"
+    content += ref[["Lang", "Judge", "Non-ref", "Ref", "Ref - non-ref"]].to_markdown(
+        index=False, disable_numparse=True
+    )
     content += "\n"
 
     path = OUT / "kci_tables.md"
@@ -464,8 +511,7 @@ def write_notes() -> None:
 
         - **Fig. 1.** Overview of the Korean MT-Bench evaluation protocol.
         - **Fig. 2.** English and Korean MT-Bench scores under the Qwen-32B judge.
-          The left annotation denotes the KO-EN score gap, and the right annotation
-          denotes the paired permutation-test result.
+          The annotation denotes the observed KO-EN score gap.
         - **Fig. 3.** Pairwise inconsistency and first-position tendency across judge
           settings. First-position share is computed within inconsistent pairs.
         - **Fig. 4.** Reference-guided scoring effects and parse-failure settings in
