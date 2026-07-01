@@ -33,7 +33,7 @@ files, and 6 reference-guided files. Non-standard missing values from the local
 raw export were normalized from `NaN` to JSON `null` so that every JSONL file is
 strictly parseable by standard JSON readers.
 
-## Recomputing Reported Statistics
+## Recomputing Reported Metrics
 
 ```bash
 python3 scripts/translate/compare_en_ko.py
@@ -41,5 +41,5 @@ python3 scripts/analysis/analyze_statistics.py
 python3 scripts/tools/generate_figures.py
 ```
 
-These commands regenerate the EN-KO comparison CSV, statistical test CSVs, and
-KCI-style paper figures from the committed data.
+These commands regenerate the EN-KO comparison CSVs, aggregate analysis CSVs,
+and KCI-style paper figures from the committed data.

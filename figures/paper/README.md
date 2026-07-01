@@ -18,8 +18,7 @@
 
 - **Fig. 1.** Overview of the Korean MT-Bench evaluation protocol.
 - **Fig. 2.** English and Korean MT-Bench scores under the Qwen-32B judge.
-  The left annotation denotes the KO-EN score gap, and the right annotation
-  denotes the paired permutation-test result.
+  The annotation denotes the observed KO-EN score gap.
 - **Fig. 3.** Pairwise inconsistency and first-position tendency across judge
   settings. First-position share is computed within inconsistent pairs.
 - **Fig. 4.** Reference-guided scoring effects and parse-failure settings in
