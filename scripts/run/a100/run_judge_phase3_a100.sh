@@ -1,29 +1,27 @@
 #!/bin/bash
 # scripts/run/a100/run_judge_phase3_a100.sh
 #
-# Phase 3: Judge 크기 스케일링 실험.
-# Qwen2.5 단일 패밀리(7B / 14B / 32B / 72B)로 순차 judge 실행.
+# Phase 3: English Qwen judge scaling experiment.
+# Qwen2.5 single-family judges (7B / 14B / 32B) are run sequentially.
 #
 # 설계 원칙:
 #   - judge 1개씩 vLLM 올리고 → 전 모델 judge → 서버 내리고 → 다음 judge
 #   - 출력 경로를 judge 크기별로 분리: data/en/judgments/qwen/judge_7B/ 등
-#   - 32B / 72B는 AWQ 4-bit 양자화 사용 (A100 40GB VRAM 제약)
-#   - 14B는 Phase 2와 eval 모델 셋이 다르므로(Llama 추가, Qwen 제거) 재실행
+#   - 32B는 AWQ 4-bit 양자화 사용 (A100 40GB VRAM 제약)
+#   - EN/KO comparison uses the same six evaluated models as the Korean run.
 #
-# eval 모델 6개 (Phase 2에서 변경):
-#   Llama-3.1-8B-Instruct  (신규 — Qwen2.5-7B 대체)
-#   SOLAR-10.7B-Instruct   (Phase 2 재사용)
-#   gemma-2-9b-it          (Phase 2 재사용)
-#   Yi-1.5-9B-Chat         (Phase 2 재사용)
-#   Zephyr-7B-beta         (Phase 2 재사용)
-#   Mistral-7B-Instruct-v0.3 (Phase 2 재사용)
-#   Phi-3.5-mini-Instruct  (Phase 2 재사용)
+# eval 모델 6개:
+#   Llama-3.1-8B-Instruct
+#   EEVE-Korean-Instruct-10.8B
+#   EXAONE-3.5-7.8B-Instruct
+#   gemma-2-9b-it
+#   Mistral-7B-Instruct-v0.3
+#   Phi-3.5-mini-Instruct
 #
 # HuggingFace 모델 ID:
 #   Qwen2.5-7B-Instruct  : Qwen/Qwen2.5-7B-Instruct
 #   Qwen2.5-14B-Instruct : Qwen/Qwen2.5-14B-Instruct
 #   Qwen2.5-32B-Instruct : Qwen/Qwen2.5-32B-Instruct-AWQ  (AWQ 4-bit)
-#   Qwen2.5-72B-Instruct : Qwen/Qwen2.5-72B-Instruct-AWQ  (AWQ 4-bit)
 
 set -euo pipefail
 
@@ -72,7 +70,7 @@ if [ ! -f "$QUESTIONS" ]; then
   echo "[Init] 다운로드 완료 ($(wc -l < "$QUESTIONS")문항)"
 fi
 
-# ── eval 모델 목록 (한국어 실험과 동일 5개 — Yi, Zephyr 제외)
+# ── eval 모델 목록 (한국어 실험과 동일 6개)
 EVAL_MODELS=(
   "Llama-3.1-8B-Instruct"
   "EEVE-Korean-Instruct-10.8B"
@@ -90,13 +88,12 @@ JUDGE_LIST=(
   "judge_7B:Qwen2.5-7B-Instruct:none:0.90"
   "judge_14B:Qwen2.5-14B-Instruct:none:0.90"
   "judge_32B:Qwen2.5-32B-Instruct:awq:0.95"
-  # judge_72B: A100 40GB VRAM 부족으로 제외 (AWQ 4-bit 웨이트 ~38.95GB, max-model-len 2048/4096 모두 OOM)
 )
 
 echo "=============================="
 echo " Phase 3 Judge Scaling Experiment"
 echo " eval 모델: ${EVAL_MODELS[*]}"
-echo " judge 4종: ${JUDGE_LIST[*]}"
+echo " judge 3종: ${JUDGE_LIST[*]}"
 echo " Date: $(date)"
 echo "=============================="
 
@@ -178,7 +175,7 @@ for JUDGE_ENTRY in "${JUDGE_LIST[@]}"; do
   fi
   VLLM_PID=$!
 
-  # 서버 준비 대기 (72B AWQ는 로드 시간이 길어 최대 600초)
+  # 서버 준비 대기
   MAX_WAIT=600
   WAITED=0
   until curl -s "http://localhost:$VLLM_PORT/health" > /dev/null 2>&1; do

@@ -190,7 +190,7 @@ def cmd_judge_single(args: argparse.Namespace) -> None:
 
 
 def add_judge_single_parser(subparsers) -> None:
-    p = subparsers.add_parser("judge-single", help="Single-answer grading (Figure 6)")
+    p = subparsers.add_parser("judge-single", help="Single-answer grading (single-grade prompt)")
     _add_common_args(p)
     p.add_argument("--model-id", type=str, required=True,
                    help="채점 대상 모델 ID")
@@ -237,7 +237,7 @@ def cmd_judge_pairwise(args: argparse.Namespace) -> None:
 
 def add_judge_pairwise_parser(subparsers) -> None:
     p = subparsers.add_parser("judge-pairwise",
-                              help="Pairwise comparison + swap (Figure 5, 9)")
+                              help="Pairwise comparison + swap (pairwise and multi-turn pairwise prompts)")
     _add_common_args(p)
     p.add_argument("--model-a", type=str, default=None)
     p.add_argument("--model-b", type=str, default=None)
@@ -294,7 +294,7 @@ def cmd_judge_reference(args: argparse.Namespace) -> None:
 
 def add_judge_reference_parser(subparsers) -> None:
     p = subparsers.add_parser("judge-reference",
-                              help="Reference-guided grading (Figure 8, 10)")
+                              help="Reference-guided grading (reference-guided pairwise and single-grade prompts)")
     _add_common_args(p)
     p.add_argument("--mode", choices=["single", "pairwise"], default="single")
     p.add_argument("--model-id", type=str, default=None)

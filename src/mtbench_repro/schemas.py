@@ -36,7 +36,7 @@ class MTBenchQuestion:
         turns: 1st turn과 2nd turn 질문 텍스트 리스트
                논문 Section 2.2에서 모든 질문은 정확히 2-turn
         reference: 참조 답변 리스트 (reference-guided judge 전용, 선택적)
-                   논문 Section 3.4, Figure 8에서 수학/추론 문제에만 사용
+                   논문 Section 3.4, reference-guided pairwise prompt에서 수학/추론 문제에만 사용
     """
     question_id: int
     category: str
@@ -109,7 +109,7 @@ class ModelAnswer:
 class JudgmentSingle:
     """
     Single-answer grading 결과.
-    논문 Figure 6 기반: 1~10점 척도, [[rating]] 파싱.
+    논문 single-grade prompt 기반: 1~10점 척도, [[rating]] 파싱.
 
     Attributes:
         question_id: 판정 대상 질문 ID
@@ -167,7 +167,7 @@ class JudgmentSingle:
 class JudgmentPairwise:
     """
     Pairwise comparison 결과.
-    논문 Figure 5/9 기반: A / B / tie 판정, swap으로 position bias 완화.
+    논문 pairwise and multi-turn pairwise prompts 기반: A / B / tie 판정, swap으로 position bias 완화.
 
     Attributes:
         question_id: 판정 대상 질문 ID

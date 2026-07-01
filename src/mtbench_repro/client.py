@@ -338,7 +338,7 @@ class ChatClient:
             )
 
         # single grading 응답 mock: "Rating: [[rating]]" 형식
-        # 논문 Figure 6의 파싱 패턴과 일치해야 한다
+        # 논문 single-grade prompt의 파싱 패턴과 일치해야 한다
         return (
             "The response is helpful and addresses the question well. "
             "It covers the main points with sufficient detail.\n"

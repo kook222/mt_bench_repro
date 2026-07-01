@@ -1,17 +1,17 @@
 # src/prompts.py
 """
-논문 Appendix A (Figure 5~10)의 프롬프트 템플릿과 파싱 함수 모음.
+논문 Appendix A (MT-Bench prompt templates)의 프롬프트 템플릿과 파싱 함수 모음.
 
 왜 prompts.py에 파싱까지 포함하는가:
 - 프롬프트 형식과 파싱 패턴은 강하게 결합되어 있다.
-  예: "[[A]]"/"[[B]]"/"[[C]]" 형식은 Figure 5/8/9 프롬프트가 요구하는 형식이고,
-  "Rating: [[5]]" 형식은 Figure 6/10 프롬프트가 요구한다.
+  예: "[[A]]"/"[[B]]"/"[[C]]" 형식은 pairwise verdict 프롬프트가 요구하고,
+  "Rating: [[5]]" 형식은 single-grade scoring 프롬프트가 요구한다.
   두 관심사를 분리하면 포맷이 바뀔 때 파일을 두 곳 수정해야 한다.
 - judge_single.py, judge_pairwise.py, judge_reference.py는
   이 파일에서 build_ 함수와 parse_ 함수만 가져다 쓴다.
 
 프롬프트 원칙:
-- 논문 원문(Figure 5~10)을 최대한 그대로 유지한다.
+- 논문 원문(MT-Bench prompt templates)을 최대한 그대로 유지한다.
 - 변수 자리는 Python str.format() 스타일 대신 명시적 파라미터로 처리해
   빠진 값이 있으면 TypeError로 즉시 알 수 있게 한다.
 """
@@ -26,10 +26,10 @@ from typing import Dict, List, Optional, Tuple
 # 시스템 프롬프트 상수 (논문 Appendix A 원문)
 # ===========================================================================
 # lang 파라미터: "en" (기본값) 또는 "ko" (한국어 judge 프롬프트)
-# 한국어 프롬프트는 MT_Bench_Prompt_Translation.xlsx Figure 5~10 번역 기준
+# 한국어 프롬프트는 MT_Bench_Prompt_Translation.xlsx MT-Bench prompt templates 번역 기준
 # ===========================================================================
 
-# Figure 5: default prompt for pairwise comparison
+# pairwise prompt: default prompt for pairwise comparison
 # 논문 원문 그대로 유지 — 수정 시 논문 근거 명시 필요
 _SYSTEM_PAIRWISE = (
     "Please act as an impartial judge and evaluate the quality of the responses "
@@ -47,7 +47,7 @@ _SYSTEM_PAIRWISE = (
     "is better, \"[[B]]\" if assistant B is better, and \"[[C]]\" for a tie."
 )
 
-# Figure 6: default prompt for single answer grading
+# single-grade prompt: default prompt for single answer grading
 _SYSTEM_SINGLE = (
     "Please act as an impartial judge and evaluate the quality of the response "
     "provided by an AI assistant to the user question displayed below. Your "
@@ -59,7 +59,7 @@ _SYSTEM_SINGLE = (
     "example: \"Rating: [[5]]\"."
 )
 
-# Figure 7: chain-of-thought prompt for math/reasoning pairwise
+# CoT pairwise prompt for math/reasoning pairwise comparisons
 # 논문 Section 3.4: CoT judge는 먼저 독립적으로 풀고 나서 채점
 _SYSTEM_PAIRWISE_MATH_COT = (
     "Please act as an impartial judge and evaluate the quality of the responses "
@@ -77,7 +77,7 @@ _SYSTEM_PAIRWISE_MATH_COT = (
     "is better, \"[[B]]\" if assistant B is better, and \"[[C]]\" for a tie."
 )
 
-# Figure 8: reference-guided pairwise comparison
+# reference-guided pairwise prompt: reference-guided pairwise comparison
 # 논문 Section 3.4, Table 4: reference 제공 시 failure rate 70%→15%
 _SYSTEM_PAIRWISE_REFERENCE = (
     "Please act as an impartial judge and evaluate the quality of the responses "
@@ -95,7 +95,7 @@ _SYSTEM_PAIRWISE_REFERENCE = (
     "is better, and \"[[C]]\" for a tie."
 )
 
-# Figure 10: reference-guided multi-turn single-answer grading
+# reference-guided single-grade prompt: reference-guided multi-turn single-answer grading
 _SYSTEM_SINGLE_REFERENCE = (
     "Please act as an impartial judge and evaluate the quality of the response "
     "provided by an AI assistant to the user question. Your evaluation should "
@@ -110,10 +110,10 @@ _SYSTEM_SINGLE_REFERENCE = (
 
 
 # ===========================================================================
-# 한국어 시스템 프롬프트 (MT_Bench_Prompt_Translation.xlsx Figure 5~10 기준)
+# 한국어 시스템 프롬프트 (MT_Bench_Prompt_Translation.xlsx MT-Bench prompt templates 기준)
 # ===========================================================================
 
-# Figure 5 KO: pairwise comparison
+# pairwise prompt KO: pairwise comparison
 _SYSTEM_PAIRWISE_KO = (
     "당신은 공정한 평가자입니다. 아래 사용자 질문에 대해 두 AI 어시스턴트가 작성한 "
     "답변의 품질을 평가해 주세요. 사용자의 지시를 더 잘 따르고 질문에 더 적절하게 "
@@ -125,7 +125,7 @@ _SYSTEM_PAIRWISE_KO = (
     "어시스턴트 B가 더 나으면 \"[[B]]\", 동점이면 \"[[C]]\"."
 )
 
-# Figure 6 KO: single answer grading
+# single-grade prompt KO: single answer grading
 _SYSTEM_SINGLE_KO = (
     "당신은 공정한 평가자입니다. 아래 사용자 질문에 대해 AI 어시스턴트가 작성한 "
     "답변의 품질을 평가해 주세요. 평가 시 답변의 유용성, 관련성, 정확성, 깊이, "
@@ -134,7 +134,7 @@ _SYSTEM_SINGLE_KO = (
     "사이의 점수를 매겨 주세요: \"[[rating]]\", 예시: \"Rating: [[5]]\"."
 )
 
-# Figure 7 KO: chain-of-thought (math/reasoning)
+# CoT pairwise prompt KO: chain-of-thought (math/reasoning)
 _SYSTEM_PAIRWISE_MATH_COT_KO = (
     "당신은 공정한 평가자입니다. 아래 사용자 질문에 대해 두 AI 어시스턴트가 작성한 "
     "답변의 정확성과 유용성을 평가해 주세요. 어느 쪽이 더 나은지 판단하는 것이 "
@@ -145,7 +145,7 @@ _SYSTEM_PAIRWISE_MATH_COT_KO = (
     "\"[[A]]\", 어시스턴트 B가 더 나으면 \"[[B]]\", 동점이면 \"[[C]]\"."
 )
 
-# Figure 8 KO: reference-guided pairwise
+# reference-guided pairwise prompt KO: reference-guided pairwise
 _SYSTEM_PAIRWISE_REFERENCE_KO = (
     "당신은 공정한 평가자입니다. 아래 사용자 질문에 대해 두 AI 어시스턴트가 작성한 "
     "답변의 정확성과 유용성을 평가해 주세요. 참고 정답, 어시스턴트 A의 답변, "
@@ -157,7 +157,7 @@ _SYSTEM_PAIRWISE_REFERENCE_KO = (
     "동점이면 \"[[C]]\"."
 )
 
-# Figure 10 KO: reference-guided multi-turn single grading
+# reference-guided single-grade prompt KO: reference-guided multi-turn single grading
 _SYSTEM_SINGLE_REFERENCE_KO = (
     "당신은 공정한 평가자입니다. 사용자 질문에 대해 AI 어시스턴트가 작성한 답변의 "
     "정확성과 유용성을 평가해 주세요. 참고 정답과 어시스턴트의 답변이 주어지며, "
@@ -174,7 +174,7 @@ def _sys(en_prompt: str, ko_prompt: str, lang: str) -> str:
 
 
 # ===========================================================================
-# Pairwise 프롬프트 빌더 (Figure 5, 7, 8, 9)
+# Pairwise 프롬프트 빌더
 # ===========================================================================
 
 def build_pairwise_prompt(
@@ -186,18 +186,18 @@ def build_pairwise_prompt(
     lang: str = "en",
 ) -> List[Dict[str, str]]:
     """
-    Single-turn pairwise 비교 프롬프트 생성 (Figure 5 / 7 / 8).
+    Single-turn pairwise 비교 프롬프트 생성.
 
-    reference가 있으면 Figure 8, use_cot이면 Figure 7,
-    둘 다 없으면 Figure 5를 사용한다.
+    reference가 있으면 reference-guided pairwise prompt, use_cot이면 CoT prompt,
+    둘 다 없으면 pairwise prompt를 사용한다.
     논문 Section 3.4: reference가 CoT보다 효과적 (Table 4 근거).
 
     Args:
         question: 1st turn 질문 텍스트
         answer_a: Assistant A의 답변
         answer_b: Assistant B의 답변
-        reference: 참조 답변 (math/coding 전용, Figure 8)
-        use_cot: True면 Figure 7 CoT 프롬프트 사용
+        reference: 참조 답변 (math/coding 전용, reference-guided pairwise prompt)
+        use_cot: True면 CoT 프롬프트 사용
         lang: "en" (기본값) 또는 "ko" (한국어 judge 프롬프트)
 
     Returns:
@@ -247,7 +247,7 @@ def build_multiturn_pairwise_prompt(
     lang: str = "en",
 ) -> List[Dict[str, str]]:
     """
-    Multi-turn pairwise 비교 프롬프트 생성 (Figure 9).
+    Multi-turn pairwise 비교 프롬프트 생성 (multi-turn pairwise prompt).
 
     논문 Section 3.5:
     - 두 대화 전체를 하나의 프롬프트에 담아 judge에게 2nd turn 집중 요청.
@@ -288,7 +288,7 @@ def build_multiturn_pairwise_prompt(
 
 
 # ===========================================================================
-# Reference-guided multi-turn pairwise (Figure 8 × Figure 9 결합)
+# Reference-guided multi-turn pairwise
 # ===========================================================================
 
 def build_multiturn_pairwise_reference_prompt(
@@ -299,9 +299,9 @@ def build_multiturn_pairwise_reference_prompt(
     lang: str = "en",
 ) -> List[Dict[str, str]]:
     """
-    Multi-turn reference-guided pairwise 프롬프트 (Figure 8 + Figure 9 결합).
+    Multi-turn reference-guided pairwise 프롬프트.
 
-    Figure 8(reference-guided)과 Figure 9(multi-turn)를 결합:
+    reference-guided pairwise prompt와 multi-turn pairwise prompt를 결합:
     - reference answer(1st/2nd turn 모두)를 judge에게 제공
     - 두 모델의 전체 2-turn 대화를 하나의 프롬프트에 담음
     - judge가 reference 기준으로 두 모델의 정확성을 전체 대화 맥락에서 비교
@@ -322,7 +322,7 @@ def build_multiturn_pairwise_reference_prompt(
     assert len(turns) == 2 and len(answers_a) == 2 and len(answers_b) == 2
     assert len(references) >= 1, "reference가 최소 1개 필요합니다."
 
-    # Reference block — Figure 10의 표현 방식 준용, 2nd turn reference는 선택적
+    # Reference block — reference-guided single-grade prompt의 표현 방식 준용, 2nd turn reference는 선택적
     ref_turn1 = (
         f"### User:\n{turns[0]}\n"
         f"### Reference answer:\n{references[0]}"
@@ -340,7 +340,7 @@ def build_multiturn_pairwise_reference_prompt(
         f"<|The End of Reference Answer|>"
     )
 
-    # 두 모델의 전체 대화 — Figure 9 방식
+    # 두 모델의 전체 대화 — multi-turn pairwise prompt 방식
     conv_a = (
         f"<|The Start of Assistant A's Conversation with User|>\n"
         f"### User:\n{turns[0]}\n"
@@ -365,7 +365,7 @@ def build_multiturn_pairwise_reference_prompt(
 
 
 # ===========================================================================
-# Single-answer grading 프롬프트 빌더 (Figure 6, 10)
+# Single-answer grading 프롬프트 빌더
 # ===========================================================================
 
 def build_single_prompt(
@@ -375,7 +375,7 @@ def build_single_prompt(
     lang: str = "en",
 ) -> List[Dict[str, str]]:
     """
-    Single-answer grading 프롬프트 생성 (Figure 6).
+    Single-answer grading 프롬프트 생성 (single-grade prompt).
 
     논문 Table 8: GPT-4 single-answer grading으로 MT-Bench Score 산출.
     각 turn마다 별도 호출하고, 두 점수를 평균내어 최종 점수를 낸다.
@@ -383,7 +383,7 @@ def build_single_prompt(
     Args:
         question: 해당 turn의 질문
         answer: 채점할 답변
-        reference: 참조 답변 (있으면 Figure 6가 아닌 변형 사용)
+        reference: 참조 답변 (있으면 single-grade prompt가 아닌 변형 사용)
 
     Returns:
         messages 리스트
@@ -418,9 +418,9 @@ def build_multiturn_single_prompt(
     lang: str = "en",
 ) -> List[Dict[str, str]]:
     """
-    Multi-turn single-answer grading 프롬프트 생성 (Figure 10).
+    Multi-turn single-answer grading 프롬프트 생성 (reference-guided single-grade prompt).
 
-    논문 Section 3.5, Figure 10:
+    논문 Section 3.5의 reference-guided single-grade prompt:
     - reference answer가 있을 때 전체 대화 맥락을 포함해 2nd turn 채점.
     - 주로 math/coding 카테고리에서 reference와 함께 사용.
 
@@ -480,7 +480,7 @@ def parse_pairwise_verdict(text: str) -> str:
     """
     Pairwise judge 응답에서 최종 판정을 파싱.
 
-    논문 Figure 5/7/8/9의 출력 형식:
+    논문 pairwise prompt/7/8/9의 출력 형식:
     - "[[A]]": Assistant A가 더 좋음
     - "[[B]]": Assistant B가 더 좋음
     - "[[C]]": 동점 (tie)
@@ -515,7 +515,7 @@ def parse_single_score(text: str) -> float:
     """
     Single-answer grading 응답에서 점수를 파싱.
 
-    논문 Figure 6의 출력 형식: "Rating: [[5]]"
+    논문 single-grade prompt의 출력 형식: "Rating: [[5]]"
     점수 범위: 1~10 (정수 또는 소수)
 
     파싱 전략:
