@@ -22,7 +22,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.patches import FancyBboxPatch
+from matplotlib.patches import Rectangle
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -148,39 +148,39 @@ def add_panel_label(ax: plt.Axes, label: str) -> None:
 
 
 def fig1_protocol() -> None:
-    fig, ax = plt.subplots(figsize=(7.2, 3.4))
+    fig, ax = plt.subplots(figsize=(7.2, 2.18))
     ax.set_axis_off()
 
     boxes = [
-        (0.03, 0.58, 0.18, 0.24, "MT-Bench\n80 EN items"),
-        (0.29, 0.58, 0.18, 0.24, "Manual KO\ntranslation"),
-        (0.55, 0.58, 0.18, 0.24, "6 evaluated\nLLMs"),
-        (0.79, 0.58, 0.18, 0.24, "EN/KO\nanswers"),
-        (0.29, 0.16, 0.18, 0.24, "Back-translation\nvalidity check"),
-        (0.55, 0.16, 0.18, 0.24, "5 judge settings\nQwen/EXAONE/GPT"),
-        (0.79, 0.16, 0.18, 0.24, "Score gap,\ninconsistency,\nparse failure"),
+        (0.03, 0.58, 0.15, 0.23, "MT-Bench\n80 EN items"),
+        (0.24, 0.58, 0.15, 0.23, "KO benchmark\nconstruction"),
+        (0.45, 0.58, 0.15, 0.23, "EN/KO answer\ncollection"),
+        (0.66, 0.58, 0.15, 0.23, "LLM-as-judge\nevaluation"),
+        (0.84, 0.58, 0.13, 0.23, "Metric\naggregation"),
+        (0.24, 0.19, 0.15, 0.20, "Back-translation\nvalidation"),
+        (0.66, 0.19, 0.15, 0.20, "Qwen / EXAONE\nGPT-4o-mini"),
+        (0.84, 0.19, 0.13, 0.20, "Score gap\ninconsistency\nparse failure"),
     ]
 
     for x, y, w, h, text in boxes:
-        patch = FancyBboxPatch(
+        patch = Rectangle(
             (x, y),
             w,
             h,
-            boxstyle="round,pad=0.012,rounding_size=0.012",
-            facecolor=MONO["pale"],
+            facecolor="white",
             edgecolor=MONO["black"],
-            linewidth=0.9,
+            linewidth=0.8,
         )
         ax.add_patch(patch)
-        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=8.5)
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=8.0)
 
     arrows = [
-        ((0.21, 0.70), (0.29, 0.70)),
-        ((0.47, 0.70), (0.55, 0.70)),
-        ((0.73, 0.70), (0.79, 0.70)),
-        ((0.38, 0.58), (0.38, 0.40)),
-        ((0.64, 0.58), (0.64, 0.40)),
-        ((0.73, 0.28), (0.79, 0.28)),
+        ((0.18, 0.695), (0.24, 0.695)),
+        ((0.39, 0.695), (0.45, 0.695)),
+        ((0.60, 0.695), (0.66, 0.695)),
+        ((0.81, 0.695), (0.84, 0.695)),
+        ((0.735, 0.58), (0.735, 0.39)),
+        ((0.81, 0.29), (0.84, 0.29)),
     ]
     for start, end in arrows:
         ax.annotate(
@@ -190,20 +190,13 @@ def fig1_protocol() -> None:
             arrowprops=dict(arrowstyle="->", color=MONO["black"], lw=0.9),
         )
 
-    ax.text(
-        0.03,
-        0.93,
-        "Experimental protocol for Korean MT-Bench reliability analysis",
-        fontsize=9.5,
-        fontweight="bold",
+    ax.annotate(
+        "",
+        xy=(0.315, 0.39),
+        xytext=(0.315, 0.58),
+        arrowprops=dict(arrowstyle="<->", color=MONO["dark"], lw=0.8, linestyle="--"),
     )
-    ax.text(
-        0.03,
-        0.04,
-        "Note. Raw pairwise, single-grade, and reference-guided judgments are included for audit and recomputation.",
-        fontsize=7.5,
-        color=MONO["dark"],
-    )
+    fig.tight_layout(pad=0.15)
     save(fig, "fig1_protocol")
 
 
