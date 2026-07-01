@@ -19,7 +19,7 @@ EN에서 7B→32B: 79.3%→30.9%. KO에서도 동일 패턴(44.9%→20.4%), 단 
 EXAONE-32B와 GPT-4o-mini 모두 불일치 판정의 80~90%가 1st-pos bias로, 같은 크기의 Qwen-32B(72~70%)보다 현저히 높다. 패밀리가 다른 judge가 판정에 확신이 없을 때 position heuristic에 더 의존하는 공통 패턴이다.
 
 **4. Reference-guided 채점은 standard보다 점수가 낮다.**  
-math/coding/reasoning 문항에 한정된 ref 채점 평균이 non-ref보다 낮다. EN에서는 GPT-4o-mini(−2.51)와 Qwen-32B(−2.49)가 최대 차이를 보여, 두 judge가 ref 기준에 가장 엄격하게 반응한다.
+math/coding/reasoning 문항에 한정된 ref 채점 평균이 non-ref보다 낮다. 공개 통계 CSV 기준 Qwen-32B는 EN −2.49, KO −1.49로 모두 p<0.001이며, reference 제공 시 정답 기준이 더 엄격하게 적용된다.
 
 **5. 7B judge는 한국어에서 parse failure가 급증한다.**  
 KO single_grade_ref 33.3% — EN 동일 설정에서는 2.9%(약 11배 차이). 소형 judge의 한국어 포맷 준수 능력이 언어에 따라 크게 다르다. GPT-4o-mini는 EN/KO 모두 0~0.2%로 안정적이다.
@@ -31,6 +31,51 @@ KO single_grade_ref 33.3% — EN 동일 설정에서는 2.9%(약 11배 차이). 
 MT-Bench는 LLM 능력을 8개 카테고리, 80문항으로 평가하는 대표적 벤치마크다. 원 논문(Zheng et al. 2023)은 영어 환경에서 GPT-4 judge의 높은 신뢰도를 보였으나, **비영어권 언어로 동일 파이프라인을 적용했을 때 judge 신뢰도가 유지되는지**는 검증되지 않았다.
 
 본 연구는 MT-Bench 80문항을 한국어로 번역하고, Qwen2.5 패밀리(7B/14B/32B, same-family), EXAONE-3.5-32B(cross-family, 한국어 특화), GPT-4o-mini(cross-family, 상용) 세 judge 군으로 영어 baseline과 동일 조건에서 실험을 수행한다. Judge 크기 scaling, 언어별 inconsistency/position bias, cross-family 편향, parse failure rate를 정량 비교한다.
+
+---
+
+## 논문용 Figure 및 값 검증 요약
+
+아래 figure는 공개 repo에 commit된 aggregate CSV에서 직접 재생성된다.
+
+```bash
+python3 scripts/tools/generate_figures.py
+```
+
+> **재현성 주의**: 공개 repo에는 raw pairwise judgment JSONL이 포함되어 있지 않다. 따라서 모델별 pairwise win-rate는 현재 checkout만으로 재계산할 수 없고, 아래 figure는 공개 CSV로 검증 가능한 single-score gap, inconsistency, 1st-position win rate, Spearman rho, permutation p-value, parse-failure rate만 사용한다.
+
+| Figure | 용도 | 주요 입력 파일 |
+|--------|------|----------------|
+| Fig. 1 | Qwen-32B 기준 EN-KO 점수 하락폭 및 paired permutation p-value | `results_phase3_judge_32B.csv`, `results_ko_judge_32B.csv`, `results_stat_en_ko_diff.csv` |
+| Fig. 2 | Judge별 inconsistency와 불일치 내부 1st-position win rate | `results_en_ko_comparison.csv` |
+| Fig. 3 | EN-KO 모델 랭킹 Spearman rho: 전체 80문항 vs 변별 문항 | `results_en_ko_comparison.csv` |
+| Fig. 4 | Qwen judge reference-guided vs non-reference 차이와 p-value | `results_stat_ref_vs_nonref.csv` |
+| Fig. 5 | 공개 aggregate CSV 기준 parse-failure rate 상위 조건 | EN/KO `results*.csv` |
+| Fig. 6 | 논문 본문/표에 바로 넣을 핵심 통계 요약 | `results_stat_*.csv` |
+
+<p align="center">
+  <img src="figures/readme/fig1_qwen32_en_ko_score_gap.png" width="92%" alt="Qwen-32B EN-KO score gap">
+</p>
+
+<p align="center">
+  <img src="figures/readme/fig2_judge_reliability_position_bias.png" width="92%" alt="Judge reliability and position bias">
+</p>
+
+<p align="center">
+  <img src="figures/readme/fig3_rank_correlation_topdisc.png" width="82%" alt="EN-KO rank correlation">
+</p>
+
+<p align="center">
+  <img src="figures/readme/fig4_ref_vs_nonref_qwen_stats.png" width="92%" alt="Reference vs non-reference Qwen statistics">
+</p>
+
+<p align="center">
+  <img src="figures/readme/fig5_parse_failure_public_csv.png" width="82%" alt="Parse failure rates">
+</p>
+
+<p align="center">
+  <img src="figures/readme/fig6_key_statistics_table.png" width="82%" alt="Key statistical checks">
+</p>
 
 ---
 
@@ -387,6 +432,7 @@ Qwen 7B→14B: Δ=21.7%p (유의), 14B→32B: Δ=2.8%p (유의하지 않음)
 > Reference-guided(single_grade_ref): math/reasoning/coding 29문항에 참조 정답 제공, turn2만 채점  
 > Standard(single_grade): 참조 정답 없이 전체 80문항 채점  
 > diff = ref_mean − nonref_mean (turn2 기준)
+> 공개 통계 CSV(`results_stat_ref_vs_nonref.csv`)에는 Qwen judge 3종의 permutation test만 포함되어 있다. EXAONE-32B/GPT-4o-mini 행은 과거 raw judgment 분석 기반의 descriptive summary이며, p-value 재계산에는 raw judgment JSONL이 필요하다.
 
 | 언어 | Judge | Non-ref | Ref | 차이 |
 |------|-------|--------:|----:|-----:|
@@ -412,6 +458,8 @@ KO Qwen-7B의 차이(−0.40)가 작은 것은 7B judge의 한국어 ref 파싱 
 ## Parse Failure
 
 Parse failure = judge가 `[[N]]` 형식 점수를 출력하지 않아 집계에서 제외된 경우(−1.0 처리).
+
+> 집계 CSV의 `coverage` 컬럼은 문항 수 기준 coverage라서 `1.0000`이어도 parse failure가 없다는 뜻은 아니다. 실제 parse failure는 `n_samples / (expected_count × 2)`(single-grade) 또는 `n_samples / expected_count`(reference-guided)로 확인해야 한다.
 
 ### EN Parse Failure
 
@@ -542,7 +590,7 @@ mt_bench_repro/
 │   │   └── run_ko_full_a100.sh           # KO 전체 파이프라인
 │   ├── run/local/
 │   │   ├── run_mock_full.sh
-│   │   └── run_judge_gpt4o_local.sh      # GPT-4o judge (Phase 1c, 로컬 실행)
+│   │   └── run_judge_gpt_local.sh        # GPT-4o-mini judge (Phase 1c, 로컬 실행)
 │   ├── analysis/
 │   │   ├── analyze_phase3.py             # Judge scaling 분석
 │   │   ├── analyze_phase345.py           # Judge 간 비교 통합 분석
@@ -556,6 +604,7 @@ mt_bench_repro/
 │       ├── generate_figures.py
 │       ├── prepare_topdisc_subset.py
 │       └── download_dataset.sh
+├── figures/readme/                       # README/논문용 figure PNG
 └── src/mtbench_repro/                    # 핵심 Python 패키지
 ```
 
@@ -574,6 +623,10 @@ bash scripts/run/local/run_mock_full.sh
 # 통계 분석 (numpy 필요)
 python3 scripts/analysis/analyze_statistics.py
 # → data/ko/results/results_stat_*.csv
+
+# README/논문용 figure 재생성
+python3 scripts/tools/generate_figures.py
+# → figures/readme/*.png
 
 # 번역 validity 검증 (GPT-4o-mini API 키 필요)
 python3 scripts/translate/back_translate.py \
