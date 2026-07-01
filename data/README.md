@@ -1,0 +1,45 @@
+# Data Manifest
+
+This repository includes the aggregate CSV files and the raw judge outputs needed
+to audit the reported MT-Bench statistics.
+
+## Raw Judgments
+
+Raw judge outputs are stored under:
+
+- `data/en/judgments/`
+- `data/ko/judgments/`
+
+The public raw judgment set contains 270 JSONL files and 18,540 records:
+
+| Split | Files |
+|-------|------:|
+| English judgments | 135 |
+| Korean judgments | 135 |
+| Pairwise JSONL | 150 |
+| Single-grade JSONL | 60 |
+| Reference-guided JSONL | 60 |
+
+Each language contains five judge settings:
+
+- `qwen/judge_7B`
+- `qwen/judge_14B`
+- `qwen/judge_32B`
+- `exaone/judge_32B`
+- `gpt/judge_gpt4omini`
+
+For each judge setting, the repository includes 15 pairwise files, 6 single-grade
+files, and 6 reference-guided files. Non-standard missing values from the local
+raw export were normalized from `NaN` to JSON `null` so that every JSONL file is
+strictly parseable by standard JSON readers.
+
+## Recomputing Reported Statistics
+
+```bash
+python3 scripts/translate/compare_en_ko.py
+python3 scripts/analysis/analyze_statistics.py
+python3 scripts/tools/generate_figures.py
+```
+
+These commands regenerate the EN-KO comparison CSV, statistical test CSVs, and
+KCI-style paper figures from the committed data.

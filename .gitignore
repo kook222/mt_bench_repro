@@ -50,11 +50,10 @@ data/en/questions.jsonl
 # ── 역번역 결과 (back_translate.py 출력) ─────────────────────
 data/ko/questions_back.jsonl
 
-# ── A100 실험 raw 산출물 (재생성 가능) ───────────────────────
-#   data/en/answers/ 는 git 추적 (7개 eval 모델 답변 baseline)
-data/en/judgments/
+# ── A100 실험 raw 산출물 ────────────────────────────────────
+#   data/*/judgments/ raw JSONL은 논문 재현성 검증을 위해 git 추적
+#   KO 답변은 저장소 크기 관리를 위해 제외
 data/ko/answers/
-data/ko/judgments/
 
 # ── Mock 테스트 임시 결과 (run_mock_full.sh 출력) ─────────────
 data/mock/
@@ -67,8 +66,8 @@ data/judge_agreement.png
 #   파싱 실패 리포트 (check_parse_fail_detail.py 출력, 재생성 가능)
 data/parse_fail_report.json
 
-# ── Figure (generate_figures.py, compare_en_ko.py 출력) ───────
-#   재생성 가능 — git 추적 불필요
+# ── 임시 Figure (generate_figures.py, compare_en_ko.py 출력) ─
+#   figures/paper/는 논문용 산출물로 git 추적, 아래 임시 산출물은 제외
 figures/en/*.png
 figures/ko/
 
@@ -80,9 +79,12 @@ figures/ko/
 # git 추적 대상 정리
 # ============================================================
 #   data/en/answers/          ← 6개 eval 모델 답변 (baseline)
+#   data/en/judgments/**/*.jsonl ← raw judge outputs
 #   data/en/results/*.csv     ← Qwen/GPT judge 집계 결과
+#   data/ko/judgments/**/*.jsonl ← raw judge outputs
 #   data/ko/results/*.csv     ← 한국어 judge 집계 결과 (Phase 1 이후)
 #   data/ko/questions.jsonl   ← 수작업 한국어 번역
+#   figures/paper/            ← KCI 논문용 figure PNG/PDF 및 표
 #   data/parse_fail_report.json
 #   src/, scripts/            ← 핵심 패키지 및 스크립트
 # ============================================================

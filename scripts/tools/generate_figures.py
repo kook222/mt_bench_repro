@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Generate README/paper figures from the committed aggregate CSV files.
+Generate KCI-style paper figures and copy-ready result tables.
 
-The public repository does not include raw pairwise judgment JSONL files, so this
-script only plots metrics that can be reproduced from committed CSVs.
+The repository includes raw judge JSONL files, but this paper figure script uses
+the committed aggregate CSVs so the manuscript figures remain compact and stable.
+Raw judgments can be used to audit or recompute the aggregate statistics.
 
 Usage:
     python3 scripts/tools/generate_figures.py
@@ -11,8 +12,8 @@ Usage:
 
 from __future__ import annotations
 
-from collections import OrderedDict
 from pathlib import Path
+from textwrap import dedent
 
 import matplotlib
 
@@ -20,32 +21,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.patches import FancyBboxPatch
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "figures" / "readme"
+OUT = ROOT / "figures" / "paper"
 OUT.mkdir(parents=True, exist_ok=True)
-
-CATEGORIES = [
-    "writing",
-    "roleplay",
-    "extraction",
-    "reasoning",
-    "math",
-    "coding",
-    "stem",
-    "humanities",
-]
-
-JUDGE_LABELS = OrderedDict(
-    [
-        ("qwen_7B", "Qwen-7B"),
-        ("qwen_14B", "Qwen-14B"),
-        ("qwen_32B", "Qwen-32B"),
-        ("exaone_32B", "EXAONE-32B"),
-        ("gpt4omini", "GPT-4o-mini"),
-    ]
-)
 
 SCORE_FILES = {
     ("EN", "Qwen-7B"): ROOT / "data/en/results/results_phase3_judge_7B.csv",
@@ -74,42 +55,51 @@ REF_FILES = {
 }
 
 MODEL_LABELS = {
-    "EXAONE-3.5-7.8B-Instruct": "EXAONE\n7.8B",
-    "EEVE-Korean-Instruct-10.8B": "EEVE\n10.8B",
-    "gemma-2-9b-it": "Gemma\n9B",
-    "Llama-3.1-8B-Instruct": "Llama\n8B",
-    "Mistral-7B-Instruct-v0.3": "Mistral\n7B",
-    "Phi-3.5-mini-Instruct": "Phi\n3.5",
+    "EXAONE-3.5-7.8B-Instruct": "EXAONE-7.8B",
+    "EEVE-Korean-Instruct-10.8B": "EEVE-10.8B",
+    "gemma-2-9b-it": "Gemma-9B",
+    "Llama-3.1-8B-Instruct": "Llama-8B",
+    "Mistral-7B-Instruct-v0.3": "Mistral-7B",
+    "Phi-3.5-mini-Instruct": "Phi-3.5",
 }
 
-COLORS = {
-    "en": "#4C78A8",
-    "ko": "#F58518",
-    "gap": "#E45756",
-    "neutral": "#6C757D",
-    "green": "#54A24B",
-    "purple": "#B279A2",
+JUDGE_LABELS = {
+    "qwen_7B": "Qwen-7B",
+    "qwen_14B": "Qwen-14B",
+    "qwen_32B": "Qwen-32B",
+    "exaone_32B": "EXAONE-32B",
+    "gpt4omini": "GPT-4o-mini",
+}
+
+MONO = {
+    "black": "#111111",
+    "dark": "#333333",
+    "mid": "#777777",
+    "light": "#D9D9D9",
+    "pale": "#F3F3F3",
+    "accent": "#555555",
 }
 
 
 def setup_style() -> None:
     plt.rcParams.update(
         {
-            "font.family": "DejaVu Sans",
+            "font.family": "DejaVu Serif",
             "axes.spines.top": False,
             "axes.spines.right": False,
-            "axes.grid": True,
-            "grid.alpha": 0.28,
-            "grid.linestyle": "--",
+            "axes.edgecolor": MONO["black"],
+            "axes.linewidth": 0.8,
+            "axes.grid": False,
             "figure.dpi": 140,
-            "savefig.dpi": 220,
+            "savefig.dpi": 300,
             "savefig.bbox": "tight",
             "savefig.facecolor": "white",
-            "axes.titleweight": "bold",
-            "axes.titlesize": 12,
-            "axes.labelsize": 10,
-            "xtick.labelsize": 9,
-            "ytick.labelsize": 9,
+            "font.size": 8.5,
+            "axes.titlesize": 9.5,
+            "axes.labelsize": 9,
+            "xtick.labelsize": 7.8,
+            "ytick.labelsize": 7.8,
+            "legend.fontsize": 8,
         }
     )
 
@@ -122,23 +112,98 @@ def read_csv(path: Path) -> pd.DataFrame:
 
 def p_label(p_value: float) -> str:
     if p_value < 0.001:
-        return "p<0.001"
+        return "p<.001"
     if p_value < 0.01:
-        return "p<0.01"
+        return "p<.01"
     if p_value < 0.05:
-        return "p<0.05"
-    return f"p={p_value:.3f} ns"
+        return "p<.05"
+    return f"p={p_value:.3f}"
 
 
-def save(fig: plt.Figure, name: str) -> Path:
-    path = OUT / name
-    fig.savefig(path)
+def save(fig: plt.Figure, stem: str) -> None:
+    png = OUT / f"{stem}.png"
+    pdf = OUT / f"{stem}.pdf"
+    fig.savefig(png)
+    fig.savefig(pdf)
     plt.close(fig)
-    print(f"saved {path.relative_to(ROOT)}")
-    return path
+    print(f"saved {png.relative_to(ROOT)}")
+    print(f"saved {pdf.relative_to(ROOT)}")
 
 
-def fig_en_ko_score_gap() -> None:
+def add_panel_label(ax: plt.Axes, label: str) -> None:
+    ax.text(
+        -0.08,
+        1.05,
+        label,
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=10,
+        fontweight="bold",
+    )
+
+
+def fig1_protocol() -> None:
+    fig, ax = plt.subplots(figsize=(7.2, 3.4))
+    ax.set_axis_off()
+
+    boxes = [
+        (0.03, 0.58, 0.18, 0.24, "MT-Bench\n80 EN items"),
+        (0.29, 0.58, 0.18, 0.24, "Manual KO\ntranslation"),
+        (0.55, 0.58, 0.18, 0.24, "6 evaluated\nLLMs"),
+        (0.79, 0.58, 0.18, 0.24, "EN/KO\nanswers"),
+        (0.29, 0.16, 0.18, 0.24, "Back-translation\nvalidity check"),
+        (0.55, 0.16, 0.18, 0.24, "5 judge settings\nQwen/EXAONE/GPT"),
+        (0.79, 0.16, 0.18, 0.24, "Score gap,\ninconsistency,\nparse failure"),
+    ]
+
+    for x, y, w, h, text in boxes:
+        patch = FancyBboxPatch(
+            (x, y),
+            w,
+            h,
+            boxstyle="round,pad=0.012,rounding_size=0.012",
+            facecolor=MONO["pale"],
+            edgecolor=MONO["black"],
+            linewidth=0.9,
+        )
+        ax.add_patch(patch)
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=8.5)
+
+    arrows = [
+        ((0.21, 0.70), (0.29, 0.70)),
+        ((0.47, 0.70), (0.55, 0.70)),
+        ((0.73, 0.70), (0.79, 0.70)),
+        ((0.38, 0.58), (0.38, 0.40)),
+        ((0.64, 0.58), (0.64, 0.40)),
+        ((0.73, 0.28), (0.79, 0.28)),
+    ]
+    for start, end in arrows:
+        ax.annotate(
+            "",
+            xy=end,
+            xytext=start,
+            arrowprops=dict(arrowstyle="->", color=MONO["black"], lw=0.9),
+        )
+
+    ax.text(
+        0.03,
+        0.93,
+        "Experimental protocol for Korean MT-Bench reliability analysis",
+        fontsize=9.5,
+        fontweight="bold",
+    )
+    ax.text(
+        0.03,
+        0.04,
+        "Note. Raw pairwise, single-grade, and reference-guided judgments are included for audit and recomputation.",
+        fontsize=7.5,
+        color=MONO["dark"],
+    )
+    save(fig, "fig1_protocol")
+
+
+def qwen32_gap_frame() -> pd.DataFrame:
     en = read_csv(SCORE_FILES[("EN", "Qwen-32B")])
     ko = read_csv(SCORE_FILES[("KO", "Qwen-32B")])
     stat = read_csv(ROOT / "data/ko/results/results_stat_en_ko_diff.csv")
@@ -147,178 +212,101 @@ def fig_en_ko_score_gap() -> None:
     df = en[["model", "overall", "n_samples"]].merge(
         ko[["model", "overall", "n_samples"]], on="model", suffixes=("_en", "_ko")
     )
-    df["delta"] = df["overall_ko"] - df["overall_en"]
+    df["gap"] = df["overall_ko"] - df["overall_en"]
+    df["paired_diff"] = df["model"].map(stat["mean_diff"])
     df["p_value"] = df["model"].map(stat["p_value"])
-    df = df.sort_values("delta")
+    df["label"] = df["model"].map(MODEL_LABELS)
+    return df.sort_values("gap")
 
+
+def fig2_score_gap() -> None:
+    df = qwen32_gap_frame()
     y = np.arange(len(df))
-    fig, ax = plt.subplots(figsize=(9.4, 5.2))
-    ax.scatter(df["overall_en"], y, s=95, color=COLORS["en"], label="EN", zorder=3)
-    ax.scatter(df["overall_ko"], y, s=95, color=COLORS["ko"], label="KO", zorder=3)
+
+    fig, ax = plt.subplots(figsize=(6.8, 3.9))
+    ax.hlines(y, df["overall_ko"], df["overall_en"], color=MONO["light"], lw=2.4, zorder=1)
+    ax.plot(df["overall_en"], y, "o", ms=5.5, mfc="white", mec=MONO["black"], label="EN", zorder=3)
+    ax.plot(df["overall_ko"], y, "s", ms=5.2, mfc=MONO["black"], mec=MONO["black"], label="KO", zorder=3)
 
     for idx, row in enumerate(df.itertuples(index=False)):
-        ax.plot([row.overall_ko, row.overall_en], [idx, idx], color="#C9CED6", lw=4, zorder=1)
         ax.text(
-            min(row.overall_en, row.overall_ko) - 0.05,
+            min(row.overall_en, row.overall_ko) - 0.07,
             idx,
-            f"{row.delta:+.2f}",
-            va="center",
+            f"{row.gap:+.2f}",
             ha="right",
-            fontsize=9,
-            fontweight="bold",
-            color=COLORS["gap"],
+            va="center",
+            fontsize=8,
         )
         ax.text(
             max(row.overall_en, row.overall_ko) + 0.08,
             idx,
             p_label(row.p_value),
-            va="center",
             ha="left",
-            fontsize=8.5,
-            color="#333333",
+            va="center",
+            fontsize=7.6,
+            color=MONO["dark"],
         )
 
     ax.set_yticks(y)
-    ax.set_yticklabels([MODEL_LABELS[m] for m in df["model"]])
-    ax.set_xlim(4.25, 8.9)
+    ax.set_yticklabels(df["label"])
     ax.set_xlabel("MT-Bench score (1-10)")
-    ax.set_title("Qwen-32B Judge: EN vs KO Score Gap")
-    ax.legend(loc="lower right", frameon=False)
-    ax.grid(True, axis="x")
-    ax.grid(False, axis="y")
+    ax.set_xlim(4.2, 8.9)
+    ax.set_title("Qwen-32B single-grade score: English vs. Korean")
+    ax.grid(axis="x", color="#E6E6E6", lw=0.6)
     ax.text(
-        0.01,
-        -0.16,
-        "Left labels show KO-EN overall score delta; right labels show paired EN-KO permutation p-values.",
+        0.0,
+        -0.20,
+        "Open circle=EN, filled square=KO. Left annotations show KO-EN gaps; right annotations show paired permutation-test results.",
         transform=ax.transAxes,
-        fontsize=8.5,
-        color="#555555",
+        fontsize=7.2,
+        color=MONO["dark"],
     )
+    save(fig, "fig2_score_gap_qwen32")
 
-    save(fig, "fig1_qwen32_en_ko_score_gap.png")
 
-
-def fig_reliability_bias() -> None:
+def fig3_reliability_bias() -> None:
     comp = read_csv(ROOT / "data/ko/results/results_en_ko_comparison.csv")
     comp["judge_label"] = comp["judge"].map(JUDGE_LABELS)
     comp["en_fp_in_incon"] = comp["en_fp_pct"] / comp["en_incon_pct"] * 100
     comp["ko_fp_in_incon"] = comp["ko_fp_pct"] / comp["ko_incon_pct"] * 100
 
     x = np.arange(len(comp))
-    width = 0.35
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10.5, 8.0), sharex=True)
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.2), sharex=True)
 
-    ax1.bar(x - width / 2, comp["en_incon_pct"], width, label="EN", color=COLORS["en"])
-    ax1.bar(x + width / 2, comp["ko_incon_pct"], width, label="KO", color=COLORS["ko"])
-    ax1.set_ylabel("Inconsistency (%)")
-    ax1.set_ylim(0, 90)
-    ax1.set_title("Pairwise Inconsistency: KO Is Lower Across Judges")
-    ax1.legend(frameon=False, ncol=2, loc="upper right")
-    for xpos, value in zip(x - width / 2, comp["en_incon_pct"]):
-        ax1.text(xpos, value + 1.4, f"{value:.1f}", ha="center", fontsize=8.5)
-    for xpos, value in zip(x + width / 2, comp["ko_incon_pct"]):
-        ax1.text(xpos, value + 1.4, f"{value:.1f}", ha="center", fontsize=8.5)
+    ax = axes[0]
+    ax.plot(x, comp["en_incon_pct"], "-o", color=MONO["black"], mfc="white", ms=4.5, label="EN")
+    ax.plot(x, comp["ko_incon_pct"], "--s", color=MONO["dark"], mfc=MONO["dark"], ms=4.2, label="KO")
+    ax.set_ylabel("Inconsistency (%)")
+    ax.set_ylim(0, 85)
+    ax.set_title("AB/BA inconsistency")
+    ax.grid(axis="y", color="#E6E6E6", lw=0.6)
+    ax.legend(frameon=False, loc="upper right")
+    add_panel_label(ax, "(a)")
 
-    ax2.bar(
-        x - width / 2,
-        comp["en_fp_in_incon"],
-        width,
-        label="EN",
-        color=COLORS["en"],
-        alpha=0.9,
-    )
-    ax2.bar(
-        x + width / 2,
-        comp["ko_fp_in_incon"],
-        width,
-        label="KO",
-        color=COLORS["ko"],
-        alpha=0.9,
-    )
-    ax2.axhline(50, color="#555555", lw=1.2, ls=":", label="50%")
-    ax2.set_ylabel("1st-position wins among inconsistent pairs (%)")
-    ax2.set_ylim(0, 105)
-    ax2.set_title("Residual Inconsistency Is Often Position-Sensitive")
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(comp["judge_label"], rotation=0)
-    for xpos, value in zip(x - width / 2, comp["en_fp_in_incon"]):
-        ax2.text(xpos, value + 1.4, f"{value:.0f}", ha="center", fontsize=8.5)
-    for xpos, value in zip(x + width / 2, comp["ko_fp_in_incon"]):
-        ax2.text(xpos, value + 1.4, f"{value:.0f}", ha="center", fontsize=8.5)
+    ax = axes[1]
+    ax.plot(x, comp["en_fp_in_incon"], "-o", color=MONO["black"], mfc="white", ms=4.5, label="EN")
+    ax.plot(x, comp["ko_fp_in_incon"], "--s", color=MONO["dark"], mfc=MONO["dark"], ms=4.2, label="KO")
+    ax.axhline(50, color=MONO["mid"], ls=":", lw=1)
+    ax.set_ylabel("First-position share (%)")
+    ax.set_ylim(0, 105)
+    ax.set_title("Among inconsistent pairs")
+    ax.grid(axis="y", color="#E6E6E6", lw=0.6)
+    add_panel_label(ax, "(b)")
 
-    fig.suptitle("Judge Reliability and Position Bias", fontsize=14, fontweight="bold", y=0.99)
-    fig.tight_layout()
-    save(fig, "fig2_judge_reliability_position_bias.png")
-
-
-def fig_rank_correlation() -> None:
-    comp = read_csv(ROOT / "data/ko/results/results_en_ko_comparison.csv")
-    comp["judge_label"] = comp["judge"].map(JUDGE_LABELS)
-    x = np.arange(len(comp))
-    width = 0.36
-
-    fig, ax = plt.subplots(figsize=(9.5, 4.8))
-    ax.bar(
-        x - width / 2,
-        comp["spearman_rho_overall"],
-        width,
-        color=COLORS["purple"],
-        label="All 80 questions",
-    )
-    ax.bar(
-        x + width / 2,
-        comp["spearman_rho_topdisc"],
-        width,
-        color=COLORS["green"],
-        label="Top-discriminative subset",
-    )
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("Spearman rho (EN vs KO ranking)")
-    ax.set_title("EN-KO Ranking Correlation Improves on Discriminative Questions")
-    ax.set_xticks(x)
-    ax.set_xticklabels(comp["judge_label"])
-    ax.legend(frameon=False, loc="upper left")
-    for xpos, value in zip(x - width / 2, comp["spearman_rho_overall"]):
-        ax.text(xpos, value + 0.025, f"{value:.2f}", ha="center", fontsize=8.5)
-    for xpos, value in zip(x + width / 2, comp["spearman_rho_topdisc"]):
-        ax.text(xpos, value + 0.025, f"{value:.2f}", ha="center", fontsize=8.5)
-
-    save(fig, "fig3_rank_correlation_topdisc.png")
-
-
-def fig_ref_vs_nonref_qwen() -> None:
-    df = read_csv(ROOT / "data/ko/results/results_stat_ref_vs_nonref.csv")
-    judge_order = ["Qwen-7B", "Qwen-14B", "Qwen-32B"]
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.8), sharey=True)
-
-    for ax, lang in zip(axes, ["EN", "KO"]):
-        sub = df[df["lang"] == lang].set_index("judge").loc[judge_order].reset_index()
-        x = np.arange(len(sub))
-        width = 0.34
-        ax.bar(x - width / 2, sub["nonref_mean"], width, color=COLORS["neutral"], label="Non-ref")
-        ax.bar(x + width / 2, sub["ref_mean"], width, color=COLORS["gap"], label="Reference")
-        for i, row in enumerate(sub.itertuples(index=False)):
-            ax.text(
-                i,
-                max(row.nonref_mean, row.ref_mean) + 0.25,
-                f"{row.diff_ref_minus_nonref:+.2f}\n{row.sig}",
-                ha="center",
-                va="bottom",
-                fontsize=8.2,
-                color="#333333",
-            )
-        ax.set_title(f"{lang}: Qwen Judges")
+    for ax in axes:
         ax.set_xticks(x)
-        ax.set_xticklabels(sub["judge"])
-        ax.set_ylim(0, 9.5)
-        ax.grid(True, axis="y")
-        ax.grid(False, axis="x")
+        ax.set_xticklabels(comp["judge_label"], rotation=35, ha="right")
 
-    axes[0].set_ylabel("Mean turn-2 score")
-    axes[1].legend(frameon=False, loc="upper right")
-    fig.suptitle("Reference-Guided Scoring Lowers Scores on Hard Questions", fontsize=14, fontweight="bold")
+    fig.text(
+        0.5,
+        -0.05,
+        "Note. First-position share is computed within inconsistent pairs, not over all pairs.",
+        ha="center",
+        fontsize=7.2,
+        color=MONO["dark"],
+    )
     fig.tight_layout()
-    save(fig, "fig4_ref_vs_nonref_qwen_stats.png")
+    save(fig, "fig3_reliability_bias")
 
 
 def collect_parse_coverage() -> pd.DataFrame:
@@ -356,107 +344,145 @@ def collect_parse_coverage() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def fig_parse_failure() -> None:
-    df = collect_parse_coverage()
+def fig4_ref_parse() -> None:
+    ref = read_csv(ROOT / "data/ko/results/results_stat_ref_vs_nonref.csv")
+    ref = ref[ref["judge"].isin(["Qwen-7B", "Qwen-14B", "Qwen-32B"])].copy()
+    ref["label"] = ref["lang"] + "\n" + ref["judge"]
+
+    coverage = collect_parse_coverage()
     summary = (
-        df.groupby(["lang", "judge", "type"], as_index=False)
+        coverage.groupby(["lang", "judge", "type"], as_index=False)
         .agg(valid=("valid", "sum"), expected=("expected", "sum"))
         .assign(failure_rate=lambda d: 1 - d["valid"] / d["expected"])
     )
-    summary = summary.sort_values("failure_rate", ascending=False).head(12)
-    summary["label"] = summary["lang"] + " " + summary["judge"] + "\n" + summary["type"]
+    top = summary.sort_values("failure_rate", ascending=False).head(6)
+    top["label"] = top["lang"] + " " + top["judge"] + "\n" + top["type"]
 
-    fig, ax = plt.subplots(figsize=(10.5, 5.8))
-    colors = [COLORS["gap"] if lang == "KO" else COLORS["en"] for lang in summary["lang"]]
-    y = np.arange(len(summary))[::-1]
-    ax.barh(y, summary["failure_rate"] * 100, color=colors)
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.4))
+
+    ax = axes[0]
+    x = np.arange(len(ref))
+    hatch = ["///" if lang == "KO" else "" for lang in ref["lang"]]
+    bars = ax.bar(x, ref["diff_ref_minus_nonref"], color=MONO["light"], edgecolor=MONO["black"], lw=0.7)
+    for bar, h in zip(bars, hatch):
+        bar.set_hatch(h)
+    ax.axhline(0, color=MONO["black"], lw=0.8)
+    ax.set_ylabel("Ref - non-ref score")
+    ax.set_title("Reference-guided scoring")
+    ax.set_xticks(x)
+    ax.set_xticklabels(ref["label"], rotation=40, ha="right")
+    ax.set_ylim(-2.8, 0.3)
+    ax.grid(axis="y", color="#E6E6E6", lw=0.6)
+    for idx, row in enumerate(ref.itertuples(index=False)):
+        ax.text(idx, row.diff_ref_minus_nonref - 0.12, p_label(row.p_value), ha="center", va="top", fontsize=7)
+    add_panel_label(ax, "(a)")
+
+    ax = axes[1]
+    y = np.arange(len(top))[::-1]
+    ax.barh(y, top["failure_rate"] * 100, color=MONO["light"], edgecolor=MONO["black"], lw=0.7)
     ax.set_yticks(y)
-    ax.set_yticklabels(summary["label"])
-    ax.set_xlabel("Parse failure rate (%)")
-    ax.set_title("Highest Parse-Failure Settings in Public Aggregate CSVs")
-    ax.set_xlim(0, max(35, float(summary["failure_rate"].max() * 115)))
-    for ypos, row in zip(y, summary.itertuples(index=False)):
+    ax.set_yticklabels(top["label"])
+    ax.set_xlabel("Parse failure (%)")
+    ax.set_title("Highest parse-failure settings")
+    ax.set_xlim(0, max(36, top["failure_rate"].max() * 115))
+    ax.grid(axis="x", color="#E6E6E6", lw=0.6)
+    for ypos, row in zip(y, top.itertuples(index=False)):
         failed = int(round(row.expected - row.valid))
         total = int(round(row.expected))
-        ax.text(
-            row.failure_rate * 100 + 0.6,
-            ypos,
-            f"{row.failure_rate*100:.1f}% ({failed}/{total})",
-            va="center",
-            fontsize=8.7,
-        )
-    ax.grid(True, axis="x")
-    ax.grid(False, axis="y")
+        ax.text(row.failure_rate * 100 + 0.6, ypos, f"{row.failure_rate*100:.1f}% ({failed}/{total})", va="center", fontsize=7)
+    add_panel_label(ax, "(b)")
 
-    save(fig, "fig5_parse_failure_public_csv.png")
+    fig.tight_layout()
+    save(fig, "fig4_ref_parse_failure")
 
 
-def fig_key_numbers_table() -> None:
-    q32 = read_csv(ROOT / "data/ko/results/results_stat_en_ko_diff.csv")
-    q32 = q32[q32["judge"] == "Qwen-32B"].copy()
-    rows = []
-    for _, row in q32.sort_values("mean_diff", ascending=False).iterrows():
-        rows.append(
-            [
-                f"Qwen-32B KO-EN score: {MODEL_LABELS.get(row['model'], row['model']).replace(chr(10), ' ')}",
-                f"-{row['mean_diff']:.2f}",
-                p_label(float(row["p_value"])),
-            ]
-        )
+def write_tables() -> None:
+    gap = qwen32_gap_frame().copy()
+    gap["Model"] = gap["label"]
+    gap["EN"] = gap["overall_en"].map(lambda x: f"{x:.2f}")
+    gap["KO"] = gap["overall_ko"].map(lambda x: f"{x:.2f}")
+    gap["KO-EN"] = gap["gap"].map(lambda x: f"{x:+.2f}")
+    gap["p"] = gap["p_value"].map(p_label)
 
-    incon = read_csv(ROOT / "data/ko/results/results_stat_inconsistency.csv")
-    for _, row in incon[incon["comparison"] == "EN_vs_KO"].iterrows():
-        rows.append(
-            [
-                f"{row['judge']} EN-KO inconsistency",
-                f"-{abs(float(row['obs_diff']))*100:.1f} pp",
-                p_label(float(row["p_value"])),
-            ]
-        )
+    comp = read_csv(ROOT / "data/ko/results/results_en_ko_comparison.csv").copy()
+    comp["Judge"] = comp["judge"].map(JUDGE_LABELS)
+    comp["EN inconsistency"] = comp["en_incon_pct"].map(lambda x: f"{x:.1f}%")
+    comp["KO inconsistency"] = comp["ko_incon_pct"].map(lambda x: f"{x:.1f}%")
+    comp["Delta"] = comp["delta_incon_pct"].map(lambda x: f"{x:+.1f} pp")
+    comp["EN first-pos/incon"] = (comp["en_fp_pct"] / comp["en_incon_pct"] * 100).map(lambda x: f"{x:.0f}%")
+    comp["KO first-pos/incon"] = (comp["ko_fp_pct"] / comp["ko_incon_pct"] * 100).map(lambda x: f"{x:.0f}%")
 
-    ref = read_csv(ROOT / "data/ko/results/results_stat_ref_vs_nonref.csv")
-    ref = ref[(ref["judge"] == "Qwen-32B") & (ref["lang"].isin(["EN", "KO"]))]
-    for _, row in ref.iterrows():
-        rows.append(
-            [
-                f"{row['lang']} Qwen-32B ref minus non-ref",
-                f"{row['diff_ref_minus_nonref']:.2f}",
-                p_label(float(row["p_value"])),
-            ]
-        )
+    stat = read_csv(ROOT / "data/ko/results/results_stat_inconsistency.csv")
+    stat = stat[stat["comparison"].notna() & (stat["comparison"].astype(str) != "")].copy()
+    stat["Comparison"] = stat["lang"] + " " + stat["judge"]
+    stat["Observed diff"] = stat["obs_diff"].map(lambda x: f"{float(x):+.4f}")
+    stat["p"] = stat["p_value"].map(lambda x: p_label(float(x)))
 
-    fig, ax = plt.subplots(figsize=(9.5, 5.4))
-    ax.axis("off")
-    table = ax.table(
-        cellText=rows,
-        colLabels=["Metric", "Effect", "Permutation test"],
-        colWidths=[0.55, 0.18, 0.22],
-        cellLoc="left",
-        colLoc="left",
-        loc="center",
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(9.0)
-    table.scale(1, 1.45)
-    for (r, c), cell in table.get_celld().items():
-        cell.set_edgecolor("#E5E7EB")
-        if r == 0:
-            cell.set_facecolor("#111827")
-            cell.set_text_props(color="white", weight="bold")
-        elif r % 2 == 0:
-            cell.set_facecolor("#F8FAFC")
-        else:
-            cell.set_facecolor("white")
-    ax.set_title("Paper-Ready Statistical Checks from Committed CSVs", pad=20, fontweight="bold")
+    content = "# KCI-style Copy Tables\n\n"
+    content += "## Table 1. Qwen-32B EN-KO single-grade score gap\n\n"
+    content += gap[["Model", "EN", "KO", "KO-EN", "p"]].to_markdown(index=False)
+    content += "\n\n## Table 2. Inconsistency and first-position tendency\n\n"
+    content += comp[
+        [
+            "Judge",
+            "EN inconsistency",
+            "KO inconsistency",
+            "Delta",
+            "EN first-pos/incon",
+            "KO first-pos/incon",
+        ]
+    ].to_markdown(index=False)
+    content += "\n\n## Table 3. Permutation tests for inconsistency rates\n\n"
+    content += stat[["Comparison", "Observed diff", "p", "sig"]].to_markdown(index=False)
+    content += "\n"
 
-    save(fig, "fig6_key_statistics_table.png")
+    path = OUT / "kci_tables.md"
+    path.write_text(content, encoding="utf-8")
+    print(f"saved {path.relative_to(ROOT)}")
+
+
+def write_notes() -> None:
+    notes = dedent(
+        """
+        # KCI Figure Notes
+
+        이 도표 세트는 한국어 LLM 벤치마크/평가 논문에 맞춰 본문 삽입용으로 설계했다.
+        색 의존도를 줄이고, 흑백 인쇄에서도 구분되도록 marker shape, line style, hatch를 사용한다.
+
+        ## Suggested Figure Order
+
+        1. **Fig. 1. Experimental protocol.**
+           방법론 섹션 마지막 또는 실험 설계 첫 부분에 배치한다.
+        2. **Fig. 2. Qwen-32B single-grade score gap.**
+           핵심 결과 1: 범용 영어 모델의 KO 하락폭과 한국어 특화 모델의 완충 효과.
+        3. **Fig. 3. Pairwise inconsistency and residual position tendency.**
+           핵심 결과 2: judge reliability와 position-sensitive residual error.
+        4. **Fig. 4. Reference-guided scoring and parse failure.**
+           핵심 결과 3 및 한계: reference 제공 효과와 KO 7B ref parse failure.
+
+        ## Caption Drafts
+
+        - **Fig. 1.** Overview of the Korean MT-Bench evaluation protocol.
+        - **Fig. 2.** English and Korean MT-Bench scores under the Qwen-32B judge.
+          The left annotation denotes the KO-EN score gap, and the right annotation
+          denotes the paired permutation-test result.
+        - **Fig. 3.** Pairwise inconsistency and first-position tendency across judge
+          settings. First-position share is computed within inconsistent pairs.
+        - **Fig. 4.** Reference-guided scoring effects and parse-failure settings in
+          the committed aggregate CSVs. Raw JSONL judgments are included for
+          independent audit and recomputation.
+        """
+    ).strip()
+    path = OUT / "README.md"
+    path.write_text(notes + "\n", encoding="utf-8")
+    print(f"saved {path.relative_to(ROOT)}")
 
 
 def print_audit() -> None:
-    print("\ncoverage audit: rows with valid sample coverage < 99.5%")
     coverage = collect_parse_coverage()
     coverage["valid_rate"] = coverage["valid"] / coverage["expected"]
     bad = coverage[coverage["valid_rate"] < 0.995].sort_values("valid_rate")
+    print("\ncoverage audit: rows with valid sample coverage < 99.5%")
     if bad.empty:
         print("  none")
         return
@@ -470,13 +496,13 @@ def print_audit() -> None:
 
 def main() -> None:
     setup_style()
-    print(f"Generating figures under {OUT.relative_to(ROOT)}/")
-    fig_en_ko_score_gap()
-    fig_reliability_bias()
-    fig_rank_correlation()
-    fig_ref_vs_nonref_qwen()
-    fig_parse_failure()
-    fig_key_numbers_table()
+    print(f"Generating KCI-style figures under {OUT.relative_to(ROOT)}/")
+    fig1_protocol()
+    fig2_score_gap()
+    fig3_reliability_bias()
+    fig4_ref_parse()
+    write_tables()
+    write_notes()
     print_audit()
 
 
