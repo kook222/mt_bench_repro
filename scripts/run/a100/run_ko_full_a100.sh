@@ -10,8 +10,8 @@
 #   python3 k8s_create_job.py \
 #     -i vllm/vllm-openai:v0.6.6 \
 #     -g 1 \
-#     -n "clink-seunghyun-15" \
-#     -c "cd /home/clink-seunghyun/MT_BENCH_REPRO && bash scripts/run/a100/run_ko_full_a100.sh > /tmp/run_ko_full.log 2>&1 && echo DONE"
+#     -n "<job-name>" \
+#     -c "cd /path/to/MT_BENCH_REPRO && bash scripts/run/a100/run_ko_full_a100.sh > /tmp/run_ko_full.log 2>&1 && echo DONE"
 
 set -euo pipefail
 
