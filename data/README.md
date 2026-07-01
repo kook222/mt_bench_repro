@@ -20,13 +20,14 @@ The public raw judgment set contains 270 JSONL files and 18,540 records:
 | Single-grade JSONL | 60 |
 | Reference-guided JSONL | 60 |
 
-Each language contains five judge settings:
+Each language contains five judge settings under both `data/en/judgments/` and
+`data/ko/judgments/`:
 
-- `qwen/judge_7B`
-- `qwen/judge_14B`
-- `qwen/judge_32B`
-- `exaone/judge_32B`
-- `gpt/judge_gpt4omini`
+- Qwen judge_7B
+- Qwen judge_14B
+- Qwen judge_32B
+- EXAONE judge_32B
+- GPT judge_gpt4omini
 
 For each judge setting, the repository includes 15 pairwise files, 6 single-grade
 files, and 6 reference-guided files. Non-standard missing values from the local
@@ -37,9 +38,8 @@ strictly parseable by standard JSON readers.
 
 ```bash
 python3 scripts/translate/compare_en_ko.py
-python3 scripts/analysis/analyze_statistics.py
-python3 scripts/tools/generate_figures.py
+python3 scripts/paper/generate_figures.py
 ```
 
-These commands regenerate the EN-KO comparison CSVs, aggregate analysis CSVs,
-and KCI-style paper figures from the committed data.
+These commands regenerate the EN-KO comparison CSVs, KIPS-ready paper figures,
+and copy-ready tables from the committed data.
