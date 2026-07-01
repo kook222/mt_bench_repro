@@ -21,6 +21,6 @@
   The annotation denotes the observed KO-EN score gap.
 - **Fig. 3.** Pairwise inconsistency and first-position tendency across judge
   settings. First-position share is computed within inconsistent pairs.
-- **Fig. 4.** Reference-guided scoring effects and parse-failure settings in
-  the committed aggregate CSVs. Raw JSONL judgments are included for
-  independent audit and recomputation.
+- **Fig. 4.** Reference-guided scoring effects and reference-guided
+  parse-failure rates across all judge settings. Raw JSONL judgments are
+  included for independent audit and recomputation.

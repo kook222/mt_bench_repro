@@ -35,3 +35,18 @@
 | KO     | Qwen-32B    | 6.35      | 4.87  | -1.49           |
 | KO     | EXAONE-32B  | 7.33      | 6.04  | -1.29           |
 | KO     | GPT-4o-mini | 6.70      | 4.55  | -2.15           |
+
+## Table 4. Reference-guided parse failure by judge
+
+| Lang   | Judge       | Failed   | Total   | Failure rate   |
+|:-------|:------------|:---------|:--------|:---------------|
+| EN     | Qwen-7B     | 5        | 174     | 2.9%           |
+| EN     | Qwen-14B    | 0        | 174     | 0.0%           |
+| EN     | Qwen-32B    | 0        | 174     | 0.0%           |
+| EN     | EXAONE-32B  | 0        | 174     | 0.0%           |
+| EN     | GPT-4o-mini | 0        | 174     | 0.0%           |
+| KO     | Qwen-7B     | 58       | 174     | 33.3%          |
+| KO     | Qwen-14B    | 3        | 174     | 1.7%           |
+| KO     | Qwen-32B    | 0        | 174     | 0.0%           |
+| KO     | EXAONE-32B  | 0        | 174     | 0.0%           |
+| KO     | GPT-4o-mini | 0        | 174     | 0.0%           |

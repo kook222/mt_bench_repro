@@ -378,17 +378,24 @@ def collect_parse_coverage() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def fig4_ref_parse() -> None:
-    ref = collect_ref_score_diff()
-    ref["label"] = ref["lang"] + " " + ref["judge"]
+def reference_parse_summary() -> pd.DataFrame:
     coverage = collect_parse_coverage()
-    summary = (
-        coverage.groupby(["lang", "judge", "type"], as_index=False)
+    order = {key: idx for idx, key in enumerate(RAW_JUDGE_DIRS)}
+    ref_parse = (
+        coverage[coverage["type"] == "reference"]
+        .groupby(["lang", "judge"], as_index=False)
         .agg(valid=("valid", "sum"), expected=("expected", "sum"))
         .assign(failure_rate=lambda d: 1 - d["valid"] / d["expected"])
     )
-    top = summary.sort_values("failure_rate", ascending=False).head(6)
-    top["label"] = top["lang"] + " " + top["judge"] + "\n" + top["type"]
+    ref_parse["order"] = ref_parse.apply(lambda row: order[(row["lang"], row["judge"])], axis=1)
+    return ref_parse.sort_values("order")
+
+
+def fig4_ref_parse() -> None:
+    ref = collect_ref_score_diff()
+    ref["label"] = ref["lang"] + " " + ref["judge"]
+    ref_parse = reference_parse_summary()
+    ref_parse["label"] = ref_parse["lang"] + " " + ref_parse["judge"]
 
     fig, axes = plt.subplots(1, 2, figsize=(8.8, 4.25))
 
@@ -423,18 +430,22 @@ def fig4_ref_parse() -> None:
     add_panel_label(ax, "(a)")
 
     ax = axes[1]
-    y = np.arange(len(top))[::-1]
-    ax.barh(y, top["failure_rate"] * 100, color=MONO["light"], edgecolor=MONO["black"], lw=0.7)
+    y = np.arange(len(ref_parse))[::-1]
+    hatch = ["///" if lang == "KO" else "" for lang in ref_parse["lang"]]
+    bars = ax.barh(y, ref_parse["failure_rate"] * 100, color=MONO["light"], edgecolor=MONO["black"], lw=0.7)
+    for bar, h in zip(bars, hatch):
+        bar.set_hatch(h)
     ax.set_yticks(y)
-    ax.set_yticklabels(top["label"])
+    ax.set_yticklabels(ref_parse["label"])
     ax.set_xlabel("Parse failure (%)")
-    ax.set_title("Highest parse-failure settings")
-    ax.set_xlim(0, max(36, top["failure_rate"].max() * 115))
+    ax.set_title("Reference-guided parse failure")
+    ax.set_xlim(0, max(36, ref_parse["failure_rate"].max() * 115))
     ax.grid(axis="x", color="#E6E6E6", lw=0.6)
-    for ypos, row in zip(y, top.itertuples(index=False)):
+    for ypos, row in zip(y, ref_parse.itertuples(index=False)):
         failed = int(round(row.expected - row.valid))
         total = int(round(row.expected))
-        ax.text(row.failure_rate * 100 + 0.6, ypos, f"{row.failure_rate*100:.1f}% ({failed}/{total})", va="center", fontsize=7)
+        label_x = max(row.failure_rate * 100 + 0.6, 0.45)
+        ax.text(label_x, ypos, f"{row.failure_rate*100:.1f}% ({failed}/{total})", va="center", fontsize=7)
     add_panel_label(ax, "(b)")
 
     fig.tight_layout()
@@ -463,6 +474,13 @@ def write_tables() -> None:
     ref["Ref"] = ref["ref_mean"].map(lambda x: f"{float(x):.2f}")
     ref["Ref - non-ref"] = ref["diff_ref_minus_nonref"].map(lambda x: f"{float(x):+.2f}")
 
+    ref_parse = reference_parse_summary().copy()
+    ref_parse["Lang"] = ref_parse["lang"]
+    ref_parse["Judge"] = ref_parse["judge"]
+    ref_parse["Failed"] = (ref_parse["expected"] - ref_parse["valid"]).map(lambda x: f"{int(round(x))}")
+    ref_parse["Total"] = ref_parse["expected"].map(lambda x: f"{int(round(x))}")
+    ref_parse["Failure rate"] = ref_parse["failure_rate"].map(lambda x: f"{x * 100:.1f}%")
+
     content = "# KCI-style Copy Tables\n\n"
     content += "## Table 1. Qwen-32B EN-KO single-grade score gap\n\n"
     content += gap[["Model", "EN", "KO", "KO-EN"]].to_markdown(index=False, disable_numparse=True)
@@ -479,6 +497,10 @@ def write_tables() -> None:
     ].to_markdown(index=False, disable_numparse=True)
     content += "\n\n## Table 3. Reference-guided score difference by judge\n\n"
     content += ref[["Lang", "Judge", "Non-ref", "Ref", "Ref - non-ref"]].to_markdown(
+        index=False, disable_numparse=True
+    )
+    content += "\n\n## Table 4. Reference-guided parse failure by judge\n\n"
+    content += ref_parse[["Lang", "Judge", "Failed", "Total", "Failure rate"]].to_markdown(
         index=False, disable_numparse=True
     )
     content += "\n"
@@ -514,9 +536,9 @@ def write_notes() -> None:
           The annotation denotes the observed KO-EN score gap.
         - **Fig. 3.** Pairwise inconsistency and first-position tendency across judge
           settings. First-position share is computed within inconsistent pairs.
-        - **Fig. 4.** Reference-guided scoring effects and parse-failure settings in
-          the committed aggregate CSVs. Raw JSONL judgments are included for
-          independent audit and recomputation.
+        - **Fig. 4.** Reference-guided scoring effects and reference-guided
+          parse-failure rates across all judge settings. Raw JSONL judgments are
+          included for independent audit and recomputation.
         """
     ).strip()
     path = OUT / "README.md"

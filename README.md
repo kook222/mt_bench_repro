@@ -51,7 +51,7 @@ Raw judgment 공개 범위는 총 270개 JSONL이다: EN 135개, KO 135개이며
 | Fig. 1 | Korean MT-Bench 실험 프로토콜 요약 | `data/en`, `data/ko`, `results*.csv` |
 | Fig. 2 | Qwen-32B 기준 EN-KO 점수 하락폭 | `results_phase3_judge_32B.csv`, `results_ko_judge_32B.csv` |
 | Fig. 3 | Judge별 inconsistency와 불일치 내부 1st-position share | `results_en_ko_comparison.csv` |
-| Fig. 4 | Judge별 reference-guided 평균 차이와 parse-failure 상위 조건 | raw judgment JSONL, EN/KO `results*.csv` |
+| Fig. 4 | Judge별 reference-guided 평균 차이와 reference-guided parse failure 전체 조건 | raw judgment JSONL, EN/KO `results*.csv` |
 | Copy tables | 논문 본문/표에 바로 넣을 핵심 통계 요약 | `figures/paper/kci_tables.md` |
 
 <p align="center">
