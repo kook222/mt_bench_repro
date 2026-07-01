@@ -13,8 +13,8 @@ MT-Bench 모델 답변 생성 (논문 Section 4.1).
 - 생성은 GPU 서버(A100), judge는 GPT-4 API를 사용하므로 단계가 다르다.
 - resume 지원: 이미 생성된 question_id는 재실행 시 skip.
 
-논문 Temperature:
-- 생성: 0.7 (Figure 3 주석 기준)
+MT-Bench 원논문 설정:
+- 생성: 0.7
 - Judge: 0.0 (deterministic)
 """
 

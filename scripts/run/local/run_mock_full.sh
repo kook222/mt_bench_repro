@@ -47,7 +47,7 @@ echo "  답변 생성 완료: $(ls $ANSWERS_DIR*.jsonl 2>/dev/null | wc -l)개 �
 
 # ── Step 2: Single-answer grading ──────────────────
 echo ""
-echo "[Step 2] Single-answer grading (Figure 6)"
+echo "[Step 2] Single-answer grading"
 for MODEL in "${MODELS[@]}"; do
     python -m mtbench_repro.cli judge-single \
         --questions "$QUESTIONS" \
@@ -63,7 +63,7 @@ echo "  Single grading 완료"
 
 # ── Step 3: Pairwise comparison ─────────────────────
 echo ""
-echo "[Step 3] Pairwise comparison + AB/BA swap (Figure 5, 9)"
+echo "[Step 3] Pairwise comparison + AB/BA swap"
 python -m mtbench_repro.cli judge-pairwise \
     --questions "$QUESTIONS" \
     --answers-dir "$ANSWERS_DIR" \
@@ -78,7 +78,7 @@ echo "  Pairwise 완료"
 
 # ── Step 4: Reference-guided grading ───────────────
 echo ""
-echo "[Step 4] Reference-guided grading (Figure 10, math/reasoning/coding)"
+echo "[Step 4] Reference-guided grading (math/reasoning/coding)"
 for MODEL in "${MODELS[@]}"; do
     python -m mtbench_repro.cli judge-reference \
         --questions "$QUESTIONS" \

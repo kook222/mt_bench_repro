@@ -145,7 +145,7 @@ def main() -> None:
     if not input_path.exists():
         print(f"[오류] 입력 파일 없음: {input_path}")
         print("  수작업 번역 완료 후 data/ko/questions.jsonl로 저장하세요.")
-        print("  형식 확인: python3 scripts/translate/validate_ko_format.py")
+        print("  형식 확인: python3 scripts/translate/validate_translation.py")
         sys.exit(1)
 
     questions = load_ko_questions(str(input_path))

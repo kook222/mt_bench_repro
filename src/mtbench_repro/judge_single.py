@@ -1,6 +1,6 @@
 # src/mtbench_repro/judge_single.py
 """
-MT-Bench Single-answer grading 수행 (논문 Figure 6, Section 3.1).
+MT-Bench Single-answer grading 수행 (논문 single-grade prompt, Section 3.1).
 
 왜 single-answer grading인가:
 - 논문 Table 8의 MT-Bench Score는 GPT-4 single-answer grading 기반.
@@ -11,7 +11,7 @@ MT-Bench Single-answer grading 수행 (논문 Figure 6, Section 3.1).
 
 각 turn을 별도 호출하는 이유:
 - 논문 Section 3.5: 2nd turn 채점 시 전체 대화 컨텍스트가 필요하지만,
-  단순 single grading에서는 turn별 독립 점수가 Figure 6 기준에 더 맞다.
+  단순 single grading에서는 turn별 독립 점수가 single-grade prompt 기준에 더 맞다.
 - aggregate.py에서 turn1/turn2를 분리 분석할 수 있게 두 점수를 모두 저장.
 """
 
@@ -58,7 +58,7 @@ def grade_single_question(
     채점 방식:
     - turn1: 1st turn 질문 + 1st turn 답변 → judge가 1~10점 부여
     - turn2: 2nd turn 질문 + 2nd turn 답변 → judge가 1~10점 부여
-    - 각 turn을 독립 호출하는 이유: 논문 Figure 6 프롬프트가
+    - 각 turn을 독립 호출하는 이유: 논문 single-grade prompt 프롬프트가
       단일 질문-답변 쌍 기준으로 설계되어 있기 때문.
 
     파싱 실패 시 score=-1.0으로 저장하고 원문은 보존:
@@ -91,7 +91,7 @@ def grade_single_question(
     )
     score_t1 = parse_single_score(judgment_t1)
 
-    # turn2 채점 — 전체 대화 컨텍스트 포함 (논문 Figure 10 방식)
+    # turn2 채점 — 전체 대화 컨텍스트 포함 (논문 reference-guided single-grade prompt 방식)
     # FastChat 원본: turn2 채점 시 [q1, a1, q2, a2] 전체를 judge에게 제공해야
     # 1st turn 맥락을 고려한 정확한 채점이 가능하다.
     # build_single_prompt(question=turns_q[1], answer=turns_a[1])처럼

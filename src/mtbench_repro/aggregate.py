@@ -159,7 +159,7 @@ def compute_reference_scores(
     """
     Reference-guided single grading 결과를 별도 집계.
 
-    Figure 10 기반 점수는 math/reasoning/coding 3개 카테고리의 2nd turn에만 해당하므로,
+    reference-guided single-grade prompt 기반 점수는 math/reasoning/coding 3개 카테고리의 2nd turn에만 해당하므로,
     main MT-Bench 점수와 섞지 않고 별도 표/CSV로 보고한다.
     """
     grade_dir = Path(judgments_dir) / "single_grade_ref"

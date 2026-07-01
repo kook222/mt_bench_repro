@@ -1,6 +1,6 @@
 # src/mtbench_repro/judge_reference.py
 """
-Reference-guided grading 수행 (논문 Figure 8, 10, Section 3.4).
+Reference-guided grading 수행 (논문 reference-guided pairwise and single-grade prompts, Section 3.4).
 
 왜 reference-guided가 필요한가:
 - 논문 Section 3.3, Table 4:
@@ -15,8 +15,8 @@ Reference-guided grading 수행 (논문 Figure 8, 10, Section 3.4).
 - 나머지 카테고리(writing, roleplay 등)는 주관적이라 reference가 의미 없음.
 
 두 가지 모드:
-1. reference-guided pairwise (Figure 8): 두 답변 비교 + reference
-2. reference-guided single grading (Figure 10): 단일 채점 + reference
+1. reference-guided pairwise (reference-guided pairwise prompt): 두 답변 비교 + reference
+2. reference-guided single grading (reference-guided single-grade prompt): 단일 채점 + reference
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Reference-guided Single Grading (Figure 10)
+# Reference-guided Single Grading (reference-guided single-grade prompt)
 # ---------------------------------------------------------------------------
 
 def grade_single_with_reference(
@@ -75,10 +75,10 @@ def grade_single_with_reference(
     - 모든 질문이 reference를 갖지는 않으므로 호출 측에서 필터링 가능.
     - reference 없는 질문은 judge_single.py에서 처리.
 
-    Multi-turn single grading (Figure 10):
+    Multi-turn single grading (reference-guided single-grade prompt):
     - 전체 대화 컨텍스트(q1, a1, q2, a2)와 reference(r1, r2)를
       하나의 프롬프트에 담아 2nd turn 답변을 채점.
-    - turn1과 turn2를 합쳐 채점하는 방식 사용 (Figure 10 기준).
+    - turn1과 turn2를 합쳐 채점하는 방식 사용 (reference-guided single-grade prompt 기준).
 
     Args:
         question: reference 필드가 있는 MTBenchQuestion
@@ -99,7 +99,7 @@ def grade_single_with_reference(
     turns_a = answer.get_turns()
     references = question.reference
 
-    # Figure 10: multi-turn reference-guided single grading
+    # reference-guided single-grade prompt: multi-turn reference-guided single grading
     # reference와 함께 전체 대화를 한 번에 채점
     msgs = build_multiturn_single_prompt(
         turns=turns_q,
@@ -113,7 +113,7 @@ def grade_single_with_reference(
         temperature=0.0,
         max_tokens=1024,
     )
-    # Figure 10은 2nd turn 집중 채점이므로 score_turn2에 저장
+    # reference-guided single-grade prompt은 2nd turn 집중 채점이므로 score_turn2에 저장
     # score_turn1은 -1로 표시해 집계 시 제외 (참고: 이 방식은 논문 설계에 따름)
     score = parse_single_score(raw_judgment)
 
@@ -127,7 +127,7 @@ def grade_single_with_reference(
         question_id=question.question_id,
         model_id=answer.model_id,
         judge_id=judge_model,
-        score_turn1=-1.0,     # Figure 10은 전체 대화 기준 단일 점수
+        score_turn1=-1.0,     # reference-guided single-grade prompt은 전체 대화 기준 단일 점수
         score_turn2=score,    # 2nd turn 집중 채점 결과를 turn2에 저장
         judgment_turn1="",
         judgment_turn2=raw_judgment,
@@ -137,7 +137,7 @@ def grade_single_with_reference(
 
 
 # ---------------------------------------------------------------------------
-# Reference-guided Pairwise (Figure 8)
+# Reference-guided Pairwise (reference-guided pairwise prompt)
 # ---------------------------------------------------------------------------
 
 def judge_pairwise_with_reference(
@@ -151,7 +151,7 @@ def judge_pairwise_with_reference(
     """
     Reference answer가 있는 질문에 대해 reference-guided pairwise 판정.
 
-    Figure 8(reference-guided) + Figure 9(multi-turn)를 결합한 프롬프트 사용:
+    reference-guided pairwise prompt(reference-guided) + multi-turn pairwise prompt(multi-turn)를 결합한 프롬프트 사용:
     - reference answer와 두 모델의 전체 2-turn 대화를 하나의 프롬프트에 담음.
     - judge가 reference를 기준으로 전체 대화 맥락에서 정확성을 비교.
     - 2nd turn reference가 있으면 함께 제공하고, 없어도 동작함.
@@ -178,7 +178,7 @@ def judge_pairwise_with_reference(
     turns_b = answer_b.get_turns()
     references = question.reference  # 가용한 모든 reference 사용
 
-    # ── AB 순서 (Figure 8 + Figure 9 결합) ──
+    # ── AB 순서 (reference-guided multi-turn pairwise prompt 결합) ──
     msgs_ab = build_multiturn_pairwise_reference_prompt(
         turns=turns_q,
         answers_a=turns_a,
@@ -425,7 +425,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=str, default="data/judgments/")
     parser.add_argument("--mode", type=str,
                         choices=["single", "pairwise"], default="single",
-                        help="채점 모드: single (Figure 10) 또는 pairwise (Figure 8)")
+                        help="채점 모드: single (reference-guided single-grade prompt) 또는 pairwise (reference-guided pairwise prompt)")
     parser.add_argument("--model-id", type=str, default=None,
                         help="single 모드: 채점 대상 모델")
     parser.add_argument("--model-a", type=str, default=None,

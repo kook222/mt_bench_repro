@@ -1,6 +1,6 @@
 # src/mtbench_repro/judge_pairwise.py
 """
-MT-Bench Pairwise comparison 수행 (논문 Figure 5, 9, Section 3.1, 3.4).
+MT-Bench Pairwise comparison 수행 (논문 pairwise and multi-turn pairwise prompts, Section 3.1, 3.4).
 
 왜 swap을 두 번 하는가:
 - 논문 Section 3.3: LLM judge는 position bias가 있어 먼저 나온 답변을 선호한다.
@@ -9,7 +9,7 @@ MT-Bench Pairwise comparison 수행 (논문 Figure 5, 9, Section 3.1, 3.4).
   AB 순서와 BA 순서에서 모두 같은 결과가 나올 때만 winner 선언.
   불일치 시 "inconsistent" → aggregate에서 tie로 처리.
 
-Multi-turn 프롬프트 (Figure 9) 사용 이유:
+Multi-turn 프롬프트 (multi-turn pairwise prompt) 사용 이유:
 - 논문 Section 3.5: 두 turn을 분리하면 judge가 이전 답변을 잘못 참조한다.
   전체 대화 컨텍스트를 하나의 프롬프트에 담아 2nd turn에 집중하게 한다.
 """
@@ -60,7 +60,7 @@ def judge_pairwise_question(
     """
     한 질문에 대해 두 모델의 답변을 비교 판정. AB/BA 순서로 각 1회 호출.
 
-    Multi-turn 프롬프트(Figure 9) 사용:
+    Multi-turn 프롬프트(multi-turn pairwise prompt) 사용:
     - 2-turn 전체 대화를 하나의 프롬프트에 담는다.
     - 논문 Section 3.5에서 이 방식이 turn별 분리보다 정확하다고 검증됨.
 

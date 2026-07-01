@@ -582,8 +582,9 @@ mt_bench_repro/
 │   │   ├── run_judge_exaone32b_a100.sh   # EN+KO EXAONE judge (완료)
 │   │   └── run_ko_full_a100.sh           # KO 전체 파이프라인
 │   ├── run/local/
-│   │   ├── run_mock_full.sh
-│   │   └── run_judge_gpt_local.sh        # GPT-4o-mini judge (Phase 1c, 로컬 실행)
+│   │   ├── run_mock_full.sh              # 로컬 mock smoke test
+│   │   ├── run_quality_check_local.sh    # 번역 품질 검증
+│   │   └── run_judge_gpt_local.sh        # GPT-4o-mini judge (로컬 실행)
 │   ├── analysis/
 │   │   └── analyze_translation_validity.py
 │   ├── paper/
