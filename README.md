@@ -548,12 +548,6 @@ Single-grade / Pairwise / Reference-guided 세 가지 judge 평가 방식의 입
 
 Qwen-32B 기준 8개 카테고리별 Δ(KO−EN). coding(Δ=−0.43)이 나머지 카테고리(Δ=−1.18 ~ −2.05)와 뚜렷이 구분된다.
 
-### Fig 5 — Reference-Guided vs Standard Scoring
-
-![Fig 5](paper/figures/fig5_ref_vs_nonref.png)
-
-math/coding/reasoning 29문항 기준 reference-guided vs standard 채점 비교. GPT-4o-mini·Qwen-32B에서 격차가 가장 크다.
-
 ---
 
 ## Base Paper 비교 (Zheng et al. 2023)
