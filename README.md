@@ -510,6 +510,20 @@ coding(Δ=−0.43)은 다른 카테고리(Δ=−1.18 ~ −2.05)와 달리 EN-KO 
 > 투고용 figure는 `paper/figures/`에 PDF + PNG 300dpi로 저장.  
 > fig6/7(win-rate heatmap), fig8/9(score heatmap)은 본문 표로 대체.
 
+### Fig. 1 — Back-Translation Verification Pipeline (§3)
+
+![Back-Translation Verification Pipeline](paper/figures/fig_backtranslation_pipeline.svg)
+
+수작업 번역 품질 검증을 위한 역번역 파이프라인. KO 번역 → GPT-4o 역번역 → BLEU + LLM 의미 보존 점수 → 임계값 기반 판정 흐름.
+
+### Fig. 2 — LLM-as-a-Judge: Three Evaluation Protocols (§4)
+
+![LLM-as-a-Judge Evaluation Protocols](paper/figures/fig_judge_mechanism.svg)
+
+Single-grade / Pairwise / Reference-guided 세 가지 judge 평가 방식의 입력-출력 구조.
+
+---
+
 ### Fig 1 — Inconsistency Rate: English vs Korean
 
 ![Fig 1](paper/figures/fig1_inconsistency.png)

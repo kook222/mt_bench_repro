@@ -1,15 +1,11 @@
-<svg viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" style="background:white;font-family:'Segoe UI',Arial,sans-serif">
-  <title>Fig. 2. LLM-as-a-Judge: Three Evaluation Protocols</title>
+<svg viewBox="0 42 900 378" xmlns="http://www.w3.org/2000/svg" style="background:white;font-family:'Segoe UI',Arial,sans-serif">
+  <title>LLM-as-a-Judge: Three Evaluation Protocols</title>
   <defs>
     <marker id="a3" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#374151"/></marker>
     <marker id="a3g" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#059669"/></marker>
     <marker id="a3r" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#DC2626"/></marker>
     <filter id="s3" x="-5%" y="-5%" width="110%" height="120%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#00000018"/></filter>
   </defs>
-
-  <!-- Title -->
-  <text x="450" y="22" text-anchor="middle" font-size="12.5" font-weight="700" fill="#111827">Fig. 2.  LLM-as-a-Judge: Three Evaluation Protocols</text>
-  <text x="450" y="38" text-anchor="middle" font-size="9" fill="#6B7280">Scoring strategies applied per question across English and Korean MT-Bench</text>
 
   <!-- ════ Panel (a): Single-grade ════ -->
   <rect x="8" y="50" width="265" height="355" rx="8" fill="#F9FAFB" stroke="#D1D5DB" stroke-width="1.5"/>

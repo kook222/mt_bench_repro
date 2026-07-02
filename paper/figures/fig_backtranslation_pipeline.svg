@@ -1,5 +1,5 @@
-<svg viewBox="0 0 900 295" xmlns="http://www.w3.org/2000/svg" role="img" style="background:white;font-family:'Segoe UI',Arial,sans-serif">
-  <title>Fig. 1. Back-Translation Verification Pipeline</title>
+<svg viewBox="0 44 900 251" xmlns="http://www.w3.org/2000/svg" role="img" style="background:white;font-family:'Segoe UI',Arial,sans-serif">
+  <title>Back-Translation Verification Pipeline</title>
   <defs>
     <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
       <polygon points="0 0,9 3.5,0 7" fill="#374151"/>
@@ -17,10 +17,6 @@
       <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#00000018"/>
     </filter>
   </defs>
-
-  <!-- Title -->
-  <text x="450" y="20" text-anchor="middle" font-size="12.5" font-weight="700" fill="#111827">Fig. 1.  Back-Translation Verification Pipeline</text>
-  <text x="450" y="36" text-anchor="middle" font-size="9" fill="#6B7280">Quality assessment procedure for Korean translation of MT-Bench (Phase 0)</text>
 
   <!-- Box 1: MT-Bench EN -->
   <rect x="14" y="52" width="126" height="52" rx="7" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.4" filter="url(#shadow)"/>
