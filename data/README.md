@@ -38,8 +38,6 @@ strictly parseable by standard JSON readers.
 
 ```bash
 python3 scripts/translate/compare_en_ko.py
-python3 scripts/paper/generate_figures.py
 ```
 
-These commands regenerate the EN-KO comparison CSVs, KIPS-ready paper figures,
-and copy-ready tables from the committed data.
+This command regenerates the EN-KO comparison CSV from the committed data.
