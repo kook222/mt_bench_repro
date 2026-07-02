@@ -56,25 +56,25 @@ Raw judgment 공개 범위는 총 270개 JSONL이다: EN 135개, KO 135개이며
 | Copy tables | 논문 본문/표에 바로 넣을 핵심 통계 요약 | `paper/tables/kci_tables.md` |
 
 <p align="center">
-  <img src="paper/figures/fig1_protocol.png?v=20260702-paper2" width="88%" alt="Korean MT-Bench experimental protocol">
+  <img src="paper/figures/fig1_protocol.png?v=20260702-labstyle" width="88%" alt="Korean MT-Bench experimental protocol">
   <br>
   <b>Fig. 1.</b> Korean MT-Bench reliability analysis protocol.
 </p>
 
 <p align="center">
-  <img src="paper/figures/fig2_score_gap_qwen32.png?v=20260702-paper2" width="92%" alt="Qwen-32B EN-KO score gap">
+  <img src="paper/figures/fig2_score_gap_qwen32.png?v=20260702-labstyle" width="92%" alt="Qwen-32B EN-KO score gap">
   <br>
   <b>Fig. 2.</b> English and Korean single-grade scores under the Qwen-32B judge. The right-hand column reports KO-EN gaps.
 </p>
 
 <p align="center">
-  <img src="paper/figures/fig3_reliability_bias.png?v=20260702-paper2" width="92%" alt="Judge reliability and position bias">
+  <img src="paper/figures/fig3_reliability_bias.png?v=20260702-labstyle" width="92%" alt="Judge reliability and position bias">
   <br>
   <b>Fig. 3.</b> Pairwise judge reliability and first-position tendency across EN/KO settings.
 </p>
 
 <p align="center">
-  <img src="paper/figures/fig4_ref_parse_failure.png?v=20260702-paper2" width="92%" alt="Reference-guided scoring and parse failure">
+  <img src="paper/figures/fig4_ref_parse_failure.png?v=20260702-labstyle" width="92%" alt="Reference-guided scoring and parse failure">
   <br>
   <b>Fig. 4.</b> Reference-guided score drop and reference parse-failure rate across all judge settings.
 </p>

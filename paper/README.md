@@ -1,7 +1,8 @@
 # Paper Artifacts
 
 이 도표 세트는 국내 학회/학술지 투고 원고에 맞춰 본문 삽입용으로 설계했다.
-색 의존도를 줄이고, 흑백 인쇄에서도 구분되도록 grayscale bar, marker shape, direct label을 사용한다.
+랩 논문 예시의 phase-panel workflow와 muted color chart 스타일을 따라,
+본문 축소 삽입에서도 읽히도록 direct label과 안정적인 여백을 사용한다.
 
 ## Regeneration
 
