@@ -22,14 +22,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
-from matplotlib.patches import Circle, Ellipse, FancyArrowPatch, FancyBboxPatch, Polygon, Rectangle
+from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Rectangle
 
 
 ROOT = Path(__file__).resolve().parents[2]
 FIG_OUT = ROOT / "paper" / "figures"
 TABLE_OUT = ROOT / "paper" / "tables"
-ASSET_DIR = ROOT / "paper" / "assets"
-GPT_FIG1_BASE = ASSET_DIR / "gpt_fig1_base.png"
 FIG_OUT.mkdir(parents=True, exist_ok=True)
 TABLE_OUT.mkdir(parents=True, exist_ok=True)
 
@@ -176,36 +174,7 @@ def flow_arrow(
     )
 
 
-def rounded_panel(ax: plt.Axes, x: float, y: float, w: float, h: float, phase: str, title: str) -> None:
-    shadow = FancyBboxPatch(
-        (x + 0.04, y - 0.04),
-        w,
-        h,
-        boxstyle="round,pad=0.02,rounding_size=0.12",
-        facecolor="#E8EDF2",
-        edgecolor="none",
-        alpha=0.55,
-        zorder=0,
-    )
-    panel = FancyBboxPatch(
-        (x, y),
-        w,
-        h,
-        boxstyle="round,pad=0.02,rounding_size=0.12",
-        facecolor=PAPER["panel"],
-        edgecolor=PAPER["panel_edge"],
-        linewidth=0.8,
-        zorder=1,
-    )
-    ax.add_patch(shadow)
-    ax.add_patch(panel)
-    ax.text(x + w / 2, y + h - 0.26, phase, ha="center", va="center", fontsize=7.2, fontweight="bold")
-    ax.add_patch(Rectangle((x, y + h - 0.78), w, 0.36, facecolor=PAPER["blue_light"], edgecolor="none", zorder=2))
-    ax.text(x + w / 2, y + h - 0.60, title, ha="center", va="center", fontsize=6.3, fontweight="bold")
-    ax.text(x + w / 2, y - 0.22, f"{phase}\n{title}", ha="center", va="top", fontsize=6.0, fontweight="bold", linespacing=1.0)
-
-
-def small_box(
+def text_box(
     ax: plt.Axes,
     x: float,
     y: float,
@@ -215,8 +184,9 @@ def small_box(
     *,
     fc: str = "white",
     ec: str = "#8293A3",
-    fontsize: float = 5.4,
+    fontsize: float = 5.2,
     weight: str = "normal",
+    color: str = "#222222",
     zorder: int = 4,
 ) -> None:
     ax.add_patch(
@@ -231,36 +201,40 @@ def small_box(
             zorder=zorder,
         )
     )
-    ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=fontsize, fontweight=weight, linespacing=0.95, zorder=zorder + 1)
+    ax.text(
+        x + w / 2,
+        y + h / 2,
+        text,
+        ha="center",
+        va="center",
+        fontsize=fontsize,
+        fontweight=weight,
+        color=color,
+        linespacing=0.95,
+        zorder=zorder + 1,
+    )
 
 
-def doc_icon(ax: plt.Axes, x: float, y: float, w: float, h: float, label: str, *, color: str = PAPER["blue"]) -> None:
-    ax.add_patch(Rectangle((x, y), w, h, facecolor="white", edgecolor="#6F7F8F", linewidth=0.75, zorder=4))
-    ax.add_patch(Polygon([[x + w * 0.70, y + h], [x + w, y + h], [x + w, y + h * 0.70]], closed=True, facecolor=PAPER["blue_light"], edgecolor="#6F7F8F", linewidth=0.55, zorder=5))
-    for i in range(3):
-        ax.plot([x + 0.12, x + w - 0.12], [y + h - 0.20 - i * 0.16, y + h - 0.20 - i * 0.16], color=color, lw=0.55, zorder=6)
-    ax.text(x + w / 2, y - 0.07, label, ha="center", va="top", fontsize=5.1, linespacing=0.9, zorder=7)
+def panel(ax: plt.Axes, x: float, y: float, w: float, h: float, title: str, subtitle: str) -> None:
+    ax.add_patch(
+        FancyBboxPatch(
+            (x, y),
+            w,
+            h,
+            boxstyle="round,pad=0.035,rounding_size=0.10",
+            facecolor="#FFFFFF",
+            edgecolor="#C7D1DA",
+            linewidth=0.8,
+            zorder=1,
+        )
+    )
+    ax.text(x + 2.8, y + h - 1.55, title, ha="left", va="center", fontsize=6.6, fontweight="bold", color="#111111", zorder=4)
+    ax.text(x + 2.8, y + h - 2.70, subtitle, ha="left", va="center", fontsize=4.9, color="#555555", zorder=4)
 
 
-def database_icon(ax: plt.Axes, x: float, y: float, w: float, h: float, label: str) -> None:
-    ax.add_patch(Rectangle((x, y), w, h, facecolor=PAPER["blue_light"], edgecolor=PAPER["blue_dark"], linewidth=0.75, zorder=4))
-    ax.add_patch(Ellipse((x + w / 2, y + h), w, 0.24, facecolor="#F7FBFF", edgecolor=PAPER["blue_dark"], linewidth=0.75, zorder=5))
-    ax.add_patch(Ellipse((x + w / 2, y), w, 0.24, facecolor=PAPER["blue_light"], edgecolor=PAPER["blue_dark"], linewidth=0.75, zorder=5))
-    for yy in [y + h * 0.34, y + h * 0.66]:
-        ax.plot([x, x + w], [yy, yy], color=PAPER["blue_dark"], lw=0.55, zorder=6)
-    ax.text(x + w / 2, y - 0.12, label, ha="center", va="top", fontsize=5.3, fontweight="bold", linespacing=0.9)
-
-
-def language_node(ax: plt.Axes, x: float, y: float, label: str, *, fc: str, ec: str) -> None:
-    ax.add_patch(Circle((x, y), 0.28, facecolor=fc, edgecolor=ec, linewidth=0.8, zorder=5))
-    ax.text(x, y, label, ha="center", va="center", fontsize=5.6, fontweight="bold", color="#111111", zorder=6)
-
-
-def metric_box(ax: plt.Axes, x: float, y: float, w: float, h: float, title: str, value: str | None = None) -> None:
-    ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.06", facecolor="white", edgecolor="#8293A3", linewidth=0.75, zorder=4))
-    ax.text(x + w / 2, y + h * (0.62 if value else 0.50), title, ha="center", va="center", fontsize=5.2, fontweight="bold", linespacing=0.9, zorder=5)
-    if value:
-        ax.text(x + w / 2, y + 0.17, value, ha="center", va="center", fontsize=5.1, color=PAPER["red"], fontweight="bold", zorder=5)
+def step_badge(ax: plt.Axes, x: float, y: float, label: str, color: str) -> None:
+    ax.add_patch(Circle((x, y), 0.72, facecolor=color, edgecolor="white", linewidth=0.7, zorder=5))
+    ax.text(x, y, label, ha="center", va="center", fontsize=5.8, fontweight="bold", color="white", zorder=6)
 
 
 def output_tile(ax: plt.Axes, x: float, y: float, w: float, h: float, title: str, value: str, note: str, color: str) -> None:
@@ -269,16 +243,16 @@ def output_tile(ax: plt.Axes, x: float, y: float, w: float, h: float, title: str
             (x, y),
             w,
             h,
-            boxstyle="round,pad=0.02,rounding_size=0.07",
+            boxstyle="round,pad=0.025,rounding_size=0.08",
             facecolor="#FFFFFF",
-            edgecolor="#C8D1DA",
-            linewidth=0.8,
-            zorder=2,
+            edgecolor="#CDD6DE",
+            linewidth=0.75,
+            zorder=3,
         )
     )
-    ax.text(x + 0.12, y + h - 0.20, title, ha="left", va="center", fontsize=5.8, fontweight="bold", color="#222222", zorder=4)
-    ax.text(x + 0.12, y + 0.34, value, ha="left", va="center", fontsize=7.1, fontweight="bold", color=color, zorder=4)
-    ax.text(x + 0.12, y + 0.14, note, ha="left", va="center", fontsize=4.6, color="#555555", zorder=4)
+    ax.text(x + 0.75, y + h - 1.05, title, ha="left", va="center", fontsize=5.8, fontweight="bold", color="#222222", zorder=4)
+    ax.text(x + 0.75, y + 2.00, value, ha="left", va="center", fontsize=7.2, fontweight="bold", color=color, zorder=4)
+    ax.text(x + 0.75, y + 0.85, note, ha="left", va="center", fontsize=4.8, color="#555555", zorder=4)
 
 
 def raw_judgment_file_count() -> int:
@@ -327,98 +301,98 @@ def fig1_summary_metrics() -> dict[str, str]:
 
 
 def fig1_protocol() -> None:
-    if not GPT_FIG1_BASE.exists():
-        raise FileNotFoundError(f"Missing Fig. 1 GPT base asset: {GPT_FIG1_BASE}")
-
     summary = fig1_summary_metrics()
-    fig, ax = plt.subplots(figsize=(9.4, 5.3))
+    fig, ax = plt.subplots(figsize=(8.8, 4.85))
     ax.set_axis_off()
-    ax.set_xlim(0, 16)
-    ax.set_ylim(0, 9)
-    base = plt.imread(GPT_FIG1_BASE)
-    ax.imshow(base, extent=(0, 16, 0, 9), aspect="auto", zorder=0)
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 56)
 
-    # Title and exact labels are overlaid in code; the GPT base has no readable text.
-    ax.add_patch(
-        FancyBboxPatch(
-            (0.30, 8.28),
-            15.40,
-            0.55,
-            boxstyle="round,pad=0.02,rounding_size=0.08",
-            facecolor=(1, 1, 1, 0.92),
-            edgecolor="#D5DEE7",
-            linewidth=0.8,
-            zorder=1,
-        )
-    )
-    ax.text(0.56, 8.60, "Korean MT-Bench reliability audit design", ha="left", va="center", fontsize=9.0, fontweight="bold", zorder=5)
+    ax.text(3.0, 53.8, "Korean MT-Bench Reliability Audit", ha="left", va="center", fontsize=9.2, fontweight="bold")
     ax.text(
-        6.40,
-        8.60,
+        3.0,
+        51.5,
         f"{summary['question_count']} paired prompts -> {summary['model_count']} answer models -> {summary['judge_count']} judge settings -> language, order, and parsing diagnostics",
         ha="left",
         va="center",
         fontsize=5.9,
         color="#555555",
-        zorder=5,
     )
 
-    top_labels = [
-        (2.34, 7.75, "1. Paired prompt set", f"{summary['question_count']} EN items + {summary['question_count']} KO translations\nmanual translation / back-translation QC"),
-        (7.55, 7.75, "2. Answer matrix", f"{summary['model_count']} evaluated LLMs\npaired EN/KO responses by item and model"),
-        (12.40, 7.75, "3. Judge x mode matrix", "Qwen 7B/14B/32B + EXAONE + GPT\nsingle, pairwise AB/BA, reference-guided"),
-    ]
-    for x, y, title, body in top_labels:
-        ax.add_patch(
-            FancyBboxPatch(
-                (x - 1.62, y - 0.55),
-                3.24,
-                0.76,
-                boxstyle="round,pad=0.02,rounding_size=0.06",
-                facecolor=(1, 1, 1, 0.90),
-                edgecolor="#B9C6D1",
-                linewidth=0.7,
-                zorder=4,
-            )
-        )
-        ax.text(x, y - 0.05, title, ha="center", va="center", fontsize=6.4, fontweight="bold", color="#162A42", zorder=5)
-        ax.text(x, y - 0.34, body, ha="center", va="center", fontsize=4.9, color="#444444", linespacing=0.95, zorder=5)
+    # Stage 1: paired prompt construction.
+    panel(ax, 3, 26.5, 20, 21.5, "Paired prompt set", "parallel EN/KO items")
+    step_badge(ax, 5.0, 45.8, "1", PAPER["blue_dark"])
+    y_rows = [40.5, 36.5]
+    for label, color, yy in [("EN", PAPER["blue_dark"], y_rows[0]), ("KO", PAPER["red"], y_rows[1])]:
+        ax.text(6.0, yy + 0.65, label, ha="center", va="center", fontsize=5.7, fontweight="bold", color=color)
+        for i in range(3):
+            ax.add_patch(Rectangle((8.4 + i * 3.4, yy), 2.1, 1.25, facecolor="#F9FBFD", edgecolor=color, linewidth=0.65, zorder=4))
+    text_box(ax, 6.0, 30.0, 14.0, 3.8, f"{summary['question_count']} two-turn items\nmanual translation + back-translation QC", fc="#F7FAFC", ec="#B8C5D0", fontsize=4.8, weight="bold")
 
-    small_box(ax, 10.20, 3.35, 3.05, 0.40, f"{summary['raw_files']} raw judgment files + aggregate score tables", fc="#FFF9F1", ec=PAPER["orange"], fontsize=4.9, weight="bold", zorder=6)
+    # Stage 2: answer matrix.
+    panel(ax, 29, 26.5, 22, 21.5, "Answer matrix", "models x languages")
+    step_badge(ax, 31.0, 45.8, "2", PAPER["blue_dark"])
+    ax.text(39.4, 41.2, "EN", ha="center", va="center", fontsize=5.2, fontweight="bold", color=PAPER["blue_dark"])
+    ax.text(44.1, 41.2, "KO", ha="center", va="center", fontsize=5.2, fontweight="bold", color=PAPER["red"])
+    for i, label in enumerate(["EXA", "EEVE", "Gem", "Llama", "Mis", "Phi"]):
+        yy = 39.1 - i * 2.05
+        ax.text(32.0, yy + 0.55, label, ha="left", va="center", fontsize=4.5, color="#444444")
+        ax.add_patch(Rectangle((38.2, yy), 2.5, 1.2, facecolor=PAPER["blue_light"], edgecolor="white", linewidth=0.7, zorder=4))
+        ax.add_patch(Rectangle((42.9, yy), 2.5, 1.2, facecolor="#FDE2DF", edgecolor="white", linewidth=0.7, zorder=4))
+    ax.text(40.8, 28.2, f"{summary['model_count']} LLMs; responses aligned by item and turn", ha="center", va="center", fontsize=4.8, color="#555555")
 
-    # Replace decorative mini charts from the generated base with exact readout tiles.
+    # Stage 3: judge matrix.
+    panel(ax, 57, 26.5, 40, 21.5, "Judge and scoring matrix", "judge families x scoring modes")
+    step_badge(ax, 59.0, 45.8, "3", PAPER["blue_dark"])
+    cols = ["single", "pairwise", "ref."]
+    rows = ["Qwen-7B", "Qwen-14B", "Qwen-32B", "EXAONE", "GPT-4o"]
+    for j, col in enumerate(cols):
+        ax.text(76.0 + j * 6.0, 41.5, col, ha="center", va="center", fontsize=4.8, fontweight="bold", color="#444444")
+    for i, row in enumerate(rows):
+        yy = 39.0 - i * 2.35
+        ax.text(61.0, yy + 0.55, row, ha="left", va="center", fontsize=4.7, color="#444444")
+        fc = PAPER["blue_light"] if i < 3 else PAPER["green_light"]
+        for j in range(3):
+            ax.add_patch(Rectangle((74.8 + j * 6.0, yy), 3.0, 1.25, facecolor=fc, edgecolor="white", linewidth=0.7, zorder=4))
+    ax.plot([60.5, 94.5], [31.4, 31.4], color="#D8DEE6", lw=0.7, zorder=3)
+    text_box(ax, 66.0, 28.7, 24.5, 2.8, f"{summary['raw_files']} raw judgment files + aggregate CSV tables", fc="#FFF8EC", ec=PAPER["orange"], fontsize=4.8, weight="bold")
+
+    flow_arrow(ax, 23.4, 37.2, 28.4, 37.2, color="#6C7A86", lw=1.0, scale=10)
+    flow_arrow(ax, 51.5, 37.2, 56.5, 37.2, color="#6C7A86", lw=1.0, scale=10)
+    flow_arrow(ax, 77.0, 26.2, 77.0, 21.8, color="#6C7A86", lw=1.0, scale=10)
+
+    # Stage 4: diagnostics.
     ax.add_patch(
         FancyBboxPatch(
-            (0.42, 0.43),
-            15.15,
-            2.30,
-            boxstyle="round,pad=0.025,rounding_size=0.09",
-            facecolor=(1, 1, 1, 0.96),
-            edgecolor="#C9D5DF",
+            (3, 5.2),
+            94,
+            14.6,
+            boxstyle="round,pad=0.035,rounding_size=0.12",
+            facecolor="#F8FAFC",
+            edgecolor="#CDD6DE",
             linewidth=0.8,
-            zorder=2,
+            zorder=1,
         )
     )
-    ax.text(0.70, 2.45, "4. Reliability readouts recomputed from public raw records", ha="left", va="center", fontsize=7.0, fontweight="bold", zorder=5)
+    step_badge(ax, 5.2, 17.3, "4", PAPER["blue_dark"])
+    ax.text(7.2, 17.3, "Reliability readouts recomputed from public raw records", ha="left", va="center", fontsize=6.9, fontweight="bold", zorder=5)
     tile_specs = [
-        (0.74, "Language gap", summary["gap_value"], summary["gap_note"]),
-        (4.55, "Judge scaling", summary["scaling_value"], summary["scaling_note"]),
-        (8.36, "Order tendency", summary["position_value"], summary["position_note"]),
-        (12.17, "Parse failure", summary["parse_value"], summary["parse_note"]),
+        (6.2, "Language gap", summary["gap_value"], summary["gap_note"]),
+        (29.0, "Judge scaling", summary["scaling_value"], summary["scaling_note"]),
+        (51.8, "Order tendency", summary["position_value"], summary["position_note"]),
+        (74.6, "Parse failure", summary["parse_value"], summary["parse_note"]),
     ]
     colors = [PAPER["red"], PAPER["blue_dark"], PAPER["orange"], "#7A4CC2"]
     for (x, title, value, note), color in zip(tile_specs, colors):
-        output_tile(ax, x, 0.76, 3.10, 1.24, title, value, note, color)
+        output_tile(ax, x, 7.7, 19.0, 7.0, title, value, note, color)
 
-    # Tiny exact glyphs inside output tiles.
-    ax.plot([2.55, 2.90], [1.58, 1.06], color=PAPER["red"], lw=1.2, zorder=6)
-    ax.plot([2.55, 2.90], [1.58, 1.06], "o", ms=2.4, color=PAPER["red"], zorder=7)
-    ax.plot([6.32, 6.66, 7.04], [1.65, 1.29, 1.08], color=PAPER["blue_dark"], lw=1.2, zorder=6)
-    ax.plot([6.32, 6.66, 7.04], [1.65, 1.29, 1.08], "o", ms=2.3, color=PAPER["blue_dark"], zorder=7)
-    ax.axhline(1.32, xmin=0.613, xmax=0.680, color="#999999", lw=0.7, ls=":", zorder=5)
-    ax.plot([10.12, 10.43, 10.72], [1.42, 1.62, 1.48], "o", ms=2.7, color=PAPER["orange"], zorder=7)
-    ax.add_patch(Rectangle((14.42, 1.02), 0.18, 0.70, facecolor="#7A4CC2", edgecolor="#333333", lw=0.45, zorder=7))
-    ax.add_patch(Rectangle((14.72, 1.02), 0.18, 0.12, facecolor="#D8CFF0", edgecolor="#333333", lw=0.35, zorder=7))
+    ax.plot([18.8, 21.3], [13.5, 10.0], color=PAPER["red"], lw=1.1, zorder=6)
+    ax.plot([18.8, 21.3], [13.5, 10.0], "o", ms=2.2, color=PAPER["red"], zorder=7)
+    ax.plot([42.6, 45.0, 47.4], [13.8, 11.5, 10.2], color=PAPER["blue_dark"], lw=1.1, zorder=6)
+    ax.plot([42.6, 45.0, 47.4], [13.8, 11.5, 10.2], "o", ms=2.1, color=PAPER["blue_dark"], zorder=7)
+    ax.axhline(11.6, xmin=0.615, xmax=0.685, color="#999999", lw=0.65, ls=":", zorder=5)
+    ax.plot([63.4, 66.0, 68.4], [12.1, 13.6, 12.8], "o", ms=2.4, color=PAPER["orange"], zorder=7)
+    ax.add_patch(Rectangle((88.9, 9.8), 1.2, 4.2, facecolor="#7A4CC2", edgecolor="#333333", lw=0.45, zorder=7))
+    ax.add_patch(Rectangle((91.0, 9.8), 1.2, 0.7, facecolor="#D8CFF0", edgecolor="#333333", lw=0.35, zorder=7))
 
     fig.tight_layout(pad=0.12)
     save(fig, "fig1_protocol")
