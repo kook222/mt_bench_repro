@@ -429,7 +429,7 @@ def fig2_score_gap() -> None:
         Line2D([0], [0], marker="o", color="none", markerfacecolor="white", markeredgecolor=PALETTE["blue"], markeredgewidth=1.3, markersize=6, label="EN"),
         Line2D([0], [0], marker="s", color="none", markerfacecolor=PALETTE["red"], markeredgecolor=PALETTE["red"], markersize=5.8, label="KO"),
     ]
-    ax.legend(handles=legend_handles, frameon=False, loc="lower right", bbox_to_anchor=(0.97, 0.03), ncol=2, handletextpad=0.35, columnspacing=0.85)
+    ax.legend(handles=legend_handles, frameon=False, loc="upper left", bbox_to_anchor=(0.02, 0.98), ncol=2, handletextpad=0.35, columnspacing=0.85)
     ax.text(0.0, -0.19, "Gap chips report Korean minus English score; larger red gaps indicate stronger cross-lingual degradation.", transform=ax.transAxes, fontsize=7.0, color=PALETTE["muted"])
     for spine in ["left", "bottom"]:
         ax.spines[spine].set_color("#AEB8C2")
