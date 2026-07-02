@@ -515,65 +515,38 @@ Qwen-32B 기준, 사전 정의된 8개 카테고리별 Δ = KO − EN과 Cohen's
 
 ## 논문 Figure
 
-### Fig 1 — Inconsistency & 1st-pos Bias: EN vs KO
+> 투고용 figure는 `paper/figures/`에 PDF + PNG 300dpi로 저장.  
+> fig6/7(win-rate heatmap), fig8/9(score heatmap)은 본문 표로 대체.
 
-![Fig 1](figures/ko/fig1_inconsistency_en_ko.png)
+### Fig 1 — Inconsistency Rate: English vs Korean
 
-EN/KO 5개 judge별 inconsistency(a)와 1st-pos bias(b) 비율. 원 논문 GPT-4 기준선(inconsistency 35%, 1st-pos bias 30%) 점선 포함.
+![Fig 1](paper/figures/fig1_inconsistency.png)
 
-### Fig 2 — Position Bias 내부 분해 (Stacked Bar)
+5개 judge별 EN/KO inconsistency rate. Zheng et al.(2023) GPT-4 기준선(35%) 점선 포함.
 
-![Fig 2](figures/ko/fig2_position_bias_breakdown.png)
+### Fig 2 — Position Bias Breakdown
 
-10개 judge×언어 조합별 Consistent / 1st-pos bias / 2nd-pos bias / Tie-mix 비율 전체 분해. Cross-family judge(EXAONE, GPT-4o-mini)의 1st-pos 쏠림이 시각적으로 두드러진다.
+![Fig 2](paper/figures/fig2_position_breakdown.png)
+
+10개 judge×언어 조합별 Consistent / 1st-pos bias / 2nd-pos bias / Tie-mix 비율. Cross-family judge(EXAONE, GPT-4o-mini)의 1st-pos 쏠림이 두드러진다.
 
 ### Fig 3 — EN vs KO Score Scatter (Qwen-32B judge)
 
-![Fig 3](figures/ko/fig3_en_ko_score_scatter.png)
+![Fig 3](paper/figures/fig3_score_scatter.png)
 
-6개 eval 모델의 EN single 평균 점수 vs KO single 평균 점수 산점도. 한국어 특화 모델(EXAONE, EEVE, Ko-Mistral)은 점수 하락폭이 작고, 범용 영어 모델(Phi-3.5-mini, Mistral-7B)은 하락폭이 크다.
+6개 eval 모델의 EN vs KO 평균 점수 산점도. 한국어 특화 모델(●)은 대각선 근처, 범용 영어 모델(■)은 대각선 아래 이탈이 크다.
 
-### Fig 4 — Spearman ρ: Per-question vs 모델 랭킹
+### Fig 4 — Category-level EN-KO Score Gap (Cohen's dz)
 
-![Fig 4](figures/ko/fig4_spearman_rho.png)
+![Fig 4](paper/figures/fig4_category_gap.png)
 
-judge별 EN-KO 상관관계. 파란 막대(±SD)는 n=80 문항 수준 per-question ρ, 주황 막대(빗금)는 n=6 모델 랭킹 ρ.
+Qwen-32B 기준 8개 카테고리별 Δ(KO−EN)와 Cohen's dz. coding(small, dz=−0.25)이 나머지(medium~large)와 뚜렷이 구분된다.
 
-### Fig 10 — 카테고리별 EN-KO Score Gap (Cohen's dz)
+### Fig 5 — Reference-Guided vs Standard Scoring
 
-![Fig 10](figures/ko/fig10_category_gap.png)
+![Fig 5](paper/figures/fig5_ref_vs_nonref.png)
 
-Qwen-32B 기준 8개 카테고리별 Δ(KO−EN)와 Cohen's dz(paired). coding(small, dz=−0.25)이 다른 카테고리(medium~large)와 뚜렷이 구분된다.
-
-### Fig 5 — Reference-Guided vs Standard 채점 비교
-
-![Fig 5](figures/ko/fig5_ref_vs_nonref.png)
-
-math/coding/reasoning 29문항 기준, reference-guided와 standard single 채점 평균 비교. EN/KO 모두 ref 채점이 낮으며 GPT-4o-mini·Qwen-32B에서 격차가 가장 크다.
-
-### Fig 6 — Win Rate Matrix: EN (Qwen-32B judge)
-
-![Fig 6](figures/ko/fig6_winrate_heatmap_en.png)
-
-영어 pairwise win rate 행렬. 행=A모델, 열=B모델, 값=A의 승률(inconsistent 판정 제외). 점수 내림차순 정렬.
-
-### Fig 7 — Win Rate Matrix: KO (Qwen-32B judge)
-
-![Fig 7](figures/ko/fig7_winrate_heatmap_ko.png)
-
-한국어 pairwise win rate 행렬. EN 대비 모델 서열 변화(특히 한국어 특화 모델의 상승)를 확인할 수 있다.
-
-### Fig 8 — Score Heatmap: EN (5 judges × 6 models)
-
-![Fig 8](figures/ko/fig8_score_heatmap_en.png)
-
-영어 single-grade 평균 점수. 5개 judge(행) × 6개 eval 모델(열) 히트맵. 7B judge의 전반적 점수 인플레이션이 뚜렷하다.
-
-### Fig 9 — Score Heatmap: KO (5 judges × 6 models)
-
-![Fig 9](figures/ko/fig9_score_heatmap_ko.png)
-
-한국어 single-grade 평균 점수. EN 대비 범용 모델 점수 하락과 한국어 특화 모델 상대적 강세가 드러난다.
+math/coding/reasoning 29문항 기준 reference-guided vs standard 채점 비교. GPT-4o-mini·Qwen-32B에서 격차가 가장 크다.
 
 ---
 

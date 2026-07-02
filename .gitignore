@@ -66,11 +66,10 @@ data/judge_agreement.png
 #   파싱 실패 리포트 (check_parse_fail_detail.py 출력, 재생성 가능)
 data/parse_fail_report.json
 
-# ── Figure (generate_figures.py, compare_en_ko.py 출력) ───────
-#   PNG: README 임베드용 — git 추적
-#   PDF: 논문 제출용 — 용량 큰 바이너리 제외
-figures/en/*.png
-figures/ko/*.pdf
+# ── Figure 출력물 (로컬 생성, git 제외) ────────────────────────
+#   논문 투고용은 paper/figures/ 에서 관리 (git 추적)
+figures/en/
+figures/ko/
 
 # ── 백업 파일 ─────────────────────────────────────────────────
 *.jsonl.bak
