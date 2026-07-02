@@ -22,7 +22,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.patches import Rectangle
+from matplotlib.lines import Line2D
+from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch, Polygon, Rectangle
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -96,11 +97,31 @@ MONO = {
     "accent": "#555555",
 }
 
+PALETTE = {
+    "ink": "#1F2933",
+    "muted": "#5B6472",
+    "rule": "#C9D2DC",
+    "panel": "#F6F8FA",
+    "blue": "#2F6F9F",
+    "blue_light": "#EAF3FA",
+    "teal": "#1F9A8A",
+    "teal_light": "#E7F5F2",
+    "orange": "#D8762D",
+    "orange_light": "#FFF1E5",
+    "red": "#C54A45",
+    "red_light": "#FBEAEA",
+    "purple": "#725CA8",
+    "purple_light": "#F0ECF8",
+    "green": "#4D8C57",
+    "green_light": "#EAF5EA",
+    "gray_light": "#F4F5F7",
+}
+
 
 def setup_style() -> None:
     plt.rcParams.update(
         {
-            "font.family": "DejaVu Serif",
+            "font.family": "DejaVu Sans",
             "axes.spines.top": False,
             "axes.spines.right": False,
             "axes.edgecolor": MONO["black"],
@@ -149,58 +170,215 @@ def add_panel_label(ax: plt.Axes, label: str) -> None:
     )
 
 
-def fig1_protocol() -> None:
-    fig, ax = plt.subplots(figsize=(7.2, 2.18))
-    ax.set_axis_off()
-
-    boxes = [
-        (0.03, 0.58, 0.15, 0.23, "MT-Bench\n80 EN items"),
-        (0.24, 0.58, 0.15, 0.23, "KO benchmark\nconstruction"),
-        (0.45, 0.58, 0.15, 0.23, "EN/KO answer\ncollection"),
-        (0.66, 0.58, 0.15, 0.23, "LLM-as-judge\nevaluation"),
-        (0.84, 0.58, 0.13, 0.23, "Metric\naggregation"),
-        (0.24, 0.19, 0.15, 0.20, "Back-translation\nvalidation"),
-        (0.66, 0.19, 0.15, 0.20, "Qwen / EXAONE\nGPT-4o-mini"),
-        (0.84, 0.19, 0.13, 0.20, "Score gap\ninconsistency\nparse failure"),
-    ]
-
-    for x, y, w, h, text in boxes:
-        patch = Rectangle(
-            (x, y),
-            w,
-            h,
-            facecolor="white",
-            edgecolor=MONO["black"],
-            linewidth=0.8,
-        )
-        ax.add_patch(patch)
-        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=8.0)
-
-    arrows = [
-        ((0.18, 0.695), (0.24, 0.695)),
-        ((0.39, 0.695), (0.45, 0.695)),
-        ((0.60, 0.695), (0.66, 0.695)),
-        ((0.81, 0.695), (0.84, 0.695)),
-        ((0.735, 0.58), (0.735, 0.39)),
-        ((0.81, 0.29), (0.84, 0.29)),
-    ]
-    for start, end in arrows:
-        ax.annotate(
-            "",
-            xy=end,
-            xytext=start,
-            arrowprops=dict(arrowstyle="->", color=MONO["black"], lw=0.9),
-        )
-
-    ax.annotate(
-        "",
-        xy=(0.315, 0.39),
-        xytext=(0.315, 0.58),
-        arrowprops=dict(arrowstyle="<->", color=MONO["dark"], lw=0.8, linestyle="--"),
+def rounded_box(
+    ax: plt.Axes,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    *,
+    fc: str = "white",
+    ec: str = PALETTE["rule"],
+    lw: float = 0.9,
+    radius: float = 0.08,
+    zorder: int = 1,
+) -> FancyBboxPatch:
+    patch = FancyBboxPatch(
+        (x, y),
+        w,
+        h,
+        boxstyle=f"round,pad=0.015,rounding_size={radius}",
+        facecolor=fc,
+        edgecolor=ec,
+        linewidth=lw,
+        zorder=zorder,
     )
-    fig.tight_layout(pad=0.15)
-    save(fig, "fig1_protocol")
+    ax.add_patch(patch)
+    return patch
 
+
+def arrow(
+    ax: plt.Axes,
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+    *,
+    color: str = PALETTE["muted"],
+    lw: float = 1.1,
+    style: str = "-|>",
+    mutation_scale: float = 10,
+    rad: float = 0,
+    ls: str = "-",
+    zorder: int = 6,
+) -> None:
+    ax.add_patch(
+        FancyArrowPatch(
+            (x1, y1),
+            (x2, y2),
+            arrowstyle=style,
+            mutation_scale=mutation_scale,
+            linewidth=lw,
+            color=color,
+            linestyle=ls,
+            connectionstyle=f"arc3,rad={rad}",
+            zorder=zorder,
+        )
+    )
+
+
+def phase_panel(ax: plt.Axes, x: float, y: float, w: float, h: float, phase: str, title: str, color: str) -> None:
+    header_h = 0.72
+    rounded_box(ax, x, y, w, h, fc="white", ec="#AEB8C2", lw=1.0, radius=0.10, zorder=0)
+    header = FancyBboxPatch(
+        (x, y + h - header_h),
+        w,
+        header_h,
+        boxstyle="round,pad=0.015,rounding_size=0.10",
+        facecolor=color,
+        edgecolor="#AEB8C2",
+        linewidth=1.0,
+        zorder=1,
+    )
+    ax.add_patch(header)
+    ax.add_patch(
+        Rectangle(
+            (x, y + h - header_h),
+            w,
+            0.31,
+            facecolor=color,
+            edgecolor="none",
+            zorder=2,
+        )
+    )
+    ax.text(x + w / 2, y + h - 0.23, phase, ha="center", va="center", fontsize=6.9, fontweight="bold", color=PALETTE["muted"], zorder=3)
+    ax.text(x + w / 2, y + h - 0.50, title, ha="center", va="center", fontsize=7.9, fontweight="bold", color=PALETTE["ink"], zorder=3)
+
+
+def mini_card(
+    ax: plt.Axes,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    label: str,
+    *,
+    badge: str | None = None,
+    fc: str = "white",
+    ec: str = PALETTE["rule"],
+    color: str = PALETTE["blue"],
+    fontsize: float = 7.2,
+    zorder: int = 4,
+) -> None:
+    rounded_box(ax, x, y, w, h, fc=fc, ec=ec, lw=0.9, radius=0.06, zorder=zorder)
+    if badge:
+        rounded_box(ax, x + 0.10, y + h - 0.30, 0.48, 0.20, fc=color, ec=color, lw=0.0, radius=0.04, zorder=zorder + 1)
+        ax.text(x + 0.34, y + h - 0.20, badge, ha="center", va="center", fontsize=5.8, color="white", fontweight="bold", zorder=zorder + 2)
+    ax.text(x + w / 2, y + h / 2 - (0.05 if badge else 0), label, ha="center", va="center", fontsize=fontsize, color=PALETTE["ink"], linespacing=1.05, zorder=zorder + 2)
+
+
+def doc_stack(ax: plt.Axes, x: float, y: float, w: float, h: float, label: str, *, badge: str, color: str) -> None:
+    for dx, dy in [(0.08, 0.08), (0.04, 0.04), (0, 0)]:
+        rounded_box(ax, x + dx, y - dy, w, h, fc="white", ec="#B6C0CB", lw=0.8, radius=0.05, zorder=3)
+    mini_card(ax, x, y, w, h, label, badge=badge, color=color, fontsize=6.9, zorder=5)
+
+
+def fig1_protocol() -> None:
+    fig, ax = plt.subplots(figsize=(8.8, 3.85))
+    ax.set_axis_off()
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 7)
+
+    phase_panel(ax, 0.25, 0.78, 3.55, 5.82, "Phase 1", "Benchmark construction", PALETTE["blue_light"])
+    phase_panel(ax, 4.15, 0.78, 3.25, 5.82, "Phase 2", "Answer generation", PALETTE["teal_light"])
+    phase_panel(ax, 7.75, 0.78, 4.15, 5.82, "Phase 3", "LLM-as-a-judge", PALETTE["purple_light"])
+    phase_panel(ax, 12.25, 0.78, 3.50, 5.82, "Phase 4", "Reliability audit", PALETTE["orange_light"])
+
+    # Phase 1: benchmark construction.
+    doc_stack(ax, 0.65, 4.65, 1.30, 1.02, "MT-Bench\n80 EN items", badge="EN", color=PALETTE["blue"])
+    mini_card(ax, 2.25, 4.62, 1.15, 1.05, "Manual\nKO translation", badge="KO", color=PALETTE["red"], fc="#FFFDFB")
+    mini_card(ax, 1.36, 2.93, 1.50, 0.78, "Back-translation\nvalidity check", fc=PALETTE["gray_light"], ec="#B6C0CB", fontsize=6.8)
+    rounded_box(ax, 0.78, 1.42, 2.48, 0.82, fc="#FAFBFC", ec="#B6C0CB", lw=0.9, radius=0.06, zorder=4)
+    ax.plot([2.02, 2.02], [1.51, 2.15], color="#D4DCE4", lw=0.8, zorder=6)
+    ax.text(1.40, 1.86, "EN prompt", ha="center", va="center", fontsize=6.7, color=PALETTE["ink"], zorder=7)
+    ax.text(2.64, 1.86, "KO prompt", ha="center", va="center", fontsize=6.7, color=PALETTE["ink"], zorder=7)
+    arrow(ax, 1.97, 5.15, 2.23, 5.15, color=PALETTE["blue"])
+    arrow(ax, 2.86, 4.62, 2.40, 3.73, color=PALETTE["muted"], rad=-0.18)
+    arrow(ax, 2.05, 2.93, 2.02, 2.25, color=PALETTE["muted"], rad=0.08)
+
+    # Phase 2: answer generation.
+    rounded_box(ax, 4.55, 4.57, 1.42, 1.08, fc="white", ec="#B6C0CB", lw=0.9, radius=0.06, zorder=4)
+    ax.text(5.26, 5.43, "6 evaluated LLMs", ha="center", va="center", fontsize=6.9, fontweight="bold", color=PALETTE["ink"], zorder=7)
+    model_names = ["EXAONE", "EEVE", "Gemma", "Llama", "Mistral", "Phi"]
+    for i, name in enumerate(model_names):
+        yy = 5.18 - i * 0.13
+        ax.add_patch(Rectangle((4.77, yy - 0.035), 0.98, 0.065, facecolor="#E8EEF4", edgecolor="none", zorder=6))
+        ax.text(5.26, yy, name, ha="center", va="center", fontsize=5.4, color=PALETTE["muted"], zorder=7)
+    mini_card(ax, 4.42, 2.93, 1.08, 0.85, "English\nanswers", badge="EN", color=PALETTE["blue"], fc="#FBFDFF", fontsize=6.8)
+    mini_card(ax, 5.93, 2.93, 1.08, 0.85, "Korean\nanswers", badge="KO", color=PALETTE["red"], fc="#FFFDFB", fontsize=6.8)
+    arrow(ax, 5.25, 4.57, 4.98, 3.80, color=PALETTE["teal"], rad=0.12)
+    arrow(ax, 5.42, 4.57, 6.34, 3.80, color=PALETTE["teal"], rad=-0.16)
+    rounded_box(ax, 4.72, 1.48, 2.10, 0.78, fc=PALETTE["teal_light"], ec="#A7CEC8", lw=0.9, radius=0.06, zorder=4)
+    ax.text(5.77, 1.86, "EN/KO response pairs", ha="center", va="center", fontsize=7.1, fontweight="bold", color=PALETTE["ink"], zorder=7)
+    arrow(ax, 4.96, 2.93, 5.45, 2.27, color=PALETTE["teal"], rad=0.08)
+    arrow(ax, 6.45, 2.93, 6.02, 2.27, color=PALETTE["teal"], rad=-0.08)
+
+    # Phase 3: judge settings and modes.
+    rounded_box(ax, 8.18, 4.48, 1.22, 1.16, fc="white", ec="#B6C0CB", lw=0.9, radius=0.06, zorder=4)
+    ax.text(8.79, 5.41, "Same-family", ha="center", va="center", fontsize=6.4, fontweight="bold", color=PALETTE["ink"], zorder=7)
+    for i, (name, width) in enumerate([("Qwen-7B", 0.58), ("Qwen-14B", 0.80), ("Qwen-32B", 1.00)]):
+        yy = 5.14 - i * 0.22
+        ax.add_patch(Rectangle((8.29, yy - 0.055), width, 0.11, facecolor=PALETTE["purple_light"], edgecolor=PALETTE["purple"], lw=0.5, zorder=6))
+        ax.text(8.86, yy, name, ha="center", va="center", fontsize=5.6, color=PALETTE["ink"], zorder=7)
+    mini_card(ax, 10.02, 4.48, 1.32, 1.16, "EXAONE-32B\nGPT-4o-mini", badge="CF", color=PALETTE["purple"], fc="#FEFCFF", fontsize=6.4)
+    rounded_box(ax, 8.22, 2.82, 3.06, 1.00, fc="#FBFAFE", ec="#BEB3DA", lw=0.9, radius=0.06, zorder=4)
+    ax.text(9.75, 3.55, "Judge modes", ha="center", va="center", fontsize=6.8, fontweight="bold", color=PALETTE["ink"], zorder=7)
+    mode_x = [8.42, 9.34, 10.26]
+    mode_labels = ["Single\ngrade", "Pairwise\nAB/BA", "Reference\nguided"]
+    for mx, label in zip(mode_x, mode_labels):
+        rounded_box(ax, mx, 3.02, 0.78, 0.38, fc="white", ec="#CBBFE0", lw=0.7, radius=0.04, zorder=6)
+        ax.text(mx + 0.39, 3.21, label, ha="center", va="center", fontsize=5.7, color=PALETTE["ink"], linespacing=0.92, zorder=7)
+    # Small balance icon.
+    ax.plot([9.75, 9.75], [1.56, 2.20], color=PALETTE["purple"], lw=1.1, zorder=7)
+    ax.plot([9.28, 10.22], [2.02, 2.02], color=PALETTE["purple"], lw=1.1, zorder=7)
+    ax.add_patch(Polygon([[9.25, 1.72], [9.48, 1.72], [9.37, 1.50]], closed=True, facecolor="white", edgecolor=PALETTE["purple"], lw=0.8, zorder=7))
+    ax.add_patch(Polygon([[10.02, 1.72], [10.25, 1.72], [10.14, 1.50]], closed=True, facecolor="white", edgecolor=PALETTE["purple"], lw=0.8, zorder=7))
+    ax.text(9.75, 1.22, "score / choice / parse", ha="center", va="center", fontsize=6.5, color=PALETTE["muted"], zorder=7)
+    arrow(ax, 8.79, 4.48, 9.42, 3.83, color=PALETTE["purple"], rad=0.10)
+    arrow(ax, 10.68, 4.48, 10.06, 3.83, color=PALETTE["purple"], rad=-0.10)
+
+    # Phase 4: reliability audit.
+    metric_cards = [
+        (12.56, 4.62, "Score gap", "EN vs. KO", PALETTE["blue"], PALETTE["blue_light"]),
+        (14.05, 4.62, "AB/BA", "inconsistency", PALETTE["purple"], PALETTE["purple_light"]),
+        (12.56, 3.18, "1st-pos", "bias share", PALETTE["orange"], PALETTE["orange_light"]),
+        (14.05, 3.18, "Parse", "failure", PALETTE["red"], PALETTE["red_light"]),
+    ]
+    for x, y, title, subtitle, color, fill in metric_cards:
+        rounded_box(ax, x, y, 1.15, 0.95, fc=fill, ec=color, lw=0.9, radius=0.06, zorder=4)
+        ax.text(x + 0.58, y + 0.62, title, ha="center", va="center", fontsize=7.0, fontweight="bold", color=PALETTE["ink"], zorder=7)
+        ax.text(x + 0.58, y + 0.32, subtitle, ha="center", va="center", fontsize=5.8, color=PALETTE["muted"], zorder=7)
+    # Tiny chart glyphs make the metrics read as outputs, not more boxes.
+    ax.plot([12.77, 13.02, 13.22], [4.83, 4.98, 4.76], color=PALETTE["blue"], lw=1.2, zorder=8)
+    arrow(ax, 14.26, 4.85, 14.68, 4.85, color=PALETTE["purple"], mutation_scale=7, lw=0.9)
+    arrow(ax, 14.68, 4.71, 14.26, 4.71, color=PALETTE["purple"], mutation_scale=7, lw=0.9)
+    ax.text(12.95, 3.62, "A", ha="center", va="center", fontsize=8, color=PALETTE["orange"], fontweight="bold", zorder=8)
+    ax.text(13.28, 3.62, "B", ha="center", va="center", fontsize=8, color="#9A9A9A", zorder=8)
+    ax.text(14.62, 3.62, "!", ha="center", va="center", fontsize=12, color=PALETTE["red"], fontweight="bold", zorder=8)
+    rounded_box(ax, 12.82, 1.46, 2.40, 0.82, fc="white", ec="#B6C0CB", lw=0.9, radius=0.06, zorder=4)
+    ax.text(14.02, 1.84, "Raw JSONL + aggregate CSV", ha="center", va="center", fontsize=7.0, fontweight="bold", color=PALETTE["ink"], zorder=7)
+    ax.text(14.02, 1.57, "audit and recomputation", ha="center", va="center", fontsize=5.9, color=PALETTE["muted"], zorder=7)
+    arrow(ax, 13.13, 3.18, 13.57, 2.30, color=PALETTE["orange"], rad=0.14)
+    arrow(ax, 14.62, 3.18, 14.38, 2.30, color=PALETTE["red"], rad=-0.10)
+
+    # Cross-panel flow.
+    arrow(ax, 3.80, 3.48, 4.15, 3.48, color=PALETTE["muted"], lw=1.2, mutation_scale=12)
+    arrow(ax, 7.40, 3.48, 7.75, 3.48, color=PALETTE["muted"], lw=1.2, mutation_scale=12)
+    arrow(ax, 11.90, 3.48, 12.25, 3.48, color=PALETTE["muted"], lw=1.2, mutation_scale=12)
+    ax.text(8.0, 0.33, "All figures are generated from committed aggregate CSVs and raw pairwise/single/reference judgment JSONL files.", ha="center", va="center", fontsize=6.9, color=PALETTE["muted"])
+
+    fig.tight_layout(pad=0.1)
+    save(fig, "fig1_protocol")
 
 def qwen32_gap_frame() -> pd.DataFrame:
     en = read_csv(SCORE_FILES[("EN", "Qwen-32B")])
@@ -216,36 +394,45 @@ def qwen32_gap_frame() -> pd.DataFrame:
 
 def fig2_score_gap() -> None:
     df = qwen32_gap_frame()
+    df = df.sort_values("overall_en", ascending=True).reset_index(drop=True)
     y = np.arange(len(df))
 
-    fig, ax = plt.subplots(figsize=(6.8, 3.9))
-    ax.hlines(y, df["overall_ko"], df["overall_en"], color=MONO["light"], lw=2.4, zorder=1)
-    ax.plot(df["overall_en"], y, "o", ms=5.5, mfc="white", mec=MONO["black"], label="EN", zorder=3)
-    ax.plot(df["overall_ko"], y, "s", ms=5.2, mfc=MONO["black"], mec=MONO["black"], label="KO", zorder=3)
-
+    fig, ax = plt.subplots(figsize=(7.2, 3.45))
     for idx, row in enumerate(df.itertuples(index=False)):
+        gap_abs = abs(row.gap)
+        line_color = PALETTE["red"] if gap_abs >= 1.5 else PALETTE["orange"] if gap_abs >= 0.7 else PALETTE["green"]
+        ax.hlines(idx, row.overall_ko, row.overall_en, color=line_color, alpha=0.42, lw=3.2, zorder=1)
+        ax.plot(row.overall_en, idx, "o", ms=6.2, mfc="white", mec=PALETTE["blue"], mew=1.3, zorder=4)
+        ax.plot(row.overall_ko, idx, "s", ms=5.8, mfc=PALETTE["red"], mec=PALETTE["red"], mew=0.8, zorder=4)
+        gap_fc = PALETTE["red_light"] if gap_abs >= 1.5 else PALETTE["orange_light"] if gap_abs >= 0.7 else PALETTE["green_light"]
         ax.text(
-            min(row.overall_en, row.overall_ko) - 0.07,
+            8.66,
             idx,
             f"{row.gap:+.2f}",
-            ha="right",
+            ha="center",
             va="center",
-            fontsize=8,
+            fontsize=7.2,
+            fontweight="bold",
+            color=PALETTE["ink"],
+            bbox=dict(boxstyle="round,pad=0.22,rounding_size=0.10", fc=gap_fc, ec="none"),
+            zorder=5,
         )
     ax.set_yticks(y)
     ax.set_yticklabels(df["label"])
     ax.set_xlabel("MT-Bench score (1-10)")
     ax.set_xlim(4.2, 8.9)
-    ax.set_title("Qwen-32B single-grade score: English vs. Korean")
-    ax.grid(axis="x", color="#E6E6E6", lw=0.6)
-    ax.text(
-        0.0,
-        -0.20,
-        "Open circle=EN, filled square=KO. Left annotations show the observed KO-EN score gaps.",
-        transform=ax.transAxes,
-        fontsize=7.2,
-        color=MONO["dark"],
-    )
+    ax.set_title("Qwen-32B judge: English and Korean single-grade scores", loc="left", fontsize=9.4, fontweight="bold")
+    ax.grid(axis="x", color="#E6EAF0", lw=0.65)
+    ax.set_axisbelow(True)
+    ax.text(8.66, len(df) - 0.15, "KO-EN", ha="center", va="bottom", fontsize=7.2, fontweight="bold", color=PALETTE["muted"])
+    legend_handles = [
+        Line2D([0], [0], marker="o", color="none", markerfacecolor="white", markeredgecolor=PALETTE["blue"], markeredgewidth=1.3, markersize=6, label="EN"),
+        Line2D([0], [0], marker="s", color="none", markerfacecolor=PALETTE["red"], markeredgecolor=PALETTE["red"], markersize=5.8, label="KO"),
+    ]
+    ax.legend(handles=legend_handles, frameon=False, loc="lower right", bbox_to_anchor=(0.97, 0.03), ncol=2, handletextpad=0.35, columnspacing=0.85)
+    ax.text(0.0, -0.19, "Gap chips report Korean minus English score; larger red gaps indicate stronger cross-lingual degradation.", transform=ax.transAxes, fontsize=7.0, color=PALETTE["muted"])
+    for spine in ["left", "bottom"]:
+        ax.spines[spine].set_color("#AEB8C2")
     save(fig, "fig2_score_gap_qwen32")
 
 
@@ -255,41 +442,76 @@ def fig3_reliability_bias() -> None:
     comp["en_fp_in_incon"] = comp["en_fp_pct"] / comp["en_incon_pct"] * 100
     comp["ko_fp_in_incon"] = comp["ko_fp_pct"] / comp["ko_incon_pct"] * 100
 
-    x = np.arange(len(comp))
-    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.2), sharex=True)
+    colors = {
+        "qwen_7B": PALETTE["blue"],
+        "qwen_14B": PALETTE["teal"],
+        "qwen_32B": PALETTE["green"],
+        "exaone_32B": PALETTE["orange"],
+        "gpt4omini": PALETTE["purple"],
+    }
+    offsets = {
+        "qwen_7B": (1.4, 0.8),
+        "qwen_14B": (1.0, -3.8),
+        "qwen_32B": (1.0, 2.0),
+        "exaone_32B": (1.0, 1.8),
+        "gpt4omini": (1.0, -2.8),
+    }
 
-    ax = axes[0]
-    ax.plot(x, comp["en_incon_pct"], "-o", color=MONO["black"], mfc="white", ms=4.5, label="EN")
-    ax.plot(x, comp["ko_incon_pct"], "--s", color=MONO["dark"], mfc=MONO["dark"], ms=4.2, label="KO")
-    ax.set_ylabel("Inconsistency (%)")
-    ax.set_ylim(0, 85)
-    ax.set_title("AB/BA inconsistency")
-    ax.grid(axis="y", color="#E6E6E6", lw=0.6)
-    ax.legend(frameon=False, loc="upper right")
-    add_panel_label(ax, "(a)")
+    fig, ax = plt.subplots(figsize=(7.15, 4.0))
+    ax.add_patch(Rectangle((15, 20), 20, 30, facecolor=PALETTE["green_light"], edgecolor="none", alpha=0.75, zorder=0))
+    ax.text(17.0, 24.5, "lower\nrisk", ha="left", va="bottom", fontsize=7.0, color=PALETTE["green"], fontweight="bold", zorder=1)
+    ax.axhline(50, color="#9AA6B2", lw=0.9, ls=":", zorder=1)
+    ax.text(84.5, 51.8, "no 1st-position preference", ha="right", va="bottom", fontsize=6.8, color=PALETTE["muted"])
 
-    ax = axes[1]
-    ax.plot(x, comp["en_fp_in_incon"], "-o", color=MONO["black"], mfc="white", ms=4.5, label="EN")
-    ax.plot(x, comp["ko_fp_in_incon"], "--s", color=MONO["dark"], mfc=MONO["dark"], ms=4.2, label="KO")
-    ax.axhline(50, color=MONO["mid"], ls=":", lw=1)
-    ax.set_ylabel("First-position share (%)")
-    ax.set_ylim(0, 105)
-    ax.set_title("Among inconsistent pairs")
-    ax.grid(axis="y", color="#E6E6E6", lw=0.6)
-    add_panel_label(ax, "(b)")
+    for row in comp.itertuples(index=False):
+        color = colors[row.judge]
+        ax.plot(
+            [row.en_incon_pct, row.ko_incon_pct],
+            [row.en_fp_in_incon, row.ko_fp_in_incon],
+            color=color,
+            lw=1.3,
+            alpha=0.55,
+            zorder=2,
+        )
+        ax.scatter(row.en_incon_pct, row.en_fp_in_incon, s=52, marker="o", facecolor="white", edgecolor=color, linewidth=1.3, zorder=4)
+        ax.scatter(row.ko_incon_pct, row.ko_fp_in_incon, s=48, marker="s", facecolor=color, edgecolor=color, linewidth=0.8, zorder=4)
+        dx, dy = offsets[row.judge]
+        ax.text(
+            row.ko_incon_pct + dx,
+            row.ko_fp_in_incon + dy,
+            row.judge_label,
+            ha="left",
+            va="center",
+            fontsize=7.0,
+            color=PALETTE["ink"],
+            bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none", alpha=0.78),
+            zorder=5,
+        )
 
-    for ax in axes:
-        ax.set_xticks(x)
-        ax.set_xticklabels(comp["judge_label"], rotation=35, ha="right")
-
-    fig.text(
-        0.5,
-        -0.05,
-        "Note. First-position share is computed within inconsistent pairs, not over all pairs.",
-        ha="center",
-        fontsize=7.2,
-        color=MONO["dark"],
+    ax.annotate(
+        "Qwen scale-up\nreduces inconsistency",
+        xy=(30.9, 72.0),
+        xytext=(48, 37),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["blue"], lw=0.9, connectionstyle="arc3,rad=-0.20"),
+        fontsize=7.0,
+        color=PALETTE["blue"],
+        ha="left",
     )
+    ax.set_xlim(15, 85)
+    ax.set_ylim(20, 100)
+    ax.set_xlabel("AB/BA inconsistency (%)")
+    ax.set_ylabel("First-position share within inconsistent pairs (%)")
+    ax.set_title("Pairwise judge reliability map", loc="left", fontsize=9.4, fontweight="bold")
+    ax.grid(color="#E6EAF0", lw=0.65)
+    ax.set_axisbelow(True)
+    handles = [
+        Line2D([0], [0], marker="o", color="none", markerfacecolor="white", markeredgecolor=PALETTE["ink"], markeredgewidth=1.2, markersize=6, label="EN"),
+        Line2D([0], [0], marker="s", color="none", markerfacecolor=PALETTE["ink"], markeredgecolor=PALETTE["ink"], markersize=6, label="KO"),
+    ]
+    ax.legend(handles=handles, frameon=False, loc="lower right", ncol=2, handletextpad=0.35, columnspacing=0.9)
+    ax.text(0.0, -0.18, "Each segment connects the English and Korean result for the same judge setting.", transform=ax.transAxes, fontsize=7.0, color=PALETTE["muted"])
+    for spine in ["left", "bottom"]:
+        ax.spines[spine].set_color("#AEB8C2")
     fig.tight_layout()
     save(fig, "fig3_reliability_bias")
 
@@ -388,62 +610,67 @@ def reference_parse_summary() -> pd.DataFrame:
 
 def fig4_ref_parse() -> None:
     ref = collect_ref_score_diff()
-    ref["label"] = ref["lang"] + " " + ref["judge"]
     ref_parse = reference_parse_summary()
-    ref_parse["label"] = ref_parse["lang"] + " " + ref_parse["judge"]
 
-    fig, axes = plt.subplots(1, 2, figsize=(8.8, 4.25))
+    judge_order = ["Qwen-7B", "Qwen-14B", "Qwen-32B", "EXAONE-32B", "GPT-4o-mini"]
+    judge_short = ["Qwen\n7B", "Qwen\n14B", "Qwen\n32B", "EXAONE\n32B", "GPT-4o\nmini"]
+    lang_order = ["EN", "KO"]
+    ref_mat = np.full((len(lang_order), len(judge_order)), np.nan)
+    parse_mat = np.full_like(ref_mat, np.nan, dtype=float)
+
+    for row in ref.itertuples(index=False):
+        i = lang_order.index(row.lang)
+        j = judge_order.index(row.judge)
+        ref_mat[i, j] = row.diff_ref_minus_nonref
+    for row in ref_parse.itertuples(index=False):
+        i = lang_order.index(row.lang)
+        j = judge_order.index(row.judge)
+        parse_mat[i, j] = row.failure_rate * 100
+
+    fig, axes = plt.subplots(1, 2, figsize=(8.8, 2.85), gridspec_kw={"wspace": 0.22})
 
     ax = axes[0]
-    y = np.arange(len(ref))[::-1]
-    hatch = ["///" if lang == "KO" else "" for lang in ref["lang"]]
-    bars = ax.barh(
-        y,
-        ref["diff_ref_minus_nonref"],
-        color=MONO["light"],
-        edgecolor=MONO["black"],
-        lw=0.7,
-    )
-    for bar, h in zip(bars, hatch):
-        bar.set_hatch(h)
-    ax.axvline(0, color=MONO["black"], lw=0.8)
-    ax.set_xlabel("Ref - non-ref score")
-    ax.set_title("Reference-guided scoring")
-    ax.set_yticks(y)
-    ax.set_yticklabels(ref["label"])
-    ax.set_xlim(min(-3.0, ref["diff_ref_minus_nonref"].min() * 1.22), 0.35)
-    ax.grid(axis="x", color="#E6E6E6", lw=0.6)
-    for ypos, row in zip(y, ref.itertuples(index=False)):
-        ax.text(
-            row.diff_ref_minus_nonref - 0.06,
-            ypos,
-            f"{row.diff_ref_minus_nonref:+.2f}",
-            ha="right",
-            va="center",
-            fontsize=7,
-        )
-    add_panel_label(ax, "(a)")
+    im = ax.imshow(-ref_mat, cmap="OrRd", vmin=0, vmax=max(2.6, float(np.nanmax(-ref_mat))), aspect="auto")
+    ax.set_title("(a) Reference-guided score drop", loc="left", fontsize=9.0, fontweight="bold")
+    ax.set_xticks(np.arange(len(judge_order)))
+    ax.set_xticklabels(judge_short, fontsize=7.2)
+    ax.set_yticks(np.arange(len(lang_order)))
+    ax.set_yticklabels(lang_order, fontsize=8.0, fontweight="bold")
+    ax.tick_params(length=0)
+    for i in range(len(lang_order)):
+        for j in range(len(judge_order)):
+            val = ref_mat[i, j]
+            ax.text(j, i, f"{val:+.2f}", ha="center", va="center", fontsize=7.5, color=PALETTE["ink"], fontweight="bold")
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_xlabel("judge setting", labelpad=5)
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03)
+    cbar.set_label("absolute drop", fontsize=7)
+    cbar.ax.tick_params(labelsize=6.5, length=2)
 
     ax = axes[1]
-    y = np.arange(len(ref_parse))[::-1]
-    hatch = ["///" if lang == "KO" else "" for lang in ref_parse["lang"]]
-    bars = ax.barh(y, ref_parse["failure_rate"] * 100, color=MONO["light"], edgecolor=MONO["black"], lw=0.7)
-    for bar, h in zip(bars, hatch):
-        bar.set_hatch(h)
-    ax.set_yticks(y)
-    ax.set_yticklabels(ref_parse["label"])
-    ax.set_xlabel("Parse failure (%)")
-    ax.set_title("Reference-guided parse failure")
-    ax.set_xlim(0, max(36, ref_parse["failure_rate"].max() * 115))
-    ax.grid(axis="x", color="#E6E6E6", lw=0.6)
-    for ypos, row in zip(y, ref_parse.itertuples(index=False)):
-        failed = int(round(row.expected - row.valid))
-        total = int(round(row.expected))
-        label_x = max(row.failure_rate * 100 + 0.6, 0.45)
-        ax.text(label_x, ypos, f"{row.failure_rate*100:.1f}% ({failed}/{total})", va="center", fontsize=7)
-    add_panel_label(ax, "(b)")
+    im2 = ax.imshow(parse_mat, cmap="YlOrRd", vmin=0, vmax=max(34, float(np.nanmax(parse_mat))), aspect="auto")
+    ax.set_title("(b) Reference parse failure", loc="left", fontsize=9.0, fontweight="bold")
+    ax.set_xticks(np.arange(len(judge_order)))
+    ax.set_xticklabels(judge_short, fontsize=7.2)
+    ax.set_yticks(np.arange(len(lang_order)))
+    ax.set_yticklabels(lang_order, fontsize=8.0, fontweight="bold")
+    ax.tick_params(length=0)
+    for i in range(len(lang_order)):
+        for j in range(len(judge_order)):
+            val = parse_mat[i, j]
+            label = f"{val:.1f}%"
+            color = "white" if val >= 20 else PALETTE["ink"]
+            ax.text(j, i, label, ha="center", va="center", fontsize=7.5, color=color, fontweight="bold")
+    ax.add_patch(Rectangle((-0.49, 0.51), 0.98, 0.98, fill=False, edgecolor=PALETTE["red"], linewidth=2.0, zorder=4))
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.set_xlabel("judge setting", labelpad=5)
+    cbar2 = fig.colorbar(im2, ax=ax, fraction=0.046, pad=0.03)
+    cbar2.set_label("failure rate (%)", fontsize=7)
+    cbar2.ax.tick_params(labelsize=6.5, length=2)
 
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.07, right=0.95, top=0.84, bottom=0.24, wspace=0.26)
     save(fig, "fig4_ref_parse_failure")
 
 
