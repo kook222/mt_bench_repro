@@ -1,4 +1,4 @@
-# KIPS-ready Copy Tables
+# KCI-ready Copy Tables
 
 ## Table 1. Qwen-32B EN-KO single-grade score gap
 

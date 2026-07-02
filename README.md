@@ -2,7 +2,7 @@
 
 **한국어 제목**: 한국어 MT-Bench: LLM-as-a-Judge의 한·영 신뢰도 및 Cross-Family 편향 분석
 
-> **KIPS 정보처리학회논문지 투고 목표**  
+> **국내 NLP/KCI 학회·학술지 투고 준비용 연구 repo**
 > Base paper: Zheng et al., *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*, NeurIPS 2023 ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685))
 
 ---
@@ -56,25 +56,25 @@ Raw judgment 공개 범위는 총 270개 JSONL이다: EN 135개, KO 135개이며
 | Copy tables | 논문 본문/표에 바로 넣을 핵심 통계 요약 | `paper/tables/kci_tables.md` |
 
 <p align="center">
-  <img src="paper/figures/fig1_protocol.png?v=20260702-polish" width="88%" alt="Korean MT-Bench experimental protocol">
+  <img src="paper/figures/fig1_protocol.png?v=20260702-paper2" width="88%" alt="Korean MT-Bench experimental protocol">
   <br>
   <b>Fig. 1.</b> Korean MT-Bench reliability analysis protocol.
 </p>
 
 <p align="center">
-  <img src="paper/figures/fig2_score_gap_qwen32.png?v=20260702-polish" width="92%" alt="Qwen-32B EN-KO score gap">
+  <img src="paper/figures/fig2_score_gap_qwen32.png?v=20260702-paper2" width="92%" alt="Qwen-32B EN-KO score gap">
   <br>
-  <b>Fig. 2.</b> English and Korean single-grade scores under the Qwen-32B judge. The right-hand chips report KO-EN gaps.
+  <b>Fig. 2.</b> English and Korean single-grade scores under the Qwen-32B judge. The right-hand column reports KO-EN gaps.
 </p>
 
 <p align="center">
-  <img src="paper/figures/fig3_reliability_bias.png?v=20260702-polish" width="92%" alt="Judge reliability and position bias">
+  <img src="paper/figures/fig3_reliability_bias.png?v=20260702-paper2" width="92%" alt="Judge reliability and position bias">
   <br>
-  <b>Fig. 3.</b> Pairwise judge reliability map. Each segment connects EN and KO results for the same judge.
+  <b>Fig. 3.</b> Pairwise judge reliability and first-position tendency across EN/KO settings.
 </p>
 
 <p align="center">
-  <img src="paper/figures/fig4_ref_parse_failure.png?v=20260702-polish" width="92%" alt="Reference-guided scoring and parse failure">
+  <img src="paper/figures/fig4_ref_parse_failure.png?v=20260702-paper2" width="92%" alt="Reference-guided scoring and parse failure">
   <br>
   <b>Fig. 4.</b> Reference-guided score drop and reference parse-failure rate across all judge settings.
 </p>
@@ -90,7 +90,7 @@ Raw judgment 공개 범위는 총 270개 JSONL이다: EN 135개, KO 135개이며
 | **Phase 1b** | §5 실험 설계, §6.3 Cross-family bias, §6.4 Ref, §6.5 Parse | EXAONE-3.5-32B cross-family judge (EN+KO, 한국어 특화) | ✅ 완료 |
 | **Phase 1c** | §6.3 Cross-family bias (상용 baseline) | GPT-4o-mini judge (EN+KO) | ✅ 완료 |
 | **Phase 2** | §6.2 EN-KO 비교 분석 | compare_en_ko.py 실행 → Judge scaling 재현, inconsistency/bias 정량 비교 | ✅ 완료 |
-| **Phase 3** | §7 Discussion, §8 Conclusion | KIPS 원고 작성 및 투고 준비 | ⏳ 진행 중 |
+| **Phase 3** | §7 Discussion, §8 Conclusion | 교수님 제출용 원고 작성 및 투고 후보 학회 검토 | ⏳ 진행 중 |
 
 ---
 
@@ -597,7 +597,7 @@ mt_bench_repro/
 │   ├── analysis/
 │   │   └── analyze_translation_validity.py
 │   ├── paper/
-│   │   └── generate_figures.py           # KIPS용 figure/table 재생성
+│   │   └── generate_figures.py           # 논문용 figure/table 재생성
 │   ├── translate/
 │   │   ├── validate_translation.py
 │   │   ├── back_translate.py
@@ -605,7 +605,7 @@ mt_bench_repro/
 │   └── tools/
 │       └── download_dataset.sh
 ├── paper/
-│   ├── figures/                          # KIPS 논문용 figure PNG/PDF
+│   ├── figures/                          # 논문용 figure PNG/PDF
 │   ├── tables/                           # 본문 삽입용 copy tables
 │   └── README.md                         # figure/table 사용 안내
 └── src/mtbench_repro/                    # 핵심 Python 패키지

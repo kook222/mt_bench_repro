@@ -12,7 +12,7 @@ paper-artifact generation.
 - `scripts/translate/` - Korean MT-Bench translation validation and EN/KO comparison.
 - `scripts/analysis/` - Translation-validity analysis kept for the paper methods
   section.
-- `scripts/paper/` - KIPS paper figures and copy-ready tables.
+- `scripts/paper/` - Paper figures and copy-ready tables.
 - `scripts/tools/` - Dataset download/preparation helpers.
 
 ## Main Reproduction Commands
@@ -43,6 +43,5 @@ python3 scripts/analysis/analyze_translation_validity.py
 - Figures: `paper/figures/*.png`, `paper/figures/*.pdf`
 - Tables: `paper/tables/kci_tables.md`
 
-Legacy English-only drafts, old p-value/permutation outputs, and obsolete
-figure paths were removed so the repository reflects the current KIPS paper
-scope.
+Legacy English-only drafts, obsolete statistical side outputs, and old figure
+paths were removed so the repository reflects the current paper scope.

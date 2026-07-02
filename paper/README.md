@@ -1,7 +1,7 @@
-# KIPS Paper Artifacts
+# Paper Artifacts
 
-이 도표 세트는 KIPS 정보처리학회논문지 투고 원고에 맞춰 본문 삽입용으로 설계했다.
-색 의존도를 줄이고, 흑백 인쇄에서도 구분되도록 marker shape, line style, hatch를 사용한다.
+이 도표 세트는 국내 학회/학술지 투고 원고에 맞춰 본문 삽입용으로 설계했다.
+색 의존도를 줄이고, 흑백 인쇄에서도 구분되도록 grayscale bar, marker shape, direct label을 사용한다.
 
 ## Regeneration
 
@@ -21,7 +21,7 @@ Generated outputs:
    방법론 섹션 마지막 또는 실험 설계 첫 부분에 배치한다.
 2. **Fig. 2. Qwen-32B single-grade score gap.**
    핵심 결과 1: 범용 영어 모델의 KO 하락폭과 한국어 특화 모델의 완충 효과.
-3. **Fig. 3. Pairwise inconsistency and residual position tendency.**
+3. **Fig. 3. Pairwise inconsistency and first-position tendency.**
    핵심 결과 2: judge reliability와 position-sensitive residual error.
 4. **Fig. 4. Reference-guided scoring and parse failure.**
    핵심 결과 3 및 한계: reference 제공 효과와 KO 7B ref parse failure.
