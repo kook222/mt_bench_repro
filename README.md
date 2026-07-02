@@ -453,9 +453,24 @@ EXAONE-32B의 KO single_grade parse failure **3.3%** 는 EN 동일 설정(6/960=
 ## Phase 2: EN-KO 비교 분석 결과
 
 > `python3 scripts/translate/compare_en_ko.py` 출력 기준  
-> 출력 CSV: `data/ko/results/results_en_ko_comparison.csv`
+> 출력 CSV: `data/ko/results/results_en_ko_comparison.csv`  
+> **방법론 주의**: 80문항 전수 관측이므로 가설 검정(p-value) 없이 서술적 통계 + Cohen's dz(효과 크기)로 보고한다.
 
-### [비교 1] Judge별 EN/KO 모델 랭킹 상관관계 (Spearman ρ)
+### [분석 1] Per-question EN-KO Score Correlation (Spearman ρ, n=80)
+
+각 (judge, model) 쌍에 대해 EN 80문항 점수와 KO 80문항 점수 간 Spearman ρ를 계산한다. 전수 관측이므로 ρ 자체가 기술 통계량이다.
+
+| Judge | mean ρ (SD) | 해석 |
+|-------|------------:|------|
+| Qwen-7B | 0.346 (0.137) | weak–moderate |
+| Qwen-14B | 0.356 (0.122) | weak–moderate |
+| Qwen-32B | 0.364 (0.241) | weak–moderate |
+| EXAONE-32B | 0.393 (0.108) | moderate |
+| GPT-4o-mini | 0.390 (0.115) | moderate |
+
+전 judge 공통으로 ρ = 0.35–0.39 (moderate) 수준이다. judge 규모에 따른 뚜렷한 단조 증가는 관찰되지 않으며, 한국어 특화 judge(EXAONE-32B)와 상용 judge(GPT-4o-mini)가 소폭 높다. SD가 크다(특히 Qwen-32B = 0.24)는 점은 모델 간 개인차가 있음을 나타낸다.
+
+### [분석 2] 모델 랭킹 Spearman ρ (n=6, 기술 통계)
 
 | Judge | EN Top-3 | KO Top-3 | ρ |
 |-------|----------|----------|--:|
@@ -465,11 +480,9 @@ EXAONE-32B의 KO single_grade parse failure **3.3%** 는 EN 동일 설정(6/960=
 | EXAONE-32B | EXAONE > gemma > Llama | EXAONE > gemma > EEVE | **0.60** |
 | GPT-4o-mini | EXAONE > gemma > Phi | EXAONE > gemma > EEVE | **0.60** |
 
-소형 judge(7B/14B)는 EN/KO 모델 랭킹 상관관계가 낮다(ρ=0.37). Qwen-32B, EXAONE-32B, GPT-4o-mini에서는 모두 ρ=0.60으로 관찰되며, 이 6개 모델 집합에서는 더 안정적인 랭킹을 보인다. 다만 표본 모델 수가 6개라 Spearman ρ 해석은 보수적으로 해야 한다.
+n=6 기술 통계이므로 가설 검정 없이 수치 자체로 해석한다. 소형 judge(7B/14B)는 ρ=0.37, 32B급 이상(Qwen-32B, EXAONE-32B, GPT-4o-mini)은 일관되게 ρ=0.60이다. 모든 judge에서 EXAONE이 EN·KO 공통 1위다. EN 2·3위를 차지했던 Phi/Llama가 KO에서 급락(−1.9~−2.5점)하면서 상위권이 재편된다.
 
-모든 judge에서 EXAONE이 EN·KO 공통 1위다. 2·3위 변동이 크게 나는 이유는 Phi/Llama가 EN에서는 강하지만 KO에서 급락(−1.9~−2.5점)하기 때문이다. gemma-2-9b는 다국어 사전학습 비중이 높아 KO에서도 2위를 유지한다.
-
-### [비교 2] Inconsistency & 1st-pos Bias — EN vs KO
+### [분석 3] Inconsistency & 1st-pos Bias — EN vs KO
 
 | Judge | EN Incon | KO Incon | Δ(KO−EN) | EN 1st-pos | KO 1st-pos |
 |-------|--------:|---------:|----------:|-----------:|-----------:|
@@ -479,26 +492,24 @@ EXAONE-32B의 KO single_grade parse failure **3.3%** 는 EN 동일 설정(6/960=
 | EXAONE-32B | 42.2% | 30.5% | −11.7%p | 38.1% | 26.2% |
 | GPT-4o-mini | 33.2% | 21.6% | −11.7%p | 26.8% | 18.0% |
 
-모든 judge에서 KO inconsistency가 EN보다 낮다. 7B/14B의 Δ가 큰 것은 소형 judge가 EN에서 판정 능력 부족으로 랜덤에 가까운 판정을 했을 가능성과, KO에서 모델 간 품질 격차가 커져 판정이 더 명확해졌을 가능성을 함께 시사한다. 32B급 및 상용 baseline에서는 Δ가 −10~−12%p로 수렴하며, 이 차이는 KO 모델 간 점수 범위(4.73~8.09, range 3.36)가 EN(6.72~8.32, range 1.60)의 2배 이상 넓다는 관찰과 일관된다.
+모든 judge에서 KO inconsistency가 EN보다 낮다. 32B급에서는 Δ가 −10~−12%p로 수렴하며, 이는 KO 모델 간 점수 범위(4.73~8.09, range 3.36)가 EN(6.72~8.32, range 1.60)의 2배 이상 넓어 판정이 명확해진 효과와 일관된다. 7B/14B의 큰 Δ(−34, −22%p)는 소형 judge가 EN에서 판정 능력 부족으로 랜덤에 가까운 판정을 했을 가능성을 함께 시사한다.
 
-### [비교 3] Top-20 변별 문항 기준 EN/KO 랭킹 Spearman ρ
+### [분석 4] 카테고리별 EN-KO Score Gap (Cohen's dz)
 
-> Top-20 문항 선별 기준: EN single_grade(Qwen-32B)에서 모델 간 점수 분산이 가장 높은 문항  
-> 카테고리 분포: coding 7건, math 6건, reasoning 3건, roleplay 3건, extraction 1건
+Qwen-32B 기준, 사전 정의된 8개 카테고리별 Δ = KO − EN과 Cohen's dz(paired, model × question).
 
-| Judge | ρ (Top-Disc) | ρ (전체 80문항) |
-|-------|-------------:|----------------:|
-| Qwen-7B | **0.89** | 0.37 |
-| Qwen-14B | 0.43 | 0.37 |
-| Qwen-32B | **0.89** | 0.60 |
-| EXAONE-32B | **0.89** | 0.60 |
-| GPT-4o-mini | 0.60 | 0.60 |
+| Category | EN mean | KO mean | Δ | Cohen's dz | Effect |
+|----------|--------:|--------:|--:|-----------:|--------|
+| writing | 7.983 | 6.200 | −1.783 | −0.944 | large |
+| roleplay | 7.650 | 5.983 | −1.667 | −0.836 | large |
+| reasoning | 6.917 | 4.867 | −2.050 | −0.897 | large |
+| math | 7.100 | 5.917 | −1.183 | −0.577 | medium |
+| **coding** | **7.317** | **6.892** | **−0.425** | **−0.254** | **small** |
+| extraction | 7.458 | 6.758 | −0.700 | −0.446 | small |
+| stem | 8.425 | 6.667 | −1.758 | −0.741 | medium |
+| humanities | 8.483 | 7.167 | −1.317 | −0.796 | medium |
 
-변별력 높은 문항(주로 coding·math)으로 제한하면 EN/KO 랭킹 상관관계가 크게 높아진다. Qwen-7B조차 전체 ρ=0.37에서 Top-Disc ρ=0.89로 급등한다. 이는 coding·math·reasoning 중심 문항에서 번역 후에도 변별력 구조가 상당 부분 유지된다는 보조 증거다. 다만 Top-Disc 문항은 EN Qwen-32B 기준으로 선별되었고 표본 모델 수가 작으므로 독립 검증으로 보강할 필요가 있다.
-
-GPT-4o-mini는 Top-Disc에서도 ρ=0.60으로 전체와 동일하다. Top-Disc 문항에서도 랭킹이 이미 안정적이어서 추가 이득이 없는 것으로 해석된다.
-
-Qwen-14B의 Top-Disc ρ=0.43은 KO에서의 14B 이상 현상(2nd-pos bias 우세, 판정 불능 34%)이 coding·math 등 변별 문항에서도 여전히 남아있음을 반영한다.
+**핵심 발견**: coding은 Δ=−0.43, dz=−0.25(small)로 다른 카테고리와 달리 EN-KO 점수 차이가 작다. coding은 언어 의존도가 낮은 task (코드 생성, 디버깅)로 구성되어 있어 언어 전환 후에도 모델 능력 차이가 보존되는 language-agnostic 특성을 반영한다. 반면 writing, roleplay, reasoning은 dz ≥ 0.83 (large)으로 언어 의존도가 높다.
 
 ---
 
@@ -522,11 +533,17 @@ EN/KO 5개 judge별 inconsistency(a)와 1st-pos bias(b) 비율. 원 논문 GPT-4
 
 6개 eval 모델의 EN single 평균 점수 vs KO single 평균 점수 산점도. 한국어 특화 모델(EXAONE, EEVE, Ko-Mistral)은 점수 하락폭이 작고, 범용 영어 모델(Phi-3.5-mini, Mistral-7B)은 하락폭이 크다.
 
-### Fig 4 — Spearman ρ: 전체 vs Top-20 변별 문항
+### Fig 4 — Spearman ρ: Per-question vs 모델 랭킹
 
 ![Fig 4](figures/ko/fig4_spearman_rho.png)
 
-judge별 EN/KO 랭킹 상관관계(ρ). 전체 80문항 대비 Top-20 변별 문항(coding·math 중심)에서 ρ가 현저히 향상됨을 보여준다.
+judge별 EN-KO 상관관계. 파란 막대(±SD)는 n=80 문항 수준 per-question ρ, 주황 막대(빗금)는 n=6 모델 랭킹 ρ.
+
+### Fig 10 — 카테고리별 EN-KO Score Gap (Cohen's dz)
+
+![Fig 10](figures/ko/fig10_category_gap.png)
+
+Qwen-32B 기준 8개 카테고리별 Δ(KO−EN)와 Cohen's dz(paired). coding(small, dz=−0.25)이 다른 카테고리(medium~large)와 뚜렷이 구분된다.
 
 ### Fig 5 — Reference-Guided vs Standard 채점 비교
 

@@ -23,6 +23,7 @@ ipykernel>=6.0.0
 pandas>=2.0.0
 matplotlib>=3.7.0
 tabulate>=0.9.0
+scipy>=1.11.0
 
 # ── A100 서버 전용 (CUDA 버전에 맞게 별도 설치) ──
 # torch>=2.1.0          # pip install torch --index-url https://download.pytorch.org/whl/cu121
