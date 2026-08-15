@@ -1,0 +1,7 @@
+judge,prompt_protocol,language,evaluation,metric_value,metric_numerator,metric_denominator,standard_mean,reference_mean,reference_delta,position_first_count,position_first_pct,position_second_count,position_second_pct,other_inconsistent_count,other_inconsistent_pct,expected_calls,valid_calls,format_parse_failures,empty_or_api_failures,missing_calls,total_failures
+Gemma-4-12B,single-grade-fastchat-role-v3,en,single_grade,7.51,,957,,,,,,,,,,960,957,3,0,0,3
+Gemma-4-12B,pairwise-ab-ba-fastchat-role-v3,en,pairwise,19.83,234,1180,,,,172,73.5,41,17.52,21,8.97,2400,2380,20,0,0,20
+Gemma-4-12B,reference-single-fastchat-role-v3,en,single_grade_ref,-0.59,,172,5.23,4.65,-0.59,,,,,,,174,174,0,0,0,0
+Gemma-4-12B,single-grade-fastchat-role-v3,ko,single_grade,5.56,,956,,,,,,,,,,960,956,4,0,0,4
+Gemma-4-12B,pairwise-ab-ba-fastchat-role-v3,ko,pairwise,14.7,176,1197,,,,108,61.36,54,30.68,14,7.95,2400,2397,3,0,0,3
+Gemma-4-12B,reference-single-fastchat-role-v3,ko,single_grade_ref,-0.5,,173,4.45,3.95,-0.5,,,,,,,174,174,0,0,0,0

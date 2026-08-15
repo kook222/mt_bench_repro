@@ -1,0 +1,4 @@
+openai>=1.10,<3
+anthropic>=0.89,<1
+matplotlib==3.10.8
+numpy==2.2.3

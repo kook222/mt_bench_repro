@@ -1,0 +1,7 @@
+judge,en_mean,en_valid_scores,ko_mean,ko_valid_scores,delta_ko_minus_en
+Qwen-7B,7.81,960,6.6,915,-1.21
+Qwen-14B,7.87,960,6.4,955,-1.47
+Qwen-32B,7.66,958,6.31,959,-1.36
+EXAONE-32B,8.05,954,7.37,928,-0.68
+GPT-4o-mini,7.76,960,6.6,958,-1.15
+Mean,7.83,,6.66,,-1.17
