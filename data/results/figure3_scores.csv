@@ -1,29 +1,29 @@
-language,row_type,row_order,row_id,row_label,qwen_7b,qwen_14b,qwen_32b,exaone_32b,gpt_4o_mini,judge_mean
-en,model,0,Llama-3.1-8B-Instruct,Llama 3.1 8B,7.8937,8.1687,7.7125,8.1604,7.8187,7.9508
-en,model,1,EEVE-Korean-Instruct-10.8B,EEVE 10.8B,7.1937,6.8875,6.7188,7.4494,6.8125,7.0124
-en,model,2,EXAONE-3.5-7.8B-Instruct,EXAONE 7.8B,8.3812,8.55,8.3208,8.4623,8.725,8.4879
-en,model,3,gemma-2-9b-it,Gemma 2 9B,7.8688,8.0312,8.0943,8.2673,8.0125,8.0548
-en,model,4,Mistral-7B-Instruct-v0.3,Mistral 7B,7.45,7.4875,7.0875,7.8239,7.2062,7.411
-en,model,5,Phi-3.5-mini-Instruct,Phi 3.5 Mini,8.0437,8.0875,8.0625,8.15,7.9688,8.0625
-en,category,0,writing,writing,7.7,8.2083,7.9833,7.8792,7.8917,7.9325
-en,category,1,roleplay,roleplay,7.6667,7.7667,7.65,7.9833,7.7667,7.7667
-en,category,2,extraction,extraction,7.4417,7.8417,7.4583,8.0614,7.525,7.6656
-en,category,3,reasoning,reasoning,7.525,7.275,6.9167,7.925,7.275,7.3833
-en,category,4,math,math,7.575,7.6583,7.1,7.975,7.075,7.4767
-en,category,5,coding,coding,7.8667,7.3083,7.3167,7.7792,7.8,7.6142
-en,category,6,stem,stem,8.3583,8.3917,8.425,8.4458,8.375,8.3992
-en,category,7,humanities,humanities,8.3083,8.5,8.4831,8.375,8.35,8.4033
-ko,model,0,Llama-3.1-8B-Instruct,Llama 3.1 8B,6.3926,5.8491,5.7862,6.9678,6.1,6.2191
-ko,model,1,EEVE-Korean-Instruct-10.8B,EEVE 10.8B,6.6253,6.4781,6.375,7.4723,6.7188,6.7339
-ko,model,2,EXAONE-3.5-7.8B-Instruct,EXAONE 7.8B,7.6899,8.0281,8.0938,8.3604,8.2875,8.0919
-ko,model,3,gemma-2-9b-it,Gemma 2 9B,6.9318,7.2767,7.35,7.9647,7.4528,7.3952
-ko,model,4,Mistral-7B-Instruct-v0.3,Mistral 7B,5.4133,5.0696,4.7313,6.3955,5.0126,5.3245
-ko,model,5,Phi-3.5-mini-Instruct,Phi 3.5 Mini,6.4567,5.6855,5.5187,7.0265,6.0375,6.145
-ko,category,0,writing,writing,6.5531,6.175,6.2,7.1345,6.7395,6.5604
-ko,category,1,roleplay,roleplay,5.8974,6.5333,5.9833,7.2627,6.35,6.4054
-ko,category,2,extraction,extraction,6.2009,7.0294,6.7583,7.7243,7.4083,7.0243
-ko,category,3,reasoning,reasoning,5.605,5.0167,4.8667,7.0359,5.7167,5.6482
-ko,category,4,math,math,6.8729,6.1218,5.9167,7.1724,5.9083,6.3984
-ko,category,5,coding,coding,7.3274,6.5966,6.8917,7.4731,6.85,7.0278
-ko,category,6,stem,stem,7.3657,6.5798,6.6667,7.5243,6.7833,6.984
-ko,category,7,humanities,humanities,7.0676,7.1681,7.2017,7.6555,7.0672,7.232
+language,row_type,row_order,row_id,row_label,qwen_7b,qwen_14b,qwen_32b,exaone_32b,gpt_4o_mini,gemma_4_12b,judge_mean
+en,model,0,Llama-3.1-8B-Instruct,Llama 3.1 8B,7.8937,8.1687,7.7125,8.1604,7.8187,7.8228,7.9295
+en,model,1,EEVE-Korean-Instruct-10.8B,EEVE 10.8B,7.1937,6.8875,6.7188,7.4494,6.8125,5.9813,6.8405
+en,model,2,EXAONE-3.5-7.8B-Instruct,EXAONE 7.8B,8.3812,8.55,8.3208,8.4623,8.725,8.6855,8.5208
+en,model,3,gemma-2-9b-it,Gemma 2 9B,7.8688,8.0312,8.0943,8.2673,8.0125,8.2937,8.0946
+en,model,4,Mistral-7B-Instruct-v0.3,Mistral 7B,7.45,7.4875,7.0875,7.8239,7.2062,6.5687,7.2706
+en,model,5,Phi-3.5-mini-Instruct,Phi 3.5 Mini,8.0437,8.0875,8.0625,8.15,7.9688,7.7,8.0021
+en,category,0,writing,writing,7.7,8.2083,7.9833,7.8792,7.8917,8.8167,8.0799
+en,category,1,roleplay,roleplay,7.6667,7.7667,7.65,7.9833,7.7667,7.425,7.7097
+en,category,2,extraction,extraction,7.4417,7.8417,7.4583,8.0614,7.525,8.0084,7.7227
+en,category,3,reasoning,reasoning,7.525,7.275,6.9167,7.925,7.275,6.1,7.1694
+en,category,4,math,math,7.575,7.6583,7.1,7.975,7.075,6.5169,7.3167
+en,category,5,coding,coding,7.8667,7.3083,7.3167,7.7792,7.8,6.2833,7.3924
+en,category,6,stem,stem,8.3583,8.3917,8.425,8.4458,8.375,8.05,8.341
+en,category,7,humanities,humanities,8.3083,8.5,8.4831,8.375,8.35,8.8417,8.4763
+ko,model,0,Llama-3.1-8B-Instruct,Llama 3.1 8B,6.3926,5.8491,5.7862,6.9678,6.1,4.8625,5.993
+ko,model,1,EEVE-Korean-Instruct-10.8B,EEVE 10.8B,6.6253,6.4781,6.375,7.4723,6.7188,5.0506,6.4533
+ko,model,2,EXAONE-3.5-7.8B-Instruct,EXAONE 7.8B,7.6899,8.0281,8.0938,8.3604,8.2875,8.0755,8.0892
+ko,model,3,gemma-2-9b-it,Gemma 2 9B,6.9318,7.2767,7.35,7.9647,7.4528,7.327,7.3839
+ko,model,4,Mistral-7B-Instruct-v0.3,Mistral 7B,5.4133,5.0696,4.7313,6.3955,5.0126,3.95,5.0954
+ko,model,5,Phi-3.5-mini-Instruct,Phi 3.5 Mini,6.4567,5.6855,5.5187,7.0265,6.0375,4.1,5.8042
+ko,category,0,writing,writing,6.5531,6.175,6.2,7.1345,6.7395,5.3193,6.3536
+ko,category,1,roleplay,roleplay,5.8974,6.5333,5.9833,7.2627,6.35,5.0083,6.1725
+ko,category,2,extraction,extraction,6.2009,7.0294,6.7583,7.7243,7.4083,7.3167,7.073
+ko,category,3,reasoning,reasoning,5.605,5.0167,4.8667,7.0359,5.7167,4.1513,5.3987
+ko,category,4,math,math,6.8729,6.1218,5.9167,7.1724,5.9083,5.605,6.2662
+ko,category,5,coding,coding,7.3274,6.5966,6.8917,7.4731,6.85,5.6083,6.7912
+ko,category,6,stem,stem,7.3657,6.5798,6.6667,7.5243,6.7833,5.5083,6.738
+ko,category,7,humanities,humanities,7.0676,7.1681,7.2017,7.6555,7.0672,5.9328,7.0155

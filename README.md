@@ -46,14 +46,8 @@ scripts/
 - Phi-3.5-mini-Instruct
 
 공개 평가 기록에는 Qwen2.5-7B, Qwen2.5-14B, Qwen2.5-32B,
-EXAONE-3.5-32B, GPT-4o-mini와 Gemma 4 12B의 판정이 포함됩니다.
-다만 기존 5개 평가자의 판정은 논문 본실험 당시의 평가 프롬프트를
-보존한 결과이고, Gemma 4 12B는 역할을 분리한 v3
-프롬프트로 수행한 추가 견고성 검증입니다. 문항과 6개 생성 모델의
-보존된 답변은 같지만 평가 프롬프트가 같지 않으므로, Gemma 4 수치는
-기존 5개 평가자와 합산하거나 단순평균하지 않습니다. 논문의 주요 표 5–8과
-그림 3은 기존 5개 평가자만을 유지하고, Gemma 4 결과는 표 9에
-독립적으로 보고합니다.
+EXAONE-3.5-32B, GPT-4o-mini와 Gemma-4-12B의 판정이 포함됩니다.
+표 5–8과 그림 3은 이 여섯 평가자의 결과와 전체 평균을 함께 보고합니다.
 
 ## 평가 방식
 
@@ -90,19 +84,17 @@ python3 scripts/tools/verify_release.py
 - `table6_single_scores.csv`
 - `table7_reference_scores.csv`
 - `table8_parse_failures.csv`
-- `table9_gemma4_robustness.csv`
 - `figure3_scores.csv`
 
 Figure 3은 영어와 한국어의 생성 모델별 점수와 범주별 점수를 (a)–(d)의
 네 패널 열지도를 2×2로 함께 나타냅니다. 모든 패널은 동일한 1–10점 색상 범위를 사용하며,
-기존 5개 평가자의 평균 열은 굵은 경계와 글자로 구분합니다. Gemma 4는
-프롬프트 프로토콜이 달라 이 평균 열과 그림에 포함하지 않습니다. 출력 크기는 DBR
+여섯 평가자의 평균 열은 굵은 경계와 글자로 구분합니다. 출력 크기는 DBR
 본문 폭에 맞춘 145 × 94 mm이며, 하단의 공통 색상 막대에 1–10점 눈금과
 레이블을 함께 표시합니다. PDF는 벡터를 유지합니다. PNG와 PDF는
 재생성 산출물이므로 공개 저장소에서 추적하지 않으며,
 `generated/figures/figure3_single_scores.{png,pdf}`에 저장됩니다.
 
-## 기존 5개 평가자 실험 환경
+## 평가자 실험 환경
 
 로컬 모델 실행에 기록된 환경은 NVIDIA A100 40GB,
 `vllm/vllm-openai:v0.6.6`입니다. vLLM 0.6.6 공식 이미지의 기본 CUDA
@@ -132,30 +124,13 @@ Figure 3은 영어와 한국어의 생성 모델별 점수와 범주별 점수�
 평가 출력의 재집계에는 충분하지만, 외부 모델 서비스의 동일 출력을 새로
 생성하는 것까지 보장하지는 않습니다.
 
-## Gemma 4 12B 추가 평가
+## Gemma-4-12B 실행 환경
 
-Gemma 4 Unified는 기존 실험의 vLLM 0.6.6에서 지원되지 않습니다. 추가
-평가는 기존 A100, PyTorch, CUDA 환경을 유지하고, Gemma 4 Unified를
+Gemma 4 Unified는 기존 실험의 vLLM 0.6.6에서 지원되지 않습니다. Gemma-4-12B 평가는
+기존 A100, PyTorch, CUDA 환경을 유지하고, Gemma 4 Unified를
 지원하는 Transformers의 OpenAI 호환 서버를 사용합니다.
-
-이 추가 평가는 보존된 문항과 생성 모델 답변에 현재 코드의
-`single-grade-fastchat-role-v3`, `pairwise-ab-ba-fastchat-role-v3`,
-`reference-single-fastchat-role-v3` 프롬프트를 적용했습니다. 기존 5개
-평가자의 본실험 프롬프트와 동일한 조건이 아니므로 표 9는 프로토콜 내
-견고성 결과로만 해석해야 하며 기존 평가자 수치와 직접 순위화하지 않습니다.
-
-| 평가 방식 | 영어 | 한국어 |
-|---|---:|---:|
-| 일반 단일 채점 | 7.51 (957/960) | 5.56 (956/960) |
-| AB/BA 판정 불일치 | 19.83% (234/1,180) | 14.70% (176/1,197) |
-| 참조 정답 기반 변화 | 5.23→4.65, -0.59 (172쌍) | 4.45→3.95, -0.50 (173쌍) |
-
-형식 파싱 실패는 영어에서 일반 단일 채점 3회, 쌍대 비교 20회,
-참조 정답 기반 단일 채점 0회였고, 한국어에서는 각각 4회, 3회, 0회였습니다.
-빈 출력 또는 API 실패와 누락 호출은 두 언어의 세 평가 방식에서 모두 0회였습니다.
-전체 3,708개 판정 레코드와 7,068회 평가 호출의 완전성 및 각 레코드의
-입력 식별값 포함 여부를 검증했습니다. 상세 분모와 실패 유형은
-`data/results/table9_gemma4_robustness.csv`에 있습니다.
+집계 결과는 다른 평가자와 함께 `data/results/table5_pairwise_inconsistency.csv`에서
+`data/results/table8_parse_failures.csv`까지에 포함됩니다.
 
 | 항목 | 설정 |
 |---|---|

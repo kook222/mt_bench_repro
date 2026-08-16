@@ -14,6 +14,9 @@ en,EXAONE-32B,single_grade_ref,174,174,0,0,0,0
 en,GPT-4o-mini,single_grade,960,960,0,0,0,0
 en,GPT-4o-mini,pairwise,2400,2387,0,13,0,13
 en,GPT-4o-mini,single_grade_ref,174,174,0,0,0,0
+en,Gemma-4-12B,single_grade,960,957,3,0,0,3
+en,Gemma-4-12B,pairwise,2400,2380,20,0,0,20
+en,Gemma-4-12B,single_grade_ref,174,174,0,0,0,0
 ko,Qwen-7B,single_grade,960,915,45,0,0,45
 ko,Qwen-7B,pairwise,2400,2396,4,0,0,4
 ko,Qwen-7B,single_grade_ref,174,116,58,0,0,58
@@ -29,3 +32,6 @@ ko,EXAONE-32B,single_grade_ref,174,174,0,0,0,0
 ko,GPT-4o-mini,single_grade,960,958,2,0,0,2
 ko,GPT-4o-mini,pairwise,2400,2400,0,0,0,0
 ko,GPT-4o-mini,single_grade_ref,174,174,0,0,0,0
+ko,Gemma-4-12B,single_grade,960,956,4,0,0,4
+ko,Gemma-4-12B,pairwise,2400,2397,3,0,0,3
+ko,Gemma-4-12B,single_grade_ref,174,174,0,0,0,0

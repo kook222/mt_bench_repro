@@ -37,7 +37,6 @@ RESULT_FILES = {
     "table6_single_scores.csv",
     "table7_reference_scores.csv",
     "table8_parse_failures.csv",
-    "table9_gemma4_robustness.csv",
     "figure3_scores.csv",
 }
 SECRET_PATTERNS = {
@@ -286,14 +285,12 @@ def validate_judgments(
     if gemma_files:
         validation.check(
             paper.complete_judge_matrix(data_root, gemma),
-            "Gemma 4 results are either absent or complete in both languages",
+            "Gemma 4 judgment matrix is complete in both languages",
         )
     judges = paper.active_judges(data_root)
     validation.check(
-        len(judges) == 6
-        and len(tuple(judge for judge in judges if not judge.optional)) == 5
-        and len(tuple(judge for judge in judges if judge.optional)) == 1,
-        "five baseline judges and the separate Gemma 4 robustness judge are recognized",
+        len(judges) == 6,
+        "six judges are recognized",
     )
 
     expected_pairs = {
@@ -366,8 +363,6 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 
 def validate_results(validation: Validation, judges: tuple[paper.JudgeSpec, ...]) -> None:
     results_dir = ROOT / "data" / "results"
-    baseline_judges = tuple(judge for judge in judges if not judge.optional)
-    gemma_judges = tuple(judge for judge in judges if judge.optional)
     paths = {path.name for path in results_dir.glob("*.csv")}
     validation.check(paths == RESULT_FILES, "only paper-aligned result CSVs are published")
 
@@ -380,14 +375,27 @@ def validate_results(validation: Validation, judges: tuple[paper.JudgeSpec, ...]
     )
     table5 = read_csv(results_dir / "table5_pairwise_inconsistency.csv")
     validation.check(
-        len(table5) == len(baseline_judges) + 1
+        len(table5) == len(judges) + 1
         and table5[-1]["judge"] == "Mean"
         and {row["judge"] for row in table5[:-1]}
-        == {judge.display for judge in baseline_judges}
+        == {judge.display for judge in judges}
         and table5[0]["en_rate_pct"] == "79.25"
         and table5[0]["ko_rate_pct"] == "45.07"
-        and table5[-1]["en_rate_pct"] == "46.18"
-        and table5[-1]["ko_rate_pct"] == "28.17"
+        and table5[-2]["judge"] == "Gemma-4-12B"
+        and table5[-2]["en_inconsistent"] == "234"
+        and table5[-2]["en_valid"] == "1180"
+        and table5[-2]["en_rate_pct"] == "19.83"
+        and table5[-2]["ko_inconsistent"] == "176"
+        and table5[-2]["ko_valid"] == "1197"
+        and table5[-2]["ko_rate_pct"] == "14.7"
+        and table5[-2]["delta_ko_minus_en_pp"] == "-5.13"
+        and table5[-2]["ko_same_first"] == "108"
+        and table5[-2]["ko_same_first_pct"] == "61.36"
+        and table5[-2]["ko_same_second"] == "54"
+        and table5[-2]["ko_same_second_pct"] == "30.68"
+        and table5[-1]["en_rate_pct"] == "41.79"
+        and table5[-1]["ko_rate_pct"] == "25.92"
+        and table5[-1]["delta_ko_minus_en_pp"] == "-15.87"
         and all(
             int(row["ko_same_first"])
             + int(row["ko_same_second"])
@@ -395,42 +403,69 @@ def validate_results(validation: Validation, judges: tuple[paper.JudgeSpec, ...]
             == int(row["ko_inconsistent"])
             for row in table5[:-1]
         ),
-        "pairwise table preserves only the five-judge historical baseline",
+        "pairwise table reports all six judges and the six-judge mean",
     )
     table6 = read_csv(results_dir / "table6_single_scores.csv")
     validation.check(
-        len(table6) == len(baseline_judges) + 1
+        len(table6) == len(judges) + 1
         and {row["judge"] for row in table6[:-1]}
-        == {judge.display for judge in baseline_judges}
-        and table6[-1]["en_mean"] == "7.83"
-        and table6[-1]["ko_mean"] == "6.66"
-        and table6[-1]["delta_ko_minus_en"] == "-1.17"
+        == {judge.display for judge in judges}
+        and table6[-2]["judge"] == "Gemma-4-12B"
+        and table6[-2]["en_mean"] == "7.51"
+        and table6[-2]["en_valid_scores"] == "957"
+        and table6[-2]["ko_mean"] == "5.56"
+        and table6[-2]["ko_valid_scores"] == "956"
+        and table6[-2]["delta_ko_minus_en"] == "-1.95"
+        and table6[-1]["en_mean"] == "7.78"
+        and table6[-1]["ko_mean"] == "6.47"
+        and table6[-1]["delta_ko_minus_en"] == "-1.3"
         and all(
             int(row["en_valid_scores"]) <= 960
             and int(row["ko_valid_scores"]) <= 960
             for row in table6[:-1]
         ),
-        "single-score table reports the five-judge baseline and valid denominators",
+        "single-score table reports all six judges and valid denominators",
     )
     table7 = read_csv(results_dir / "table7_reference_scores.csv")
     validation.check(
-        len(table7) == len(baseline_judges) + 1
+        len(table7) == len(judges) + 1
         and {row["judge"] for row in table7[:-1]}
-        == {judge.display for judge in baseline_judges}
-        and table7[-1]["en_standard_mean"] == "7.61"
-        and table7[-1]["en_reference_mean"] == "5.99"
-        and table7[-1]["en_delta"] == "-1.62"
-        and table7[-1]["ko_standard_mean"] == "6.67"
-        and table7[-1]["ko_reference_mean"] == "5.33"
-        and table7[-1]["ko_delta"] == "-1.33"
+        == {judge.display for judge in judges}
+        and table7[-2]["judge"] == "Gemma-4-12B"
+        and table7[-2]["en_standard_mean"] == "5.23"
+        and table7[-2]["en_reference_mean"] == "4.65"
+        and table7[-2]["en_delta"] == "-0.59"
+        and table7[-2]["en_paired"] == "172"
+        and table7[-2]["ko_standard_mean"] == "4.45"
+        and table7[-2]["ko_reference_mean"] == "3.95"
+        and table7[-2]["ko_delta"] == "-0.5"
+        and table7[-2]["ko_paired"] == "173"
+        and table7[-1]["en_standard_mean"] == "7.21"
+        and table7[-1]["en_reference_mean"] == "5.76"
+        and table7[-1]["en_delta"] == "-1.45"
+        and table7[-1]["ko_standard_mean"] == "6.3"
+        and table7[-1]["ko_reference_mean"] == "5.1"
+        and table7[-1]["ko_delta"] == "-1.19"
         and all(int(row["en_paired"]) <= 174 and int(row["ko_paired"]) <= 174 for row in table7[:-1]),
-        "reference table preserves the five-judge baseline and paired valid outputs",
+        "reference table reports all six judges and paired valid outputs",
     )
     table8 = read_csv(results_dir / "table8_parse_failures.csv")
+    table8_keyed = {
+        (row["language"], row["judge"], row["protocol"]): row
+        for row in table8
+    }
+    gemma_failures = {
+        ("en", "single_grade"): (960, 957, 3),
+        ("en", "pairwise"): (2400, 2380, 20),
+        ("en", "single_grade_ref"): (174, 174, 0),
+        ("ko", "single_grade"): (960, 956, 4),
+        ("ko", "pairwise"): (2400, 2397, 3),
+        ("ko", "single_grade_ref"): (174, 174, 0),
+    }
     validation.check(
-        len(table8) == len(baseline_judges) * 2 * 3
+        len(table8) == len(judges) * 2 * 3
         and {row["judge"] for row in table8}
-        == {judge.display for judge in baseline_judges}
+        == {judge.display for judge in judges}
         and all(
             int(row["valid_calls"])
             + int(row["format_parse_failures"])
@@ -438,89 +473,19 @@ def validate_results(validation: Validation, judges: tuple[paper.JudgeSpec, ...]
             + int(row["missing_calls"])
             == int(row["expected_calls"])
             for row in table8
-        ),
-        "failure table accounts for every five-judge baseline evaluation call",
-    )
-
-    table9 = read_csv(results_dir / "table9_gemma4_robustness.csv")
-    table9_keyed = {
-        (row["language"], row["evaluation"]): row
-        for row in table9
-    }
-    expected_table9_keys = {
-        (language, protocol)
-        for language in paper.LANGUAGES
-        for protocol in paper.PROTOCOLS
-    }
-    table9_call_accounting = all(
-        int(row["valid_calls"])
-        + int(row["format_parse_failures"])
-        + int(row["empty_or_api_failures"])
-        + int(row["missing_calls"])
-        == int(row["expected_calls"])
-        for row in table9
-    )
-    table9_exact = False
-    if set(table9_keyed) == expected_table9_keys:
-        table9_exact = (
-            len(gemma_judges) == 1
-            and {row["judge"] for row in table9} == {gemma_judges[0].display}
-            and table9_keyed[("en", "single_grade")]["metric_value"] == "7.51"
-            and table9_keyed[("en", "single_grade")]["metric_denominator"] == "957"
-            and table9_keyed[("ko", "single_grade")]["metric_value"] == "5.56"
-            and table9_keyed[("ko", "single_grade")]["metric_denominator"] == "956"
-            and table9_keyed[("en", "pairwise")]["metric_numerator"] == "234"
-            and table9_keyed[("en", "pairwise")]["metric_denominator"] == "1180"
-            and table9_keyed[("en", "pairwise")]["metric_value"] == "19.83"
-            and table9_keyed[("en", "pairwise")]["position_first_count"] == "172"
-            and table9_keyed[("en", "pairwise")]["position_second_count"] == "41"
-            and table9_keyed[("en", "pairwise")]["other_inconsistent_count"] == "21"
-            and table9_keyed[("ko", "pairwise")]["metric_numerator"] == "176"
-            and table9_keyed[("ko", "pairwise")]["metric_denominator"] == "1197"
-            and table9_keyed[("ko", "pairwise")]["metric_value"] == "14.7"
-            and table9_keyed[("ko", "pairwise")]["position_first_count"] == "108"
-            and table9_keyed[("ko", "pairwise")]["position_second_count"] == "54"
-            and table9_keyed[("ko", "pairwise")]["other_inconsistent_count"] == "14"
-            and table9_keyed[("en", "single_grade_ref")]["standard_mean"] == "5.23"
-            and table9_keyed[("en", "single_grade_ref")]["reference_mean"] == "4.65"
-            and table9_keyed[("en", "single_grade_ref")]["reference_delta"] == "-0.59"
-            and table9_keyed[("en", "single_grade_ref")]["metric_denominator"] == "172"
-            and table9_keyed[("ko", "single_grade_ref")]["standard_mean"] == "4.45"
-            and table9_keyed[("ko", "single_grade_ref")]["reference_mean"] == "3.95"
-            and table9_keyed[("ko", "single_grade_ref")]["reference_delta"] == "-0.5"
-            and table9_keyed[("ko", "single_grade_ref")]["metric_denominator"] == "173"
-            and table9_keyed[("en", "single_grade")]["format_parse_failures"] == "3"
-            and table9_keyed[("en", "pairwise")]["format_parse_failures"] == "20"
-            and table9_keyed[("en", "single_grade_ref")]["format_parse_failures"] == "0"
-            and table9_keyed[("ko", "single_grade")]["format_parse_failures"] == "4"
-            and table9_keyed[("ko", "pairwise")]["format_parse_failures"] == "3"
-            and table9_keyed[("ko", "single_grade_ref")]["format_parse_failures"] == "0"
-            and {
-                key: (row["expected_calls"], row["valid_calls"])
-                for key, row in table9_keyed.items()
-            }
-            == {
-                ("en", "single_grade"): ("960", "957"),
-                ("en", "pairwise"): ("2400", "2380"),
-                ("en", "single_grade_ref"): ("174", "174"),
-                ("ko", "single_grade"): ("960", "956"),
-                ("ko", "pairwise"): ("2400", "2397"),
-                ("ko", "single_grade_ref"): ("174", "174"),
-            }
-            and all(row["empty_or_api_failures"] == "0" for row in table9)
-            and all(row["missing_calls"] == "0" for row in table9)
-            and {
-                key: row["prompt_protocol"] for key, row in table9_keyed.items()
-            }
-            == {
-                (language, protocol): paper.GEMMA4_PROTOCOLS[protocol]
-                for language in paper.LANGUAGES
-                for protocol in paper.PROTOCOLS
-            }
         )
-    validation.check(
-        len(table9) == 6 and table9_call_accounting and table9_exact,
-        "Table 9 independently reports the complete Gemma 4 v3 robustness run",
+        and all(
+            (
+                int(table8_keyed[(language, "Gemma-4-12B", protocol)]["expected_calls"]),
+                int(table8_keyed[(language, "Gemma-4-12B", protocol)]["valid_calls"]),
+                int(table8_keyed[(language, "Gemma-4-12B", protocol)]["format_parse_failures"]),
+            )
+            == expected
+            and table8_keyed[(language, "Gemma-4-12B", protocol)]["empty_or_api_failures"] == "0"
+            and table8_keyed[(language, "Gemma-4-12B", protocol)]["missing_calls"] == "0"
+            for (language, protocol), expected in gemma_failures.items()
+        ),
+        "failure table accounts for every evaluation call from all six judges",
     )
 
     figure_rows = read_csv(results_dir / "figure3_scores.csv")
@@ -533,10 +498,10 @@ def validate_results(validation: Validation, judges: tuple[paper.JudgeSpec, ...]
             "row_order",
             "row_id",
             "row_label",
-            *(judge.key for judge in baseline_judges),
+            *(judge.key for judge in judges),
             "judge_mean",
         },
-        "Figure data contains only five baseline judges across both languages",
+        "Figure data contains all six judges across both languages",
     )
 
 def validate_public_tree(validation: Validation) -> None:

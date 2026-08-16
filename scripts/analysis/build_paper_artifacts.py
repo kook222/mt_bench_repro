@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Build the paper tables and four-panel Figure 3 from raw judgments.
-
-Tables 5--8 and Figure 3 reproduce the five-judge historical protocol.
-The later Gemma 4 run used the versioned role-separated v3 prompts and is
-therefore reported independently in Table 9 instead of being pooled into the
-historical means.
-"""
+"""Build the paper tables and four-panel Figure 3 from raw judgments."""
 
 from __future__ import annotations
 
@@ -101,16 +95,10 @@ JUDGES = (
         "gemma4/judge_12B",
         "Gemma-4-12B-it",
         "Gemma-4-12B",
-        "Gemma 4\n12B",
+        "Gemma-4\n12B",
         optional=True,
     ),
 )
-
-GEMMA4_PROTOCOLS = {
-    "single_grade": "single-grade-fastchat-role-v3",
-    "pairwise": "pairwise-ab-ba-fastchat-role-v3",
-    "single_grade_ref": "reference-single-fastchat-role-v3",
-}
 
 FIGURE_WIDTH_INCHES = 5.71
 FIGURE_HEIGHT_INCHES = 3.70
@@ -172,22 +160,6 @@ def active_judges(data_root: Path) -> tuple[JudgeSpec, ...]:
         if complete:
             active.append(judge)
     return tuple(active)
-
-
-def baseline_judges(data_root: Path) -> tuple[JudgeSpec, ...]:
-    """Return only the five mutually comparable historical judges."""
-    judges = tuple(judge for judge in active_judges(data_root) if not judge.optional)
-    if len(judges) != 5:
-        raise ValueError(f"expected five baseline judges, found {len(judges)}")
-    return judges
-
-
-def gemma4_judge(data_root: Path) -> JudgeSpec:
-    """Return the complete, separately reported Gemma 4 robustness judge."""
-    candidates = tuple(judge for judge in active_judges(data_root) if judge.optional)
-    if len(candidates) != 1:
-        raise ValueError("complete Gemma 4 robustness matrix is required")
-    return candidates[0]
 
 
 def judge_root(data_root: Path, language: str, judge: JudgeSpec) -> Path:
@@ -492,105 +464,6 @@ def build_failure_table(data_root: Path, judges: Sequence[JudgeSpec]) -> list[di
     return rows
 
 
-def build_gemma4_robustness_table(data_root: Path, judge: JudgeSpec) -> list[dict]:
-    """Build a protocol-separated robustness table for the Gemma 4 v3 run.
-
-    The long form deliberately keeps the three evaluation protocols separate.
-    In particular, no value from this table contributes to a five-judge mean.
-    """
-    single = build_single_table(data_root, (judge,))[0]
-    pairwise = build_pairwise_table(data_root, (judge,))[0]
-    reference = build_reference_table(data_root, (judge,))[0]
-    failures = {
-        (row["language"], row["protocol"]): row
-        for row in build_failure_table(data_root, (judge,))
-    }
-
-    rows: list[dict] = []
-    for language in LANGUAGES:
-        pairwise_records = latest_records(
-            judge_root(data_root, language, judge) / "pairwise",
-            "pairwise",
-        )
-        inconsistent_records = [
-            record
-            for record in pairwise_records.values()
-            if record.get("winner") == "inconsistent"
-        ]
-        same_first = sum(
-            record.get("winner_ab") == "A" and record.get("winner_ba") == "A"
-            for record in inconsistent_records
-        )
-        same_second = sum(
-            record.get("winner_ab") == "B" and record.get("winner_ba") == "B"
-            for record in inconsistent_records
-        )
-        other = len(inconsistent_records) - same_first - same_second
-
-        language_prefix = f"{language}_"
-        protocol_values = {
-            "single_grade": {
-                "metric_value": single[f"{language_prefix}mean"],
-                "metric_numerator": "",
-                "metric_denominator": single[f"{language_prefix}valid_scores"],
-            },
-            "pairwise": {
-                "metric_value": pairwise[f"{language_prefix}rate_pct"],
-                "metric_numerator": pairwise[f"{language_prefix}inconsistent"],
-                "metric_denominator": pairwise[f"{language_prefix}valid"],
-                "position_first_count": same_first,
-                "position_first_pct": round(
-                    same_first / len(inconsistent_records) * 100, 2
-                ),
-                "position_second_count": same_second,
-                "position_second_pct": round(
-                    same_second / len(inconsistent_records) * 100, 2
-                ),
-                "other_inconsistent_count": other,
-                "other_inconsistent_pct": round(
-                    other / len(inconsistent_records) * 100, 2
-                ),
-            },
-            "single_grade_ref": {
-                "metric_value": reference[f"{language_prefix}delta"],
-                "metric_numerator": "",
-                "metric_denominator": reference[f"{language_prefix}paired"],
-                "standard_mean": reference[f"{language_prefix}standard_mean"],
-                "reference_mean": reference[f"{language_prefix}reference_mean"],
-                "reference_delta": reference[f"{language_prefix}delta"],
-            },
-        }
-        for protocol in PROTOCOLS:
-            failure = failures[(language, protocol)]
-            row = {
-                "judge": judge.display,
-                "prompt_protocol": GEMMA4_PROTOCOLS[protocol],
-                "language": language,
-                "evaluation": protocol,
-                "metric_value": "",
-                "metric_numerator": "",
-                "metric_denominator": "",
-                "standard_mean": "",
-                "reference_mean": "",
-                "reference_delta": "",
-                "position_first_count": "",
-                "position_first_pct": "",
-                "position_second_count": "",
-                "position_second_pct": "",
-                "other_inconsistent_count": "",
-                "other_inconsistent_pct": "",
-                "expected_calls": failure["expected_calls"],
-                "valid_calls": failure["valid_calls"],
-                "format_parse_failures": failure["format_parse_failures"],
-                "empty_or_api_failures": failure["empty_or_api_failures"],
-                "missing_calls": failure["missing_calls"],
-                "total_failures": failure["total_failures"],
-            }
-            row.update(protocol_values[protocol])
-            rows.append(row)
-    return rows
-
-
 def build_figure_rows(data_root: Path, judges: Sequence[JudgeSpec]) -> list[dict]:
     questions = {
         language: {
@@ -810,8 +683,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     data_root = args.data_root.resolve()
-    judges = baseline_judges(data_root)
-    gemma = gemma4_judge(data_root)
+    judges = active_judges(data_root)
+    if len(judges) != 6:
+        raise ValueError(f"expected six judges, found {len(judges)}")
 
     outputs = (
         (
@@ -890,34 +764,6 @@ def main() -> None:
                 "total_failures",
             ),
             build_failure_table(data_root, judges),
-        ),
-        (
-            "table9_gemma4_robustness.csv",
-            (
-                "judge",
-                "prompt_protocol",
-                "language",
-                "evaluation",
-                "metric_value",
-                "metric_numerator",
-                "metric_denominator",
-                "standard_mean",
-                "reference_mean",
-                "reference_delta",
-                "position_first_count",
-                "position_first_pct",
-                "position_second_count",
-                "position_second_pct",
-                "other_inconsistent_count",
-                "other_inconsistent_pct",
-                "expected_calls",
-                "valid_calls",
-                "format_parse_failures",
-                "empty_or_api_failures",
-                "missing_calls",
-                "total_failures",
-            ),
-            build_gemma4_robustness_table(data_root, gemma),
         ),
     )
     for filename, fieldnames, rows in outputs:
