@@ -1,19 +1,4 @@
-"""
-MT-Bench 파이프라인 통합 CLI 엔트리포인트.
-
-왜 별도 cli.py가 필요한가:
-- 각 모듈을 python -m mtbench_repro.generate 처럼 개별 실행할 수 있지만,
-  파이프라인 전체를 하나의 진입점으로 관리하면 A100 서버에서
-  단일 커맨드로 전체 흐름을 실행할 수 있다.
-- 서브커맨드 구조: `python -m mtbench_repro.cli generate --mock` 처럼 사용.
-
-사용 예시:
-    python -m mtbench_repro.cli generate --model-id vicuna-13b --mock
-    python -m mtbench_repro.cli judge-single --model-id vicuna-13b --mock
-    python -m mtbench_repro.cli judge-pairwise --model-a vicuna-13b --model-b llama-13b --mock
-    python -m mtbench_repro.cli judge-reference --model-id vicuna-13b --mode single --mock
-    python -m mtbench_repro.cli aggregate --judgments-dir runs/reproduction/en/judgments/ --models model-a model-b
-"""
+"""Command-line entry point for the MT-Bench evaluation pipeline."""
 
 from __future__ import annotations
 
@@ -308,7 +293,7 @@ def add_judge_reference_parser(subparsers) -> None:
         "--reference-selection",
         choices=["historical-declared", "usable-turn2"],
         default="usable-turn2",
-        help="참조 문항 범위: 논문과 같은 선언 기준 29문항 또는 유효한 turn2 참조 26문항",
+        help="참조 문항 범위: 선언 기준 29문항 또는 유효한 turn2 참조 26문항",
     )
     p.set_defaults(func=cmd_judge_reference)
 
@@ -330,7 +315,7 @@ def cmd_aggregate(args: argparse.Namespace) -> None:
     )
 
 def add_aggregate_parser(subparsers) -> None:
-    p = subparsers.add_parser("aggregate", help="결과 집계 및 trend 분석")
+    p = subparsers.add_parser("aggregate", help="결과 집계")
     p.add_argument(
         "--judgments-dir", type=str, default="runs/reproduction/en/judgments/"
     )
@@ -354,8 +339,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mtbench_repro",
         description=(
-            "MT-Bench 평가 파이프라인 CLI\n"
-            "논문: Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena\n\n"
+            "MT-Bench 평가 파이프라인 CLI\n\n"
             "실행 방법: PYTHONPATH=src python -m mtbench_repro.cli <subcommand>"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,

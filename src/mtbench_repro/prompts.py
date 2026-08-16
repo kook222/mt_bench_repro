@@ -10,7 +10,7 @@ built here.
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 _SYSTEM_PAIRWISE = (
@@ -260,7 +260,6 @@ def build_pairwise_prompt(
 
     reference가 있으면 reference-guided pairwise prompt, use_cot이면 CoT prompt,
     둘 다 없으면 pairwise prompt를 사용한다.
-    논문 Section 3.4: reference가 CoT보다 효과적 (Table 4 근거).
 
     Args:
         question: 1st turn 질문 텍스트
@@ -318,9 +317,8 @@ def build_multiturn_pairwise_prompt(
     """
     Multi-turn pairwise 비교 프롬프트 생성 (multi-turn pairwise prompt).
 
-    논문 Section 3.5:
-    - 두 대화 전체를 하나의 프롬프트에 담아 judge에게 2nd turn 집중 요청.
-    - 두 turn을 별도 프롬프트로 분리하면 judge가 이전 답변을 잘못 참조함.
+    두 대화 전체를 하나의 프롬프트에 담아 judge가 2nd turn을
+    평가하도록 한다.
 
     Args:
         turns: [1st_turn_question, 2nd_turn_question]
@@ -446,8 +444,7 @@ def build_single_prompt(
     """
     Single-answer grading 프롬프트 생성 (single-grade prompt).
 
-    논문 Table 8: GPT-4 single-answer grading으로 MT-Bench Score 산출.
-    각 turn마다 별도 호출하고, 두 점수를 평균내어 최종 점수를 낸다.
+    각 turn마다 별도로 1~10점 척도의 평가 입력을 구성한다.
 
     Args:
         question: 해당 turn의 질문
@@ -495,9 +492,8 @@ def build_multiturn_single_prompt(
     """
     Multi-turn single-answer grading 프롬프트 생성 (reference-guided single-grade prompt).
 
-    논문 Section 3.5의 reference-guided single-grade prompt:
-    - reference answer가 있을 때 전체 대화 맥락을 포함해 2nd turn 채점.
-    - 주로 math/coding 카테고리에서 reference와 함께 사용.
+    reference answer와 전체 대화 맥락을 포함해 2nd turn 채점
+    입력을 구성한다.
 
     Args:
         turns: [1st_turn_question, 2nd_turn_question]
@@ -551,7 +547,7 @@ def parse_pairwise_verdict(text: str) -> str:
     """
     Pairwise judge 응답에서 최종 판정을 파싱.
 
-    논문 pairwise prompt/7/8/9의 출력 형식:
+    Pairwise prompt의 출력 형식:
     - "[[A]]": Assistant A가 더 좋음
     - "[[B]]": Assistant B가 더 좋음
     - "[[C]]": 동점 (tie)
@@ -584,7 +580,7 @@ def parse_single_score(text: str) -> float:
     """
     Single-answer grading 응답에서 점수를 파싱.
 
-    논문 single-grade prompt의 출력 형식: "Rating: [[5]]"
+    Single-grade prompt의 출력 형식: "Rating: [[5]]"
     점수 범위: 1~10 (정수 또는 소수)
 
     파싱 전략:
@@ -630,16 +626,14 @@ def resolve_pairwise_winner(
     """
     Position swap 결과를 합쳐 최종 winner를 결정.
 
-    논문 Section 3.4 conservative approach:
+    AB/BA 판정을 합치는 방식:
     - verdict_ab: [A, B] 순서일 때 판정 ("A" or "B" or "tie")
     - verdict_ba: [B, A] 순서로 swap 후 판정
       (BA 순서이므로 "A"는 실제로 model_b가 더 좋다는 의미)
     - 두 판정이 일치하면 해당 모델이 winner.
     - 불일치하면 "inconsistent" → 승자를 선언하지 않고 별도 집계.
 
-    왜 conservative approach인가:
-    - 논문 Section 3.4: "only declare a win when an answer is preferred in both orders"
-    - A100에서 비용 절감 목적으로 swap 없이 쓸 경우 이 함수 우회 가능.
+    두 순서의 판정이 다르면 승자를 선언하지 않는다.
 
     Args:
         verdict_ab: AB 순서 판정 ("A" | "B" | "tie" | "error")

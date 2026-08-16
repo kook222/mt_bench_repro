@@ -152,7 +152,7 @@ class ChatClient:
         cls,
         host: str = "localhost",
         port: int = 8000,
-        model: str = "vicuna-13b",
+        model: str = "served-model",
         **kwargs: Any,
     ) -> "ChatClient":
         """
@@ -193,10 +193,8 @@ class ChatClient:
         - system 메시지는 최상위 system 파라미터로 분리하고,
           user/assistant 메시지들은 messages 배열로 넘긴다.
 
-        temperature=0.0인 이유:
-        - 논문에서 judge는 결정론적 판정을 위해 greedy decoding을 사용한다.
-          (Section 4.1 "we use GPT-4 as judge")
-        - 생성 시에는 호출 측에서 temperature를 명시적으로 변경해야 한다.
+        평가 호출은 기본적으로 ``temperature=0.0``을 사용한다.
+        답변 생성 시에는 호출 측에서 생성 설정을 명시한다.
 
         retry 로직:
         - 네트워크 오류나 rate limit(429)은 retry_delay 후 재시도.

@@ -5,7 +5,6 @@ from pathlib import Path
 
 from mtbench_repro.aggregate import (
     _resolve_expected_reference_ids,
-    compute_rank_correlation,
     compute_reference_scores,
     compute_single_scores,
     compute_win_rates,
@@ -96,23 +95,6 @@ class AggregateDeduplicationTest(unittest.TestCase):
                 questions, str(root), ["model-a"], "auto", False
             )
             self.assertEqual(current, {2})
-
-    def test_spearman_ties_use_average_ranks_independent_of_input_order(self):
-        first = {
-            "gpt-4": 1.0,
-            "gpt-3.5": 1.0,
-            "vicuna-13b": 0.0,
-        }
-        reordered = {
-            "gpt-3.5": 1.0,
-            "gpt-4": 1.0,
-            "vicuna-13b": 0.0,
-        }
-
-        self.assertAlmostEqual(
-            compute_rank_correlation(first),
-            compute_rank_correlation(reordered),
-        )
 
     def test_invalid_single_score_is_rejected_at_load_boundary(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -10,7 +10,7 @@ import argparse
 import logging
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from mtbench_repro.client import ChatClient
 from mtbench_repro.io_utils import (

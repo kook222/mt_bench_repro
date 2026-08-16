@@ -1,18 +1,4 @@
-"""
-MT-Bench Pairwise comparison 수행 (논문 pairwise and multi-turn pairwise prompts, Section 3.1, 3.4).
-
-왜 swap을 두 번 하는가:
-- 논문 Section 3.3: LLM judge는 position bias가 있어 먼저 나온 답변을 선호한다.
-  GPT-4도 65% consistency (Table 2) — 35%는 순서만 바꿔도 판정이 달라진다.
-- 논문 Section 3.4 conservative approach:
-  AB 순서와 BA 순서에서 모두 같은 결과가 나올 때만 winner 선언.
-  불일치 시 "inconsistent"로 기록한다. 주 승률에서는 0.5/0.5 무승부로
-  계산하고, 별도 consistent-only 민감도 분석에서만 제외한다.
-
-Multi-turn 프롬프트 (multi-turn pairwise prompt) 사용 이유:
-- 논문 Section 3.5: 두 turn을 분리하면 judge가 이전 답변을 잘못 참조한다.
-  전체 대화 컨텍스트를 하나의 프롬프트에 담아 2nd turn에 집중하게 한다.
-"""
+"""Run AB/BA pairwise grading over complete two-turn conversations."""
 
 from __future__ import annotations
 
@@ -21,7 +7,7 @@ import itertools
 import logging
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 from mtbench_repro.client import ChatClient
 from mtbench_repro.io_utils import (
@@ -122,9 +108,7 @@ def judge_pairwise_question(
     """
     한 질문에 대해 두 모델의 답변을 비교 판정. AB/BA 순서로 각 1회 호출.
 
-    Multi-turn 프롬프트(multi-turn pairwise prompt) 사용:
-    - 2-turn 전체 대화를 하나의 프롬프트에 담는다.
-    - 논문 Section 3.5에서 이 방식이 turn별 분리보다 정확하다고 검증됨.
+    2-turn 전체 대화를 하나의 multi-turn 프롬프트에 담는다.
 
     Conservative verdict 결정:
     - AB 판정과 BA 판정이 일치 → 해당 모델 ID를 winner로 기록
@@ -402,8 +386,7 @@ def run_all_pairs(
     """
     모델 목록에서 가능한 모든 pairs에 대해 pairwise comparison 실행.
 
-    논문 Section 4.1: 6개 모델 × 5 pairs = 15쌍을 모두 비교.
-    combinations(model_ids, 2)로 중복 없이 순서 없는 쌍을 생성.
+    ``combinations(model_ids, 2)``로 중복 없이 순서 없는 쌍을 생성.
 
     Args:
         model_ids: 비교할 모델 ID 리스트

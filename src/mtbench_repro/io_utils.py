@@ -1,20 +1,4 @@
-"""
-JSONL 기반 파일 입출력 유틸리티.
-
-왜 io_utils.py를 schemas.py와 분리하는가:
-- schemas.py는 순수 데이터 구조 정의만 담당하고,
-  파일 I/O 로직(경로 처리, 인코딩, 에러 핸들링)은 별도로 관리하면
-  schemas를 import해도 파일 시스템 의존성이 생기지 않는다.
-- JSONL 포맷을 선택한 이유: 논문 저자들의 FastChat 구현과 호환되고,
-  대용량 답변 파일을 한 줄씩 스트리밍할 수 있어 메모리 효율이 좋다.
-- 각 함수가 Path 객체와 str 모두 받는 이유:
-  노트북(str 경로)과 스크립트(Path 객체) 모두에서 사용하기 때문이다.
-
-수정 이력:
-- from schemas import → from mtbench_repro.schemas import 로 패키지 경로 통일.
-  실행 방식이 `python -m mtbench_repro.xxx` 또는
-  PYTHONPATH=src 기반이므로 절대 패키지 경로가 필요하다.
-"""
+"""Strict JSONL I/O and path helpers for pipeline records."""
 
 from __future__ import annotations
 
@@ -27,7 +11,7 @@ import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Generator, Iterable, List, Optional, Union
+from typing import Any, Dict, Generator, Iterable, List, Union
 
 
 from mtbench_repro.schemas import (
@@ -160,19 +144,7 @@ def _write_jsonl_atomic_unlocked(
     return count
 
 def append_jsonl(path: PathLike, record: Dict[str, Any]) -> None:
-    """
-    단일 record를 JSONL 파일에 추가 (judge 실시간 저장용).
-
-    왜 필요한가:
-    - judge 파이프라인에서 API 호출 실패 시 이미 완료된 결과를 잃지 않기 위해
-      한 건씩 즉시 디스크에 flush한다.
-    - 레코드 기반 파이프라인의 append-only 유틸리티다. 새 실행 코드는
-      hash-aware ``upsert_jsonl``을 사용한다.
-
-    Args:
-        path: 대상 JSONL 파일 경로
-        record: 저장할 dict
-    """
+    """Append one strict-JSON record to a JSONL file."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -426,20 +398,7 @@ def load_pairwise_judgments(path: PathLike) -> List[JudgmentPairwise]:
     return judgments
 
 def get_processed_ids(path: PathLike) -> set:
-    """
-    이미 처리된 question_id 집합을 반환.
-
-    왜 필요한가:
-    - A100 서버에서 judge 도중 API 타임아웃/오류가 발생해 프로세스가 죽으면
-      처음부터 다시 실행하면 비용 낭비다.
-    - 출력 파일에서 기존 question_id를 읽어 skip 대상으로 쓴다.
-
-    Args:
-        path: 체크할 JSONL 파일 경로
-
-    Returns:
-        이미 처리된 question_id의 set. 파일이 없으면 빈 set 반환.
-    """
+    """Return recorded question IDs, or an empty set when the file is absent."""
     path = Path(path)
     if not path.exists():
         return set()

@@ -1,18 +1,8 @@
-"""
-MT-Bench 재현 파이프라인 전체에서 사용하는 데이터 스키마 정의.
-
-왜 별도 파일로 분리하는가:
-- io_utils.py, judge_*.py, aggregate.py가 모두 동일한 필드 이름을 참조하므로
-  한 곳에서 구조를 확정해두면 필드명 불일치 버그를 방지할 수 있다.
-- dataclass를 쓰는 이유: TypedDict보다 .attribute 접근과 기본값 설정이 직관적이고,
-  asdict()로 JSONL 직렬화가 간단하기 때문이다.
-- Optional 필드는 파이프라인 단계마다 채워지는 구조를 반영한다.
-  (예: judgment는 judge 단계 전까지 None)
-"""
+"""Dataclasses for MT-Bench questions, answers, and judgments."""
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional
 
 
@@ -27,9 +17,7 @@ class MTBenchQuestion:
                   (writing, roleplay, extraction, reasoning,
                    math, coding, stem, humanities)
         turns: 1st turn과 2nd turn 질문 텍스트 리스트
-               논문 Section 2.2에서 모든 질문은 정확히 2-turn
-        reference: 참조 답변 리스트 (reference-guided judge 전용, 선택적)
-                   논문 Section 3.4, reference-guided pairwise prompt에서 수학/추론 문제에만 사용
+        reference: reference-guided judge에 사용할 참조 답변 리스트
     """
     question_id: int
     category: str
@@ -64,11 +52,10 @@ class ModelAnswer:
 
     Attributes:
         question_id: 대응하는 질문 ID
-        model_id: 모델 식별자 (예: "vicuna-13b", "gpt-4")
+        model_id: 모델 식별자
         choices: 생성된 답변 리스트
                  각 choice는 {"index": int, "turns": List[str]} 형식
                  일반적으로 choices[0]["turns"]가 실제 사용하는 답변
-                 논문에서는 단일 답변을 사용하므로 choices는 길이 1
         tstamp: 생성 타임스탬프 (재현 추적용)
     """
     question_id: int
@@ -101,12 +88,12 @@ class ModelAnswer:
 class JudgmentSingle:
     """
     Single-answer grading 결과.
-    논문 single-grade prompt 기반: 1~10점 척도, [[rating]] 파싱.
+    Single-grade prompt의 1~10점 척도와 ``[[rating]]`` 파싱 결과.
 
     Attributes:
         question_id: 판정 대상 질문 ID
         model_id: 채점 대상 모델
-        judge_id: 판정에 사용한 judge 모델 (예: "gpt-4")
+        judge_id: 판정에 사용한 judge 모델
         score_turn1: 1st turn 점수 (1~10, 파싱 실패 시 -1)
         score_turn2: 2nd turn 점수 (1~10, 파싱 실패 시 -1)
         judgment_turn1: 1st turn에 대한 judge의 원문 응답 (설명 포함)
@@ -128,8 +115,7 @@ class JudgmentSingle:
     @property
     def avg_score(self) -> Optional[float]:
         """
-        논문 Table 8: MT-Bench Score = 160턴 평균.
-        즉 (turn1 + turn2) / 2 가 한 문항의 점수.
+        ``(turn1 + turn2) / 2``를 한 문항의 점수로 반환한다.
         파싱 실패(-1)가 있으면 NaN으로 처리해 집계를 오염시키지 않는다.
         """
         if self.score_turn1 < 0 or self.score_turn2 < 0:
@@ -160,7 +146,7 @@ class JudgmentSingle:
 class JudgmentPairwise:
     """
     Pairwise comparison 결과.
-    논문 pairwise and multi-turn pairwise prompts 기반: A / B / tie 판정, swap으로 position bias 완화.
+    A / B / tie 판정을 저장하고 swap으로 position bias를 점검한다.
 
     Attributes:
         question_id: 판정 대상 질문 ID

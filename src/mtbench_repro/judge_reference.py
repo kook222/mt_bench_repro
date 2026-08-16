@@ -1,22 +1,4 @@
-"""
-Reference-guided grading 수행 (논문 reference-guided pairwise and single-grade prompts, Section 3.4).
-
-왜 reference-guided가 필요한가:
-- 논문 Section 3.3, Table 4:
-  default prompt로 수학 문제를 채점하면 GPT-4도 70% (14/20) 실패.
-  reference answer를 제공하면 실패율이 15% (3/20)로 급감.
-- LLM은 문제를 독립적으로 풀면 맞히지만, 틀린 답변 컨텍스트에 영향받아
-  그 틀린 답변을 옳다고 판정하는 경향이 있다.
-- 해결책: reference answer를 judge 프롬프트에 포함해 정답 기준을 제공.
-
-적용 카테고리:
-- schemas.REFERENCE_GUIDED_CATEGORIES = ["math", "reasoning", "coding"]
-- 나머지 카테고리(writing, roleplay 등)는 주관적이라 reference가 의미 없음.
-
-두 가지 모드:
-1. reference-guided pairwise (reference-guided pairwise prompt): 두 답변 비교 + reference
-2. reference-guided single grading (reference-guided single-grade prompt): 단일 채점 + reference
-"""
+"""Run reference-guided pairwise and single-answer grading."""
 
 from __future__ import annotations
 
@@ -273,8 +255,8 @@ def judge_pairwise_with_reference(
     - 두 번째 턴에 사용할 수 있는 reference가 있는 문항만 대상으로 하며,
       첫 번째 턴의 reference가 비어 있으면 해당 블록은 생략함.
 
-    position bias 완화를 위해 AB/BA swap 수행:
-    - 논문 Section 3.4 conservative approach: 두 순서 모두 일치할 때만 winner 선언.
+    position bias 완화를 위해 AB/BA swap을 수행하고, 두 판정이
+    일치할 때만 winner를 선언한다.
 
     Args:
         question: reference 필드가 있는 MTBenchQuestion
@@ -372,9 +354,8 @@ def run_judge_reference_single(
     """
     Reference-guided single grading을 대상 카테고리 질문에 대해 수행.
 
-    target_categories 기본값:
-    - REFERENCE_GUIDED_CATEGORIES = ["math", "reasoning", "coding"]
-    - 논문 근거: Section 3.4, Table 4에서 이 카테고리에서 효과 검증됨.
+    ``target_categories``의 기본값은
+    ``REFERENCE_GUIDED_CATEGORIES``이다.
 
     출력 경로:
     - {output_dir}/single_grade_ref/{model_id}.jsonl
@@ -383,7 +364,7 @@ def run_judge_reference_single(
     Args:
         target_categories: reference-guided를 적용할 카테고리 목록.
                            None이면 REFERENCE_GUIDED_CATEGORIES 사용.
-        reference_selection: 논문과 같은 선언 기준 29문항은
+        reference_selection: 선언 기준 29문항은
                              ``historical-declared``, 유효한 두 번째 턴
                              참조 26문항은 ``usable-turn2``.
     """

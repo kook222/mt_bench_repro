@@ -141,7 +141,6 @@ class BackTranslationResumeTest(unittest.TestCase):
                 )
 
     def test_validity_rejects_wrong_back_translation_prompt_hash(self):
-        original = {"question_id": 1, "category": "writing", "turns": ["a", "b"]}
         korean = {"question_id": 1, "category": "writing", "turns": ["가", "나"]}
         back = {
             "question_id": 1,

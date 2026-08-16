@@ -1,28 +1,10 @@
-"""
-MT-Bench 모델 답변 생성 (논문 Section 4.1).
-
-왜 generate.py가 필요한가:
-- 논문은 6개 오픈소스/클로즈드 모델의 MT-Bench 답변을 직접 생성해 저장한다.
-- 각 질문에 대해 2-turn 대화를 수행한다:
-    turn1: 1st 질문만 전달
-    turn2: 이전 대화 컨텍스트 포함 (multi-turn)
-- A100 서버에서 vLLM으로 실행하거나 --mock 플래그로 로컬 테스트 가능.
-
-생성과 judge를 분리하는 이유:
-- 생성은 GPU 서버(A100), judge는 GPT-4 API를 사용하므로 단계가 다르다.
-- hash-aware resume: 질문·모델·생성 설정이 같은 레코드만 재사용.
-
-MT-Bench 원논문 설정:
-- 생성: 0.7
-- Judge: 0.0 (deterministic)
-"""
+"""Generate two-turn MT-Bench answers with hash-aware resume."""
 
 from __future__ import annotations
 
 import argparse
 import logging
 import time
-from pathlib import Path
 from typing import Dict, List
 
 from mtbench_repro.client import ChatClient
@@ -105,16 +87,14 @@ def generate_answer(
         입력: [{"role": "user", "content": q1}]
         출력: a1
 
-    Turn 2 (multi-turn — 논문 Section 2.2):
+    Turn 2 (multi-turn):
         입력: [{"role": "user",      "content": q1},
                {"role": "assistant", "content": a1},
                {"role": "user",      "content": q2}]
         출력: a2
 
-    왜 turn2에 이전 context를 포함하는가:
-    - MT-Bench 논문의 핵심 설계: 2nd turn은 1st turn 답변을 기반으로
-      후속 질문에 답변하는 능력을 평가한다.
-    - 이전 context 없이 독립적으로 2nd turn만 생성하면 논문 파이프라인과 다르다.
+    두 번째 턴은 MT-Bench 대화 구조를 유지하도록 이전 질문과
+    답변을 포함한다.
 
     Args:
         question: MTBenchQuestion 인스턴스

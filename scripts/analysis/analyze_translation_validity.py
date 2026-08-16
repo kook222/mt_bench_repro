@@ -21,9 +21,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from mtbench_repro.client import ChatClient
-from mtbench_repro.schemas import MT_BENCH_CATEGORIES
-from scripts.translate.back_translate import (
+from mtbench_repro.client import ChatClient  # noqa: E402
+from mtbench_repro.schemas import MT_BENCH_CATEGORIES  # noqa: E402
+from scripts.translate.back_translate import (  # noqa: E402
     EXPECTED_QUESTION_COUNT,
     EXPECTED_TURN_COUNT,
     prompt_fingerprint as back_translation_prompt_fingerprint,

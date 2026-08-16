@@ -179,7 +179,7 @@ def main() -> None:
     elif not errors:
         print("\n  오류 없음 — 경고 항목만 확인하세요.")
 
-    print(f"\n카테고리별 번역 현황:")
+    print("\n카테고리별 번역 현황:")
     cat_counts: dict = {}
     for ko in ko_by_id.values():
         cat = ko.get("category", "unknown")
